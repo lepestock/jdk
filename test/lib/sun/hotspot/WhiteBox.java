@@ -352,7 +352,6 @@ public class WhiteBox {
   }
   public native void    lockCompilation();
   public native void    unlockCompilation();
-  public native boolean isCompilationLocked();
   private native int     getMethodEntryBci0(Executable method);
   public         int     getMethodEntryBci(Executable method) {
     Objects.requireNonNull(method);

@@ -1428,17 +1428,13 @@ WB_ENTRY(void, WB_SetStringVMFlag(JNIEnv* env, jobject o, jstring name, jstring 
 WB_END
 
 WB_ENTRY(void, WB_LockCompilation(JNIEnv* env, jobject o, jlong timeout))
-  Atomic::store(&WhiteBox::compilation_locked, true);
+  WhiteBox::compilation_locked = true;
 WB_END
 
 WB_ENTRY(void, WB_UnlockCompilation(JNIEnv* env, jobject o))
   MonitorLocker mo(Compilation_lock, Mutex::_no_safepoint_check_flag);
   WhiteBox::compilation_locked = false;
   mo.notify_all();
-WB_END
-
-WB_ENTRY(jboolean, WB_IsCompilationLocked(JNIEnv* env, jobject o))
-  return Atomic::load(&WhiteBox::compilation_locked);
 WB_END
 
 WB_ENTRY(void, WB_ForceNMethodSweep(JNIEnv* env, jobject o))
@@ -2372,7 +2368,6 @@ static JNINativeMethod methods[] = {
       CC"(Ljava/lang/reflect/Executable;)V",          (void*)&WB_ClearMethodState},
   {CC"lockCompilation",    CC"()V",                   (void*)&WB_LockCompilation},
   {CC"unlockCompilation",  CC"()V",                   (void*)&WB_UnlockCompilation},
-  {CC"isCompilationLocked", CC"()Z",                  (void*)&WB_IsCompilationLocked},
   {CC"matchesMethod",
       CC"(Ljava/lang/reflect/Executable;Ljava/lang/String;)I",
                                                       (void*)&WB_MatchesMethod},

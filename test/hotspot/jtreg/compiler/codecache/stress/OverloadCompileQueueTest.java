@@ -73,9 +73,7 @@ class LockUnlockThread extends Thread {
         } catch (InterruptedException e) {
             throw new Error("TESTBUG: lockUnlocker thread was unexpectedly interrupted", e);
         } finally {
-            if (Helper.WHITE_BOX.isCompilationLocked()) {
-                Helper.WHITE_BOX.unlockCompilation();
-            }
+            Helper.WHITE_BOX.unlockCompilation();
         }
     }
 }
