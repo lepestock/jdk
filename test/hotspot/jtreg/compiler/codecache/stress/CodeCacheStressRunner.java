@@ -33,12 +33,19 @@ public class CodeCacheStressRunner {
     }
 
     protected final void runTest() {
-        Helper.startInfiniteLoopThread(action);
         try {
             // adjust timeout and substract vm init and exit time
-            long timeout = Utils.adjustTimeout(Utils.DEFAULT_TEST_TIMEOUT);
-            timeout *= 0.8;
+            long adjustedTimeout = Utils.adjustTimeout(Utils.DEFAULT_TEST_TIMEOUT);
+            long timeout = (long)(adjustedTimeout * 0.8);
+//            timeout = 19200;
             new TimeLimitedRunner(timeout, 2.0d, this::test).call();
+            Helper.startInfiniteLoopThread(action, timeout);
+            System.out.printf(
+                    "JNP TimeLimitedRunner parameters: " +
+                        "[Utils.DEFAULT_TEST_TIMEOUT: %,d]" +
+                        "[adjustedTimeout: %,d]" +
+                        "[timeout: %,d]%n",
+                    Utils.DEFAULT_TEST_TIMEOUT, adjustedTimeout, timeout);
         } catch (Exception e) {
             throw new Error("Exception occurred during test execution", e);
         }

@@ -33,11 +33,13 @@
  *        compiler.codecache.stress.TestCaseImpl
  * @run driver ClassFileInstaller sun.hotspot.WhiteBox
  * @run main/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions
+ *                   -Xlog:vmoperation+exit=debug:stdout:tm,level,tags
  *                   -XX:+WhiteBoxAPI
  *                   -XX:CompileCommand=dontinline,compiler.codecache.stress.Helper$TestCase::method
  *                   -XX:-SegmentedCodeCache
  *                   compiler.codecache.stress.OverloadCompileQueueTest
  * @run main/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions
+ *                   -Xlog:vmoperation+exit=debug:stdout:tm,level,tags
  *                   -XX:+WhiteBoxAPI
  *                   -XX:CompileCommand=dontinline,compiler.codecache.stress.Helper$TestCase::method
  *                   -XX:+SegmentedCodeCache
@@ -52,6 +54,14 @@ import jdk.test.lib.Utils;
 import java.lang.reflect.Method;
 import java.util.stream.IntStream;
 import java.util.Random;
+
+// JNP good samples
+//                  -XX:CompileCommand=dontinline,compiler.codecache.stress.Helper$TestCase::method
+//                  -Xlog:all=info:file=/mnt/c/wsl/jdk/to_del.trace:tm,level,tags
+//                  -Xlog:thread*=trace:stdout:tm,level,tags
+//                  -Xlog:vmthread=trace:file=/mnt/c/wsl/jdk/to_del.trace:tm,level,tags
+//                  -Xlog:all=debug:file=/mnt/c/wsl/jdk/to_del.trace:tm,level,tags
+//                  -Xlog:thread*=trace,vmthread*=trace:file=/mnt/c/wsl/jdk/to_del.trace:tm,level,tags
 
 class LockUnlockThread extends Thread {
     private static final int MAX_SLEEP = 10000;
@@ -112,6 +122,18 @@ public class OverloadCompileQueueTest implements Runnable {
 
         lockUnlockThread.isActive = false;
         lockUnlockThread.join();
+
+        long testFinish = System.currentTimeMillis();
+//        System.out.printf("JNP OverloadCompileQueueTest. [End: %,d][Duration: %,d]%n",
+//                testFinish, testFinish - testStart);
+//        for (int i = 0; i < 30; i++) {
+//            System.out.printf("JNP %d. Compile queue size is %d%n",
+//                    i, Helper.WHITE_BOX.getCompileQueuesSize());
+//            try {
+//                Thread.sleep(1000);
+//            } catch (Exception ignored) {}
+//        }
+
     }
 
     @Override

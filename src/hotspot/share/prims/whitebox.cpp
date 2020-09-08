@@ -1437,6 +1437,14 @@ WB_ENTRY(void, WB_UnlockCompilation(JNIEnv* env, jobject o))
   mo.notify_all();
 WB_END
 
+WB_ENTRY(jboolean, WB_IsCompilationLocked(JNIEnv* env, jobject o))
+  bool result;
+  MonitorLocker mo(Compilation_lock, Mutex::_no_safepoint_check_flag);
+  result = WhiteBox::compilation_locked;
+  mo.notify_all();
+  return result;
+WB_END
+
 WB_ENTRY(void, WB_ForceNMethodSweep(JNIEnv* env, jobject o))
   // Force a code cache sweep and block until it finished
   NMethodSweeper::force_sweep();
@@ -2368,6 +2376,7 @@ static JNINativeMethod methods[] = {
       CC"(Ljava/lang/reflect/Executable;)V",          (void*)&WB_ClearMethodState},
   {CC"lockCompilation",    CC"()V",                   (void*)&WB_LockCompilation},
   {CC"unlockCompilation",  CC"()V",                   (void*)&WB_UnlockCompilation},
+  {CC"isCompilationLocked", CC"()Z",                  (void*)&WB_IsCompilationLocked},
   {CC"matchesMethod",
       CC"(Ljava/lang/reflect/Executable;Ljava/lang/String;)I",
                                                       (void*)&WB_MatchesMethod},

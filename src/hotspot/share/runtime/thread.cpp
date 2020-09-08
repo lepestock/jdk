@@ -2048,6 +2048,7 @@ static bool is_daemon(oop threadObj) {
 // For any new cleanup additions, please check to see if they need to be applied to
 // cleanup_failed_attach_current_thread as well.
 void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
+  log_debug(os, thread, timer)("JNP Starting exit");
   assert(this == JavaThread::current(), "thread consistency check");
 
   elapsedTimer _timer_exit_phase1;

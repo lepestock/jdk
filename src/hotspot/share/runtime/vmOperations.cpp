@@ -348,6 +348,7 @@ volatile bool VM_Exit::_vm_exited = false;
 Thread * volatile VM_Exit::_shutdown_thread = NULL;
 
 int VM_Exit::set_vm_exited() {
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::set_vm_exited 0");
 
   Thread * thr_cur = Thread::current();
 
@@ -364,10 +365,12 @@ int VM_Exit::set_vm_exited() {
     }
   }
 
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::set_vm_exited 1. [num_active: %i]", num_active);
   return num_active;
 }
 
 int VM_Exit::wait_for_threads_in_native_to_block() {
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::wait_for_threads_in_native_to_block 0");
   // VM exits at safepoint. This function must be called at the final safepoint
   // to wait for threads in _thread_in_native state to be quiescent.
   assert(SafepointSynchronize::is_at_safepoint(), "must be at safepoint already");
@@ -418,6 +421,26 @@ int VM_Exit::wait_for_threads_in_native_to_block() {
       }
     }
 
+    { /// FIXME JNP Remove
+        log_debug(vmoperation, exit)
+            ("JNPVM VM_Exit::wait_for_threads_in_native_to_block 1. "
+             "[num_active: %i][num_active_compiler_thread: %i]"
+             "[attempts: %i][max_wait: %i][max_wait_user_thread:%i]",
+             num_active, num_active_compiler_thread,
+             attempts, max_wait, max_wait_user_thread);
+
+        stringStream st{};
+        st.inc(2);
+        const size_t BUF1_LEN = 512;
+        const size_t BUF2_LEN = 512;
+        char buffer_1[BUF1_LEN];
+        char buffer_2[BUF2_LEN];
+
+        Threads::print_threads_compiling(&st.indent(), buffer_1, BUF1_LEN, false);
+        log_debug(vmoperation, exit)
+            ("JNPVM thread dump. {\n%s}", st.as_string());
+    }
+
     if (num_active == 0) {
        return 0;
     } else if (attempts > max_wait) {
@@ -431,19 +454,23 @@ int VM_Exit::wait_for_threads_in_native_to_block() {
     MonitorLocker ml(&timer, Mutex::_no_safepoint_check_flag);
     ml.wait(10);
   }
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::wait_for_threads_in_native_to_block 2");
 }
 
 bool VM_Exit::doit_prologue() {
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit_prologue 0");
   if (log_is_enabled(Info, monitorinflation)) {
     // Do a deflation in order to reduce the in-use monitor population
     // that is reported by ObjectSynchronizer::log_in_use_monitor_details()
     // at VM exit.
     ObjectSynchronizer::request_deflate_idle_monitors();
   }
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit_prologue 1");
   return true;
 }
 
 void VM_Exit::doit() {
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 0");
 
   if (VerifyBeforeExit) {
     HandleMark hm(VMThread::vm_thread());
@@ -454,6 +481,7 @@ void VM_Exit::doit() {
     Universe::verify();
   }
 
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 1");
   CompileBroker::set_should_block();
 
   // Wait for a short period for threads in native to block. Any thread
@@ -463,6 +491,7 @@ void VM_Exit::doit() {
   // running in native; the other 6% are quiescent within 250ms (Ultra 80).
   wait_for_threads_in_native_to_block();
 
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 2");
   set_vm_exited();
 
   // We'd like to call IdealGraphPrinter::clean_up() to finalize the
@@ -473,17 +502,23 @@ void VM_Exit::doit() {
   // cleanup globals resources before exiting. exit_globals() currently
   // cleans up outputStream resources and PerfMemory resources.
   exit_globals();
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 3");
 
   LogConfiguration::finalize();
 
   // Check for exit hook
   exit_hook_t exit_hook = Arguments::exit_hook();
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 4");
   if (exit_hook != NULL) {
     // exit hook should exit.
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 5");
     exit_hook(_exit_code);
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 6");
     // ... but if it didn't, we must do it here
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 7");
     vm_direct_exit(_exit_code);
   } else {
+    log_debug(vmoperation, exit)("JNPVM VM_Exit::doit 8");
     vm_direct_exit(_exit_code);
   }
 }

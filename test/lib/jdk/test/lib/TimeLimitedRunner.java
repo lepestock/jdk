@@ -23,8 +23,10 @@
 
 package jdk.test.lib;
 
+import java.util.PriorityQueue;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.Comparator;
 
 /**
  * Auxiliary class to run target w/ given timeout.
@@ -68,9 +70,11 @@ public class TimeLimitedRunner implements Callable<Void> {
         if (timeout != 0 && iterStart > stoptime) {
             return null;
         }
+        PriorityQueue<Long> durations = new PriorityQueue<>(1024, Comparator.reverseOrder());
         while (target.call()) {
             if (timeout != 0) {
                 long iterDuration = System.currentTimeMillis() - iterStart;
+                durations.offer(iterDuration);
                 maxDuration = Math.max(maxDuration, iterDuration);
                 iterStart = System.currentTimeMillis();
                 if (iterStart + (maxDuration * factor) > stoptime) {
@@ -80,6 +84,8 @@ public class TimeLimitedRunner implements Callable<Void> {
                 }
             }
         }
+        for (int i = 0; (i < 20) && !durations.isEmpty(); i++)
+            System.out.printf("JNP Sample duration: %,d%n", durations.poll());
         return null;
     }
 
