@@ -39,7 +39,9 @@
  * @build vm.mlvm.share.jdi.MHDebuggee
  *
  * @comment build test class and indify classes
+ * @build sun.hotspot.WhiteBox
  * @build vm.mlvm.meth.func.jdi.breakpointOtherStratum.Test
+ * @run driver ClassFileInstaller sun.hotspot.WhiteBox
  * @run driver vm.mlvm.share.IndifiedClassesBuilder
  *
  * @comment recompile SDE_MHDebuggeeBase with Stratum annotation processor
@@ -49,6 +51,9 @@
  *      vmTestbase/vm/mlvm/share/jpda/SDE_MHDebuggeeBase.java
  *
  * @run main/othervm
+ *      -Xbootclasspath/a:.
+ *      -XX:+UnlockDiagnosticVMOptions
+ *      -XX:+WhiteBoxAPI
  *      vm.mlvm.meth.func.jdi.breakpointOtherStratum.Test
  *      -verbose
  *      -arch=${os.family}-${os.simpleArch}
@@ -68,6 +73,69 @@ import vm.mlvm.share.jpda.StratumInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.text.DecimalFormat;
+
+import sun.hotspot.WhiteBox;
+import sun.hotspot.code.BlobType;
+
+class RatioFormatter {
+    static DecimalFormat SIZE_FORMAT = new DecimalFormat("#,##0.#");
+
+    public static String format(long value) {
+        final String[] units = new String[] { "B", "kB", "MB", "GB", "TB" };
+        int ratio = (int) (Math.log10(value)/Math.log10(1024));
+        String valueFormatted = SIZE_FORMAT.format(value / Math.pow(1024, ratio)).toString();
+
+        return valueFormatted + " " + units[ratio];
+    }
+}
+
+class CodeCacheMonitor extends Thread {
+    private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
+    private static final long START_TIMESTAMP = System.currentTimeMillis();
+
+    private static String timestamp() {
+        // Timestamp
+        long elapsed = System.currentTimeMillis() - START_TIMESTAMP;
+        long millis = elapsed % 1000;
+
+        long seconds = elapsed / 1000;
+        long secondMillis = elapsed % 1000;
+
+        long minutes = seconds / 60;
+        long minuteSeconds = seconds % 60;
+
+        return String.format("%02d:%02d.%03d", minutes, minuteSeconds, secondMillis);
+    }
+
+    public static void logStatistics() {
+        // CodeCache usage
+        double total = WHITE_BOX.getCodeCacheTotalSize(BlobType.All.id);
+        double unallocated = WHITE_BOX.getCodeCacheUnallocatedCapacity(BlobType.All.id);
+        int percentUsed = (int) (100 * (total - unallocated) / total);
+        long used = (long) (total - unallocated);
+
+        System.out.printf("%s Cache Monitor: %d%% (%s) used%n",
+                timestamp(), percentUsed, RatioFormatter.format(used));
+    }
+
+    @Override
+    public void run() {
+        while (true) {
+            CodeCacheMonitor.logStatistics();
+            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+        }
+    }
+
+    public static Thread startNewInstance() {
+        Thread result = new CodeCacheMonitor ();
+        result.setDaemon(true);
+        result.start();
+        System.out.println(timestamp() + " Cache Monitor started");
+        return result;
+    }
+}
+
 
 public class Test extends JDIBreakpointTest {
     @Override
@@ -110,6 +178,7 @@ public class Test extends JDIBreakpointTest {
     }
 
     public static void main(String[] args) {
+        Thread codeCacheMonitor = CodeCacheMonitor.startNewInstance();
         launch(new ArgumentHandler(args));
     }
 }
