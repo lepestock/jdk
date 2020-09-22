@@ -371,6 +371,10 @@ public class WhiteBox {
       }
       return allocateCodeBlob( intSize, type);
   }
+
+  public native long getCodeCacheTotalSize(int blobType);
+  public native long getCodeCacheUnallocatedCapacity(int blobType);
+
   public native void    freeCodeBlob(long addr);
   public native void    forceNMethodSweep();
   public native Object[] getCodeHeapEntries(int type);
