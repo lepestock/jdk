@@ -47,10 +47,16 @@
  *          /test/lib
  *
  * @comment build test class and indify classes
+ * @build sun.hotspot.WhiteBox
  * @build vm.mlvm.meth.stress.compiler.i2c_c2i.Test
+ * @run driver ClassFileInstaller sun.hotspot.WhiteBox
  * @run driver vm.mlvm.share.IndifiedClassesBuilder
  *
- * @run main/othervm vm.mlvm.meth.stress.compiler.i2c_c2i.Test
+ * @run main/othervm
+ *      -Xbootclasspath/a:.
+ *      -XX:+UnlockDiagnosticVMOptions
+ *      -XX:+WhiteBoxAPI
+ *      vm.mlvm.meth.stress.compiler.i2c_c2i.Test
  */
 
 package vm.mlvm.meth.stress.compiler.i2c_c2i;
@@ -59,6 +65,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.concurrent.CyclicBarrier;
+import java.text.DecimalFormat;
 
 import vm.mlvm.meth.share.Argument;
 import vm.mlvm.meth.share.MHTransformationGen;
@@ -66,6 +73,68 @@ import vm.mlvm.meth.share.RandomArgumentsGen;
 import vm.mlvm.meth.share.transform.v2.MHMacroTF;
 import vm.mlvm.share.Env;
 import vm.mlvm.share.MlvmTest;
+
+import sun.hotspot.WhiteBox;
+import sun.hotspot.code.BlobType;
+
+
+class RatioFormatter {
+    static DecimalFormat SIZE_FORMAT = new DecimalFormat("#,##0.#");
+
+    public static String format(long value) {
+        final String[] units = new String[] { "B", "kB", "MB", "GB", "TB" };
+        int ratio = (int) (Math.log10(value)/Math.log10(1024));
+        String valueFormatted = SIZE_FORMAT.format(value / Math.pow(1024, ratio)).toString();
+
+        return valueFormatted + " " + units[ratio];
+    }
+}
+
+class CodeCacheMonitor extends Thread {
+    private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
+    private static final long START_TIMESTAMP = System.currentTimeMillis();
+
+    private static String timestamp() {
+        // Timestamp
+        long elapsed = System.currentTimeMillis() - START_TIMESTAMP;
+        long millis = elapsed % 1000;
+
+        long seconds = elapsed / 1000;
+        long secondMillis = elapsed % 1000;
+
+        long minutes = seconds / 60;
+        long minuteSeconds = seconds % 60;
+
+        return String.format("%02d:%02d.%03d", minutes, minuteSeconds, secondMillis);
+    }
+
+    public static void logStatistics() {
+        // CodeCache usage
+        double total = WHITE_BOX.getCodeCacheTotalSize(BlobType.All.id);
+        double unallocated = WHITE_BOX.getCodeCacheUnallocatedCapacity(BlobType.All.id);
+        int percentUsed = (int) (100 * (total - unallocated) / total);
+        long used = (long) (total - unallocated);
+
+        System.out.printf("%s Cache Monitor: %d%% (%s) used%n",
+                timestamp(), percentUsed, RatioFormatter.format(used));
+    }
+
+    @Override
+    public void run() {
+        while (true) {
+            CodeCacheMonitor.logStatistics();
+            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+        }
+    }
+
+    public static Thread startNewInstance() {
+        Thread result = new CodeCacheMonitor ();
+        result.setDaemon(true);
+        result.start();
+        System.out.println(timestamp() + " Cache Monitor started");
+        return result;
+    }
+}
 
 // TODO: check that i2c/c2i adapters are really created
 // TODO: check deopt using vm.mlvm.share.comp framework
@@ -180,6 +249,7 @@ public class Test extends MlvmTest {
     }
 
     public static void main(String[] args) {
+        var codeCacheMonitor = CodeCacheMonitor.startNewInstance();
         MlvmTest.launch(args);
     }
 }
