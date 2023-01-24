@@ -72,6 +72,7 @@ public class ProductionParams {
     // workaraound: to reduce chance throwing ArrayIndexOutOfBoundsException
     public static Option<Integer> chanceExpressionIndex = null;
     public static Option<String> testbaseDir = null;
+    public static Option<String> tempDir = null;
     public static Option<Integer> numberOfTests = null;
     public static Option<String> seed = null;
     public static Option<Long> specificSeed = null;
@@ -124,6 +125,7 @@ public class ProductionParams {
         enableFinalizers = optionResolver.addBooleanOption("enable-finalizers", "Enable finalizers (for stress testing)");
         chanceExpressionIndex = optionResolver.addIntegerOption("chance-expression-index", 0, "A non negative decimal integer used to restrict chane of generating expression in array index while creating or accessing by index");
         testbaseDir = optionResolver.addStringOption("testbase-dir", ".", "Testbase dir");
+        tempDir = optionResolver.addStringOption("temp-dir", ".", "Temp dir path");
         numberOfTests = optionResolver.addIntegerOption('n', "number-of-tests", 0, "Number of test classes to generate");
         seed = optionResolver.addStringOption("seed", "", "Random seed");
         specificSeed = optionResolver.addLongOption('z', "specificSeed", 0L, "A seed to be set for specific test generation(regular seed still needed for initialization)");
