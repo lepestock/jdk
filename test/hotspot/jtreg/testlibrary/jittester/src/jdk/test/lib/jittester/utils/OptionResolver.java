@@ -156,6 +156,12 @@ public class OptionResolver {
         return addBooleanOption(null, name, false, description);
     }
 
+    public Option<List<String>> addRepeatingOption(Character key, String name, String defaultValue, String description) {
+        final Option<List<String>> option = new RepeatingOption(key, name, defaultValue, description);
+        register(option);
+        return option;
+    }
+
     private void register(Option<?> option) {
         if (options.put("--" + option.longName, option) != null) {
             throw new RuntimeException("Option is already registered for key " + option.longName);
@@ -261,6 +267,20 @@ public class OptionResolver {
         public Boolean parseFromString(String arg) {
             //null and empty value is considered true, as option is flag and value could be absent
             return arg == null || "".equals(arg) || "1".equalsIgnoreCase(arg) || "true".equalsIgnoreCase(arg);
+        }
+    }
+
+    private class RepeatingOption extends Option<List<String>> {
+        List<String> accumulated = new ArrayList<String>();
+
+        RepeatingOption(Character s, String l, String v, String d) {
+            super(s, l, List.of(v), d);
+        }
+
+        @Override
+        public List<String> parseFromString(String arg) {
+            accumulated.add(arg);
+            return accumulated;
         }
     }
 
