@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import jdk.test.lib.util.FileUtils;
+import java.util.Random;
 
 /**
   * A temporary directory wrapper.
@@ -42,8 +43,9 @@ public class TempDir {
      */
     public TempDir(String suffix) {
         try {
-            path = Files.createTempDirectory(suffix).toAbsolutePath();
-            Runtime.getRuntime().addShutdownHook(new Thread(this::delete));
+            //FIXME JNP Restore path = Files.createTempDirectory(suffix).toAbsolutePath();
+            path = Files.createDirectory(Path.of("jnpTemp_" + suffix + (new Random()).nextInt(1000)));
+//            Runtime.getRuntime().addShutdownHook(new Thread(this::delete));
         } catch (IOException e) {
             throw new Error("Can't create a tmp dir for " + suffix, e);
         }
