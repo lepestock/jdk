@@ -26,6 +26,7 @@ package jdk.test.lib.jittester;
 import java.io.IOException;
 import java.util.function.Function;
 import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
+import jdk.test.lib.util.Pair;
 
 /**
  * Generates java source code from IRTree
@@ -79,7 +80,19 @@ public class JavaCodeGenerator extends TestsGenerator {
         }
     }
 
-    private static String[] generatePrerunAction(String mainClassName) {
+    protected static String[] generatePrerunAction(String mainClassName) {
         return new String[] {"@compile " + mainClassName + ".java"};
+    }
+
+    public static void main(String[] args) throws Exception {
+        ProductionParams.initializeFromCmdline(args);
+        IRTreeGenerator.initializeWithProductionParams();
+
+        JavaCodeGenerator generator = new JavaCodeGenerator();
+
+        for (String mainClass : ProductionParams.mainClassNames.value()) {
+            Pair<IRNode, IRNode> classes = IRTreeGenerator.generateIRTree(mainClass);
+            generator.generateSources(classes.first, classes.second);
+        }
     }
 }
