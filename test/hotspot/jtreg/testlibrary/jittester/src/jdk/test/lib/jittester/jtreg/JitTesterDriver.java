@@ -35,6 +35,7 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.stream.Stream;
 
+import jdk.test.lib.jittester.IntrinsicIgnoringStackVerifier;
 import jdk.test.lib.jittester.Phase;
 import jdk.test.lib.jittester.ProcessRunner;
 
@@ -61,7 +62,9 @@ public class JitTesterDriver {
                 Asserts.assertEQ(anlzExitValue, goldExitValue);
 
                 assertFilesEqual(name, "out");
-                assertFilesEqual(name, "err");
+                IntrinsicIgnoringStackVerifier.assertSimilar(
+                    Paths.get(Utils.TEST_SRC).resolve(name + "." + Phase.GOLD_RUN.suffix + ".err"),
+                    Paths.get(".").resolve(name + "." + Phase.RUN.suffix + ".err"));
             }
         } catch (Exception e) {
             throw new Error("Unexpected exception on test jvm start :" + e, e);
@@ -76,8 +79,8 @@ public class JitTesterDriver {
             Stream<String> goldStream = Files.lines(goldFile, Charset.forName("UTF-8"));
             Stream<String> anlzStream = Files.lines(anlzFile, Charset.forName("UTF-8"));
 
-            Iterator<?> it1 = goldStream.iterator();
-            Iterator<?> it2 = anlzStream.iterator();
+            Iterator<String> it1 = goldStream.iterator();
+            Iterator<String> it2 = anlzStream.iterator();
             while (it1.hasNext() && it2.hasNext()) {
                 Asserts.assertEquals(it1.next(), it2.next(),
                         "Contents of files '" + goldFile + "' and '" + anlzFile + "' are different");

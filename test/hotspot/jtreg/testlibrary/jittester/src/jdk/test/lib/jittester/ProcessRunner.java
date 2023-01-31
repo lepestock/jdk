@@ -56,8 +56,8 @@ public class ProcessRunner {
         StringBuilder sb = new StringBuilder();
 
         src.chars().forEachOrdered(code -> {
-            if ((code >= 32) && (code <= 126) && (code != 92)) {
-                // From space to ~, excluding \ which is needed for escapes
+            if ((code >= 32) && (code <= 126) && (code != 9) && (code != 92)) {
+                // From space to ~, excluding tabs and \ which is needed for escapes
                 sb.append((char) code);
             } else {
                 // All unreadable, encoding-dependent and \ are escaped
