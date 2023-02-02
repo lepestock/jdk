@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -36,18 +37,17 @@ import static jdk.test.lib.Asserts.assertEquals;
 public class IntrinsicIgnoringStackVerifier {
 
     // Put the most annoying intrinsics here
-    private static final Predicate[] PATTERNS = new Predicate[] {
+    private static final List<Predicate<String>> PATTERNS = List.of(
         Pattern.compile(".*at java.base.*misc.Unsafe.allocateUninitializedArray0.*").asPredicate()
-    };
+    );
+
+    private static final Predicate<String> OOME = Pattern.compile(
+            "Exception in thread \".*\" java.lang.OutOfMemoryError.*").asPredicate();
 
     public static boolean isIntrinsicCandidate(String line) {
-        boolean result = false;
-
-        for (Predicate pattern : PATTERNS) {
-            result |= pattern.test(line);
-        }
-
-        return result;
+        return PATTERNS.stream()
+                       .map(pattern -> pattern.test(line))
+                       .reduce(false, (acc, match) -> acc | match);
     }
 
     public static void assertSimilar(String message, Stream<String> gold, Stream<String> run) {
@@ -57,6 +57,10 @@ public class IntrinsicIgnoringStackVerifier {
             while (goldIt.hasNext() && runIt.hasNext()) {
                 String goldLine = goldIt.next();
                 String runLine = runIt.next();
+
+                if (OOME.test(goldLine)) {
+                    return;     // OOMEs are simply ignored.
+                }
 
                 // Skipping intrinsics in 'run'
                 while (isIntrinsicCandidate(goldLine) &&
