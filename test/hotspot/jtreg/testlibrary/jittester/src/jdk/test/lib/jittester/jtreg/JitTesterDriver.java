@@ -61,34 +61,16 @@ public class JitTesterDriver {
                 String anlzExitValue = streamFile(Path.of("."), name, Phase.RUN, "exit").findFirst().get();
                 Asserts.assertEQ(anlzExitValue, goldExitValue);
 
-                assertFilesEqual(name, "out");
                 IntrinsicIgnoringStackVerifier.assertSimilar(
                     Paths.get(Utils.TEST_SRC).resolve(name + "." + Phase.GOLD_RUN.suffix + ".err"),
                     Paths.get(".").resolve(name + "." + Phase.RUN.suffix + ".err"));
+
+                IntrinsicIgnoringStackVerifier.assertSimilar(
+                    Paths.get(Utils.TEST_SRC).resolve(name + "." + Phase.GOLD_RUN.suffix + ".out"),
+                    Paths.get(".").resolve(name + "." + Phase.RUN.suffix + ".out"));
             }
         } catch (Exception e) {
             throw new Error("Unexpected exception on test jvm start :" + e, e);
-        }
-    }
-
-    private static void assertFilesEqual(String name, String kind) {
-        Path goldFile = Paths.get(Utils.TEST_SRC).resolve(name + "." + Phase.GOLD_RUN.suffix + "." + kind);
-        Path anlzFile = Paths.get(".").resolve(name + "." + Phase.RUN.suffix + "." + kind);
-
-        try {
-            Stream<String> goldStream = Files.lines(goldFile, Charset.forName("UTF-8"));
-            Stream<String> anlzStream = Files.lines(anlzFile, Charset.forName("UTF-8"));
-
-            Iterator<String> it1 = goldStream.iterator();
-            Iterator<String> it2 = anlzStream.iterator();
-            while (it1.hasNext() && it2.hasNext()) {
-                Asserts.assertEquals(it1.next(), it2.next(),
-                        "Contents of files '" + goldFile + "' and '" + anlzFile + "' are different");
-            }
-            Asserts.assertTrue(!it1.hasNext() && !it2.hasNext(),
-                        "Sizes of files '" + goldFile + "' and '" + anlzFile + "' are different");
-        } catch (IOException e) {
-            throw new Error(String.format("Can't read file: %s", name), e);
         }
     }
 

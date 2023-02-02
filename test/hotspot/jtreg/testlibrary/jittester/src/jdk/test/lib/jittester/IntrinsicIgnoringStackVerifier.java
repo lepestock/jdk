@@ -32,7 +32,7 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static jdk.test.lib.Asserts.assertEquals;
+import jdk.test.lib.Asserts;
 
 public class IntrinsicIgnoringStackVerifier {
 
@@ -69,9 +69,14 @@ public class IntrinsicIgnoringStackVerifier {
                     goldLine = goldIt.next();
                 }
 
-                assertEquals(goldLine, runLine, message + ": Stack trace lines differ");
+                if (!goldLine.equals(runLine)) {
+                    String fullMessage = message + ": Lines are different\n" +
+                                         "    Expected: " + goldLine + "\n" +
+                                         "    Actual  : " + runLine + "\n";
+                    Asserts.fail(fullMessage);
+                }
             }
-            assertEquals(goldIt.hasNext(), runIt.hasNext(), message + ": files are different");
+            Asserts.assertEquals(goldIt.hasNext(), runIt.hasNext(), message + ": files are different");
     }
 
     public static void assertSimilar(Path gold, Path run) {
