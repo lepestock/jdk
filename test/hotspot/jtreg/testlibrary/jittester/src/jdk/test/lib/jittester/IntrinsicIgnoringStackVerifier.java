@@ -70,9 +70,9 @@ public class IntrinsicIgnoringStackVerifier {
                 }
 
                 if (!goldLine.equals(runLine)) {
-                    String fullMessage = message + ": Lines are different\n" +
-                                         "    Expected: " + goldLine + "\n" +
-                                         "    Actual  : " + runLine + "\n";
+                    String fullMessage = "While " + message + ":\n" +
+                                         "Expected: " + goldLine + "\n" +
+                                         "Actual  : " + runLine + "\n";
                     Asserts.fail(fullMessage);
                 }
             }
@@ -82,7 +82,7 @@ public class IntrinsicIgnoringStackVerifier {
     public static void assertSimilar(Path gold, Path run) {
         String comparisonNames = "'" + gold + "' and '" + run + "'";
         try {
-            assertSimilar("Comparing files " + comparisonNames,
+            assertSimilar("comparing files " + comparisonNames,
                     Files.lines(gold), Files.lines(run));
         } catch (IOException e) {
             throw new Error("Could not compare files: '" + comparisonNames);
