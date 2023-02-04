@@ -44,7 +44,7 @@ public class IntrinsicIgnoringStackVerifier {
     private static final Predicate<String> OOME = Pattern.compile(
             "Exception in thread \".*\" java.lang.OutOfMemoryError.*").asPredicate();
 
-    public static boolean isIntrinsicCandidate(String line) {
+    private static boolean isIntrinsicCandidate(String line) {
         return PATTERNS.stream()
                        .map(pattern -> pattern.test(line))
                        .reduce(false, (acc, match) -> acc | match);

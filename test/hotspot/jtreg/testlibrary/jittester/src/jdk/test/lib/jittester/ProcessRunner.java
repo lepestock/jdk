@@ -95,7 +95,7 @@ public class ProcessRunner {
         Process process = pb.start();
 
         int result = -1;
-        if (waitForProcess(process, phase.timeout)) {
+        if (waitForProcess(process, phase.timeoutSeconds)) {
             try (FileWriter file = new FileWriter(nameAndPhase + ".exit")) {
                 file.write(Integer.toString(process.exitValue()));
             }

@@ -30,11 +30,11 @@ public enum Phase {
     RUN(90, "run"),
     IGNORE(10, "ignore");
 
-    public final int timeout;
+    public final int timeoutSeconds;
     public final String suffix;
 
-    private Phase(int timeout, String suffix) {
-        this.timeout = timeout;
+    private Phase(int timeoutSeconds, String suffix) {
+        this.timeoutSeconds = timeoutSeconds;
         this.suffix = suffix;
     }
 }
