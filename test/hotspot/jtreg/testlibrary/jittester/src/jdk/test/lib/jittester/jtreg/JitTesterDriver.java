@@ -35,7 +35,7 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.stream.Stream;
 
-import jdk.test.lib.jittester.IntrinsicIgnoringStackVerifier;
+import jdk.test.lib.jittester.ErrorTolerance;
 import jdk.test.lib.jittester.Phase;
 import jdk.test.lib.jittester.ProcessRunner;
 
@@ -61,11 +61,11 @@ public class JitTesterDriver {
                 String anlzExitValue = streamFile(Path.of("."), name, Phase.RUN, "exit").findFirst().get();
                 Asserts.assertEQ(anlzExitValue, goldExitValue);
 
-                IntrinsicIgnoringStackVerifier.assertSimilar(
+                ErrorTolerance.assertIsAcceptable(
                     Paths.get(Utils.TEST_SRC).resolve(name + "." + Phase.GOLD_RUN.suffix + ".err"),
                     Paths.get(".").resolve(name + "." + Phase.RUN.suffix + ".err"));
 
-                IntrinsicIgnoringStackVerifier.assertSimilar(
+                ErrorTolerance.assertIsAcceptable(
                     Paths.get(Utils.TEST_SRC).resolve(name + "." + Phase.GOLD_RUN.suffix + ".out"),
                     Paths.get(".").resolve(name + "." + Phase.RUN.suffix + ".out"));
             }

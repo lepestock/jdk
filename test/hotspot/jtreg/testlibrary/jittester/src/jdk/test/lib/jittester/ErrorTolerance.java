@@ -34,7 +34,14 @@ import java.util.stream.Stream;
 
 import jdk.test.lib.Asserts;
 
-public class IntrinsicIgnoringStackVerifier {
+/**
+  * Compares reference output to the one that's being verified.
+  *
+  * The class can tolerate some errors (like OutOfMemoryError),
+  * as their nature is unpredictable and ignore missing intrinsics in
+  * compiled code stack traces.
+  */
+public class ErrorTolerance {
 
     // Put the most annoying intrinsics here
     private static final List<Predicate<String>> PATTERNS = List.of(
@@ -50,7 +57,7 @@ public class IntrinsicIgnoringStackVerifier {
                        .reduce(false, (acc, match) -> acc | match);
     }
 
-    public static void assertSimilar(String message, Stream<String> gold, Stream<String> run) {
+    public static void assertIsAcceptable(String message, Stream<String> gold, Stream<String> run) {
             Iterator<String> goldIt = gold.iterator();
             Iterator<String> runIt = run.iterator();
 
@@ -79,10 +86,10 @@ public class IntrinsicIgnoringStackVerifier {
             Asserts.assertEquals(goldIt.hasNext(), runIt.hasNext(), message + ": files are different");
     }
 
-    public static void assertSimilar(Path gold, Path run) {
+    public static void assertIsAcceptable(Path gold, Path run) {
         String comparisonNames = "'" + gold + "' and '" + run + "'";
         try {
-            assertSimilar("comparing files " + comparisonNames,
+            assertIsAcceptable("comparing files " + comparisonNames,
                     Files.lines(gold), Files.lines(run));
         } catch (IOException e) {
             throw new Error("Could not compare files: '" + comparisonNames);
