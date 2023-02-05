@@ -24,17 +24,15 @@
 package jdk.test.lib.jittester;
 
 import java.util.Arrays;
-
 import org.testng.annotations.Test;
 
-//FIXME JNP Rename to some self-test: both in class and the test annotation
 /*
  * @test
  * @summary Check execution process
- * @library / /test/lib /testlibrary/jittester/src
- * @run testng jdk.test.lib.jittester.SelfTest
+ * @library /test/lib /test/hotspot/jtreg/testlibrary/jittester/src
+ * @run testng jdk.test.lib.jittester.ErrorToleranceTest
  */
-public class SelfTest {
+public class ErrorToleranceTest {
 
     @Test
     public void allowsForIdenticalStacks() {
@@ -52,7 +50,7 @@ public class SelfTest {
             "	at java.base/java.lang.StringConcatHelper.newArray(StringConcatHelper.java:441)"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(gold), Arrays.stream(run));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(gold), Arrays.stream(run));
     }
 
     @Test(expectedExceptions = { java.lang.RuntimeException.class })
@@ -72,7 +70,7 @@ public class SelfTest {
             "	at java.base/java.lang.StringConcatHelper.newArray(StringConcatHelper.java:441)"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(gold), Arrays.stream(run));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(gold), Arrays.stream(run));
     }
 
     @Test
@@ -91,7 +89,7 @@ public class SelfTest {
             "	at java.base/java.lang.StringConcatHelper.newArray(StringConcatHelper.java:441)"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(gold), Arrays.stream(run));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(gold), Arrays.stream(run));
     }
 
     @Test(expectedExceptions = { java.lang.RuntimeException.class })
@@ -110,7 +108,7 @@ public class SelfTest {
             "	at java.base/java.lang.StringConcatHelper.newArray(StringConcatHelper.java:441)"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(gold), Arrays.stream(run));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(gold), Arrays.stream(run));
     }
 
     @Test(expectedExceptions = { java.lang.RuntimeException.class })
@@ -129,7 +127,7 @@ public class SelfTest {
             "	at java.base/java.lang.StringConcatHelper.newArray(StringConcatHelper.java:441)"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(gold), Arrays.stream(run));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(gold), Arrays.stream(run));
     }
 
     @Test(expectedExceptions = { java.lang.RuntimeException.class })
@@ -148,7 +146,7 @@ public class SelfTest {
             "	at java.base/java.lang.StringConcatHelper.newArray(StringConcatHelper.java:441)"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(gold), Arrays.stream(run));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(gold), Arrays.stream(run));
     }
 
     @Test(expectedExceptions = { java.lang.RuntimeException.class })
@@ -167,7 +165,7 @@ public class SelfTest {
             "	at java.base/java.lang.StringConcatHelper.newArray(StringConcatHelper.java:441)"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(run), Arrays.stream(gold));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(run), Arrays.stream(gold));
     }
 
     @Test
@@ -196,7 +194,7 @@ public class SelfTest {
             "	        at Test_221.main(Test_221.java:1968)"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(run), Arrays.stream(gold));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(run), Arrays.stream(gold));
     }
 
     @Test(expectedExceptions = { java.lang.RuntimeException.class })
@@ -213,7 +211,7 @@ public class SelfTest {
             "Correct line 2"
         };
 
-        ErrorTolerance.assertSimilar("", Arrays.stream(run), Arrays.stream(gold));
+        ErrorTolerance.assertIsAcceptable("", Arrays.stream(run), Arrays.stream(gold));
     }
 
 }
