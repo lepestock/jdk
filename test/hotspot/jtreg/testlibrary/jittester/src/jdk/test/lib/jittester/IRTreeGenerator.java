@@ -34,8 +34,12 @@ import jdk.test.lib.jittester.utils.OptionResolver;
 import jdk.test.lib.jittester.utils.OptionResolver.Option;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class IRTreeGenerator {
     private static final ReentrantLock LOCK = new ReentrantLock();
+    //FIXME JNP Remove
+    public static AtomicLong generationStartTs = new AtomicLong(System.currentTimeMillis());
 
     public static boolean tryLock() {
         return LOCK.tryLock();
@@ -46,6 +50,7 @@ public class IRTreeGenerator {
     }
 
     public static Pair<IRNode, IRNode> generateIRTree(String name) {
+        generationStartTs.setRelease(System.currentTimeMillis());
         //NB: SymbolTable is a widely-used singleton, hence all the locking.
         SymbolTable.removeAll();
         TypeList.removeAll();
