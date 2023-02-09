@@ -83,7 +83,7 @@ public class ProductionParams {
 
     public static void register(OptionResolver optionResolver) {
         productionLimit = optionResolver.addIntegerOption('l', "production-limit", 100, "Limit on steps in the production of an expression");
-        productionLimitSeconds = optionResolver.addIntegerOption("production-limit-seconds", 420, "Limit the time a test generation may take");
+        productionLimitSeconds = optionResolver.addIntegerOption("production-limit-seconds", 600, "Limit the time a test generation may take");
         dataMemberLimit = optionResolver.addIntegerOption('v', "data-member-limit", 10, "Upper limit on data members");
         statementLimit = optionResolver.addIntegerOption('s', "statement-limit", 30, "Upper limit on statements in function");
         testStatementLimit = optionResolver.addIntegerOption('e', "test-statement-limit", 300, "Upper limit on statements in test() function");
