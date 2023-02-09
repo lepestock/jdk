@@ -50,6 +50,7 @@ public class IRTreeGenerator {
     }
 
     public static Pair<IRNode, IRNode> generateIRTree(String name) {
+        ProductionLimiter.resetTimer();
         generationStartTs.setRelease(System.currentTimeMillis());
         //NB: SymbolTable is a widely-used singleton, hence all the locking.
         SymbolTable.removeAll();
