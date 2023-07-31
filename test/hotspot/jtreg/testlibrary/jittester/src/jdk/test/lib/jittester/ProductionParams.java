@@ -23,11 +23,16 @@
 
 package jdk.test.lib.jittester;
 
+import java.util.List;
+
 import jdk.test.lib.jittester.utils.OptionResolver;
 import jdk.test.lib.jittester.utils.OptionResolver.Option;
+import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public class ProductionParams {
 
+    public static Option<List<String>> runArgumentsPacks = null;
+    public static Option<List<String>> mainClassNames = null;
     public static Option<Integer> productionLimit = null;
     public static Option<Integer> productionLimitSeconds = null;
     public static Option<Integer> dataMemberLimit = null;
@@ -82,6 +87,8 @@ public class ProductionParams {
     public static Option<String> generatorsFactories = null;
 
     public static void register(OptionResolver optionResolver) {
+        runArgumentsPacks = optionResolver.addRepeatingOption('g', "run-arguments", "", "Arguments for a @run tag");
+        mainClassNames = optionResolver.addRepeatingOption('k', "main-class", "", "Main class name");
         productionLimit = optionResolver.addIntegerOption('l', "production-limit", 100, "Limit on steps in the production of an expression");
         productionLimitSeconds = optionResolver.addIntegerOption("production-limit-seconds", 600, "Limit the time a test generation may take");
         dataMemberLimit = optionResolver.addIntegerOption('v', "data-member-limit", 10, "Upper limit on data members");
@@ -133,5 +140,14 @@ public class ProductionParams {
         excludeMethodsFile = optionResolver.addStringOption('r', "exclude-methods-file", "conf/exclude.methods.lst", "File to read excluded methods from");
         generators = optionResolver.addStringOption("generators", "", "Comma-separated list of generator names");
         generatorsFactories = optionResolver.addStringOption("generatorsFactories", "", "Comma-separated list of generators factories class names");
+    }
+
+    public static void initializeFromCmdline(String[] args) {
+        OptionResolver parser = new OptionResolver();
+        Option<String> propertyFileOpt = parser.addStringOption('p', "property-file",
+                "conf/default.properties", "File to read properties from");
+        ProductionParams.register(parser);
+        parser.parse(args, propertyFileOpt);
+        PseudoRandom.reset(ProductionParams.seed.value());
     }
 }

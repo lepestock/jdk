@@ -30,20 +30,10 @@ import jdk.test.lib.util.Pair;
 import jdk.test.lib.jittester.factories.IRNodeBuilder;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
-import jdk.test.lib.jittester.utils.OptionResolver;
-import jdk.test.lib.jittester.utils.OptionResolver.Option;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public class IRTreeGenerator {
     private static final ReentrantLock LOCK = new ReentrantLock();
-
-    public static boolean tryLock() {
-        return LOCK.tryLock();
-    }
-
-    public static void unlock() {
-        LOCK.unlock();
-    }
 
     public static Pair<IRNode, IRNode> generateIRTree(String name) {
         ProductionLimiter.resetTimer();
@@ -83,13 +73,7 @@ public class IRTreeGenerator {
         return new Pair<IRNode, IRNode>(mainClass, privateClasses);
     }
 
-    public static void initializeFromCmdlineArgs(String[] args) {
-        OptionResolver parser = new OptionResolver();
-        Option<String> propertyFileOpt = parser.addStringOption('p', "property-file",
-                "conf/default.properties", "File to read properties from");
-        ProductionParams.register(parser);
-        parser.parse(args, propertyFileOpt);
-        PseudoRandom.reset(ProductionParams.seed.value());
+    public static void initializeWithProductionParams() {
         TypesParser.parseTypesAndMethods(ProductionParams.classesFile.value(),
                 ProductionParams.excludeMethodsFile.value());
         if (ProductionParams.specificSeed.isSet()) {

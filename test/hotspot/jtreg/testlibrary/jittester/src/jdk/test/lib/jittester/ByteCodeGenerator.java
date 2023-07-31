@@ -31,6 +31,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
+import jdk.test.lib.util.Pair;
+
 /**
  * Generates class files from IRTree
  */
@@ -40,7 +42,10 @@ public class ByteCodeGenerator extends TestsGenerator {
     protected final HeaderFormatter headerFormatter;
 
     protected ByteCodeGenerator() {
-        this(new HeaderFormatter.Builder().build());
+        this(new HeaderFormatter.Builder()
+                .libraries("/ /test/lib /testlibrary/jittester/src")
+                .withArguments(ProductionParams.runArgumentsPacks.value())
+                .build());
     }
 
     protected ByteCodeGenerator(HeaderFormatter headerFormatter) {
@@ -94,6 +99,19 @@ public class ByteCodeGenerator extends TestsGenerator {
             Files.write(generatorDir.resolve(fileName), bytecode);
         } catch (IOException ex) {
             ex.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        ProductionParams.initializeFromCmdline(args);
+        IRTreeGenerator.initializeWithProductionParams();
+
+        ByteCodeGenerator generator = new ByteCodeGenerator();
+
+        for (String mainClass : ProductionParams.mainClassNames.value()) {
+            Pair<IRNode, IRNode> classes = IRTreeGenerator.generateIRTree(mainClass);
+            generator.generateClassFiles(classes.first, classes.second);
+            generator.generateSeparateJtregHeader(classes.first);
         }
     }
 }

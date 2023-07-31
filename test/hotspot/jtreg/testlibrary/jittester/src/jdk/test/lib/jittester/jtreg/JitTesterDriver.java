@@ -30,6 +30,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.stream.Stream;
+import java.util.function.Predicate;
+import java.nio.file.NoSuchFileException;
 
 import jdk.test.lib.Utils;
 import jdk.test.lib.process.ProcessTools;
@@ -53,7 +55,7 @@ public class JitTesterDriver {
         testName = args[args.length - 1];
     }
 
-    private ExecutionResult extractFingerprint(Path path, Phase phase) {
+    private ExecutionResult extractFingerprint(Path path, Phase phase) throws IOException {
         return new ExecutionResult.Builder()
             .exitValue(streamFile(path, testName, phase, "exit").findFirst().get())
             .stdErr(streamFile(path, testName, phase, "err"))
@@ -62,11 +64,46 @@ public class JitTesterDriver {
             .build();
     }
 
-    public void performTheRun() {
-        ExecutionResult goldFingerprint = extractFingerprint(testDir, Phase.GOLD_RUN);
-        ErrorTolerance.assertGoldIsReliable(goldFingerprint);
-
+    private ExecutionResult extractOrCreateGoldFingerprint(Path path)
+            throws IOException, InterruptedException {
         try {
+            return extractFingerprint(path, Phase.GOLD_RUN);
+        } catch (NoSuchFileException exception) {
+            System.out.println("[DBG] Could not load golden fingerprint" +
+                    " (" + exception.getMessage() + "), trying to create one");
+        }
+
+        // Perform the golden run
+        ProcessBuilder pb = ProcessTools.createTestJavaProcessBuilder("-XX:-PrintWarnings", "-Xint", "-Dstdout.encoding=UTF-8", testName);
+        ExecutionResult runResult = ProcessRunner.runProcessExt(pb, testName, Phase.GOLD_RUN,
+                DESTROY_FORCIBLY, GATHER_INFO);
+        Duration elapsed = runResult.elapsed();
+        System.out.printf("[DBG]: Golden run took %d:%02d:%02d%n",
+                elapsed.toHoursPart(), elapsed.toMinutesPart(), elapsed.toSecondsPart());
+
+        // Move the golden files to the source path
+        System.out.printf("[DBG]: Moving the golden files to the test source directory");
+        try (Stream<Path> walkStream = Files.walk(Path.of("."), 1)) {
+            Predicate<Path> filter = p -> p.toFile().isFile()
+                                     && p.getFileName().toString().contains(testName + ".gold.");
+            walkStream.filter(filter).forEach(goldFile -> {
+                try {
+                    Files.move(goldFile, path.resolve(goldFile.getFileName()));
+                } catch (IOException ioe) {
+                    ioe.printStackTrace();
+                    throw new RuntimeException("Failed to access " + goldFile);
+                }
+            });
+        }
+
+        return extractFingerprint(path, Phase.GOLD_RUN);
+    }
+
+    public void performTheRun() {
+        try {
+            ExecutionResult goldFingerprint = extractOrCreateGoldFingerprint(testDir);
+            ErrorTolerance.assertGoldIsReliable(goldFingerprint);
+
             ProcessBuilder pb = ProcessTools.createTestJavaProcessBuilder(args);
             ExecutionResult runResult = ProcessRunner.runProcessExt(pb, testName, Phase.RUN,
                     DESTROY_FORCIBLY, GATHER_INFO);
@@ -99,13 +136,9 @@ public class JitTesterDriver {
         new JitTesterDriver(args).performTheRun();
     }
 
-    private static Stream<String> streamFile(Path dir, String name, Phase phase, String kind) {
+    private static Stream<String> streamFile(Path dir, String name, Phase phase, String kind) throws IOException {
         String fullName = name + "." + phase.suffix + "." + kind;
-        try {
-            return Files.lines(dir.resolve(fullName), Charset.forName("UTF-8"));
-        } catch (IOException e) {
-            throw new Error(String.format("Can't read file: %s", fullName), e);
-        }
+        return Files.lines(dir.resolve(fullName), Charset.forName("UTF-8"));
     }
 
 }

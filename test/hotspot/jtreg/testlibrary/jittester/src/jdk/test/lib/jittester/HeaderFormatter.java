@@ -25,29 +25,26 @@ package jdk.test.lib.jittester;
 
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.List;
 
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public final class HeaderFormatter {
+
     public static final String DISABLE_WARNINGS = "-XX:-PrintWarnings";
 
     private final Builder builder;
 
     public static class Builder {
         private Function<String, String[]>  preRunActions = s -> new String[0];
-        private String jtDriverOptions = "-Xcomp";
         private String libraries = "/ ../";
         private boolean printJitTesterHierarchy = true;
         private boolean buildPrinter = true;
+        private ArgumentsPack[] argumentPacks;
 
         public Builder preRunActions(Function<String, String[]> from) {
             preRunActions = from;
-            return this;
-        }
-
-        public Builder jtDriverOptions(String from) {
-            jtDriverOptions = from;
             return this;
         }
 
@@ -66,13 +63,38 @@ public final class HeaderFormatter {
             return this;
         }
 
+        public Builder withArguments(ArgumentsPack[] from) {
+            argumentPacks = from;
+            return this;
+        }
+
+        public Builder withArguments(List<String> from) {
+            argumentPacks = from.stream()
+                                .map(ArgumentsPack::new)
+                                .toArray(ArgumentsPack[]::new);
+            return this;
+        }
+
         public HeaderFormatter build() {
             return new HeaderFormatter(this);
         }
+
     }
 
     private HeaderFormatter(Builder builder) {
         this.builder = builder;
+    }
+
+    private void appendArguments(StringBuilder header, String mainClassName, ArgumentsPack args) {
+        header.append(
+                String.format(" * @run driver/timeout=%d jdk.test.lib.jittester.jtreg.JitTesterDriver ",
+                    Phase.RUN.timeoutSeconds + Math.max((int) (Phase.RUN.timeoutSeconds * 0.3), 60)))
+              .append(DISABLE_WARNINGS)
+              .append(" ")
+              .append(args.toString())
+              .append(" -Dstdout.encoding=UTF-8 ")
+              .append(mainClassName)
+              .append("\n");
     }
 
     public  String getJtregHeader(String mainClassName) {
@@ -82,20 +104,20 @@ public final class HeaderFormatter {
         header.append("/*\n * @test\n * @summary ")
               .append(synopsis)
               .append(" \n * @library " + builder.libraries + "\n");
-       header.append(" * @run build jdk.test.lib.jittester.jtreg.JitTesterDriver"
+        header.append(" * @run build jdk.test.lib.jittester.jtreg.JitTesterDriver"
                         + (builder.buildPrinter ? " jdk.test.lib.jittester.jtreg.Printer\n" : "\n"));
-       for (String action : builder.preRunActions.apply(mainClassName)) {
+        for (String action : builder.preRunActions.apply(mainClassName)) {
             header.append(" * ")
                   .append(action)
                   .append("\n");
         }
-        header.append(" * @run driver/timeout=300 jdk.test.lib.jittester.jtreg.JitTesterDriver ")
-              .append(DISABLE_WARNINGS)
-              .append(" ")
-              .append(builder.jtDriverOptions)
-              .append(" ")
-              .append(mainClassName)
-              .append("\n */\n\n");
+
+        for (ArgumentsPack argumentPack : builder.argumentPacks) {
+            appendArguments(header, mainClassName, argumentPack);
+        }
+
+        header.append("\n */\n\n");
+
         if (ProductionParams.printHierarchy.value() && builder.printJitTesterHierarchy) {
             header.append("/*\n")
                   .append(printHierarchy())
