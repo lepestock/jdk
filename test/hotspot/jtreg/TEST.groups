@@ -132,6 +132,46 @@ serviceability_ttf_virtual = \
   -serviceability/jvmti/events  \
   -serviceability/jvmti/negative
 
+jinnys_huge_pages = \
+  gc/TestHugePagesSettings.sh \
+  runtime/stringtable/StringTableCleaningTest.java \
+  runtime/signal/TestSigpwr.java \
+  runtime/signal/TestSigwinch.java \
+  gc/ArraySize.java \
+  gc/CondCardMark \
+  gc/InfiniteList.java \
+  gc/TestAgeOutput.java \
+  gc/TestAllocHumongousFragment.java \
+  gc/TestAllocateHeapAt.java \
+  gc/TestAllocateHeapAtError.java \
+  gc/TestAllocateHeapAtMultiple.java \
+  gc/TestBigObj.java \
+  gc/TestCardTablePageCommits.java \
+  gc/z/TestNoUncommit.java \
+  gc/z/TestGarbageCollectorMXBean.java \
+  gc/z/TestSmallHeap.java \
+  gc/z/TestAlwaysPreTouch.java \
+  gc/z/TestMemoryManagerMXBean.java \
+  gc/z/TestUncommit.java \
+  gc/z/TestRelocateInPlace.java \
+  gc/z/TestZNMT.java \
+  gc/z/TestPageCacheFlush.java \
+  gc/z/TestZForceDiscontiguousHeapReservations.java \
+  gc/z/TestMemoryMXBean.java \
+  gc/z/TestAllocateHeapAt.java \
+  gc/stress/gcbasher/TestGCBasherWithZ.java \
+  gc/stress/gcbasher/TestGCBasherWithSerial.java \
+  gc/stress/gcbasher/TestGCBasherWithG1.java \
+  gc/stress/gcbasher/TestGCBasherWithParallel.java \
+  gc/stress/gcbasher/TestGCBasherWithAllocateHeapAt.java \
+  gc/stress/jfr/TestStressBigAllocationGCEventsWithParallel.java \
+  gc/stress/jfr/TestStressAllocationGCEventsWithG1.java \
+  gc/stress/jfr/TestStressBigAllocationGCEventsWithDefNew.java \
+  gc/stress/jfr/TestStressAllocationGCEventsWithParallel.java \
+  gc/stress/jfr/TestStressAllocationGCEventsWithDefNew.java \
+  gc/stress/TestStressIHOPMultiThread.java \
+  gc/stress/TestStressRSetCoarsening.java
+
 tier1_common = \
   sanity/BasicVMTest.java \
   gtest/GTestWrapper.java \
