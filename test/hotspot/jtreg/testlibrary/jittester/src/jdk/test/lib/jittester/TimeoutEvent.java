@@ -73,21 +73,15 @@ public class TimeoutEvent {
     }
 
     private static Path findTimeoutHandler() throws FailureHandlerException {
-        Optional<String> property = new SystemProperty("timeout.handlerDir").asOptional();
+        Optional<Path> fhJar = Optional.ofNullable(System.getenv("TEST_IMAGE_DIR"))
+            .map(Path::of)
+            .map(v -> v.resolve("failure_handler").resolve("jtregFailureHandler.jar"))
+            .map(v -> v.toFile().exists() ? v : null);
 
-        if (property.isEmpty()) {
-            throw new FailureHandlerException(
-                    "Could find failure_handler jar. The property 'timeout.handlerDir' is not provided");
-        }
-
-        Path result = Path.of(property.get()).toAbsolutePath();
-        if (!result.toFile().exists()) {
-            throw new FailureHandlerException(
-                    "Could not fire TimeoutEvent: provided timeout handler path '" +
-                    result + "' doesn't exist.");
-        }
-
-        return result;
+        return fhJar.orElseThrow(() -> new FailureHandlerException(
+                "Could find failure_handler jar. " +
+                "The environment variable 'TEST_IMAGE_DIR' is not provided or " +
+                "The failure_handler/jtregFailureHandler.jar is not present there"));
     }
 
     private Class<?> loadClass() throws ClassNotFoundException, MalformedURLException, IOException {
