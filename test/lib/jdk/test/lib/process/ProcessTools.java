@@ -251,9 +251,9 @@ public final class ProcessTools {
                                        long timeout,
                                        TimeUnit unit)
             throws IOException, InterruptedException, TimeoutException {
-        System.out.println("JNP ProcessTools.startProcess");
-        Asserts.fail("JNP CHILD PROCESS STARTED");
+        System.out.println("FAILED: JNP ProcessTools.startProcess");
         System.exit(33);
+        Asserts.fail("JNP CHILD PROCESS STARTED");
         System.out.println("[" + name + "]:" + String.join(" ", processBuilder.command()));
         Process p = privilegedStart(processBuilder);
         StreamPumper stdout = new StreamPumper(p.getInputStream());
@@ -452,11 +452,9 @@ public final class ProcessTools {
      * @return The ProcessBuilder instance representing the java command.
      */
     private static ProcessBuilder createJavaProcessBuilder(String... command) {
-        if (false) {
-            System.out.println("JNP ProcessTools.createJavaProcessBuilder");
-            Asserts.fail("JNP CHILD PROCESS STARTED");
-            System.exit(33);
-        }
+        System.out.println("FAILED: JNP ProcessTools.createJavaProcessBuilder");
+        System.exit(33);
+        Asserts.fail("JNP CHILD PROCESS STARTED");
         String javapath = JDKToolFinder.getJDKTool("java");
 
         ArrayList<String> args = new ArrayList<>();
@@ -720,9 +718,9 @@ public final class ProcessTools {
     @SuppressWarnings("removal")
     public static OutputAnalyzer executeProcess(ProcessBuilder pb, String input,
                                                 Charset cs) throws Exception {
-        System.out.println("JNP ProcessTools.executeProcess");
-        Asserts.fail("JNP CHILD PROCESS STARTED");
+        System.out.println("FAILED: JNP ProcessTools.executeProcess");
         System.exit(33);
+        Asserts.fail("JNP CHILD PROCESS STARTED");
         OutputAnalyzer output = null;
         Process p = null;
         boolean failed = false;
