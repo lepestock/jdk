@@ -39,10 +39,52 @@ package compiler.compilercontrol.directives;
 import compiler.compilercontrol.share.SingleCommand;
 import compiler.compilercontrol.share.scenario.Command;
 import compiler.compilercontrol.share.scenario.Scenario;
+import java.util.Arrays;
+
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.util.List;
 
 public class CompileOnlyTest {
     public static void main(String[] args) {
+        { //FIXME JNP Remove
+            RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
+            List<String> jvmArgs = bean.getInputArguments();
+
+            for (int i = 0; i < jvmArgs.size(); i++) {
+                System.out.println( jvmArgs.get( i ) );
+            }
+            System.out.println(" -classpath " + System.getProperty("java.class.path"));
+            // print the non-JVM command line arguments
+            // print name of the main class with its arguments, like org.ClassName param1 param2
+            System.out.println(" " + System.getProperty("sun.java.command"));
+        }
+
+        if (false) { //FIXME JNP Remove
+            System.out.println("JNP(environmentInfo");
+            System.out.println(" :path " + System.getProperty("user.dir"));
+
+            System.out.println(" :arguments '(");
+            Arrays.stream(args)
+                .forEach( entry -> System.out.println(" '" + entry + "'"));
+            System.out.println(" )");
+
+            System.out.println(" :environment '(");
+            System.getenv()
+                .entrySet()
+                .stream()
+                .forEach( entry -> System.out.println(" " + entry) );
+            System.out.println(" )");
+
+            System.out.println(" :properties '(");
+            System.getProperties()
+                .entrySet()
+                .stream()
+                .forEach( entry -> System.out.println(" " + entry));
+            System.out.println("))");
+        }
         new SingleCommand(Command.COMPILEONLY, Scenario.Type.DIRECTIVE)
-                .test();
+            .test();
     }
 }
