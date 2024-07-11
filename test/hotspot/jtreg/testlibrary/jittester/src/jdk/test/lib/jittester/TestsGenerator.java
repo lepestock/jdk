@@ -34,7 +34,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import jdk.test.lib.jittester.types.TypeKlass;
-import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public abstract class TestsGenerator implements BiConsumer<IRNode, IRNode> {
     private static final int DEFAULT_JTREG_TIMEOUT = 120;
@@ -121,9 +120,9 @@ public abstract class TestsGenerator implements BiConsumer<IRNode, IRNode> {
         }
     }
 
-    protected String getJtregHeader(String mainClassName) {
+    protected String getJtregHeader(String mainClassName, long seed) {
         String synopsis = "seed = '" + ProductionParams.seed.value() + "'"
-                + ", specificSeed = '" + PseudoRandom.getCurrentSeed() + "'";
+                + ", specificSeed = '" + seed + "'";
         StringBuilder header = new StringBuilder();
         header.append("/*\n * @test\n * @summary ")
               .append(synopsis)

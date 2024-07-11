@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.function.Function;
+import jdk.test.lib.jittester.utils.PseudoRandom;
 
 import jdk.test.lib.util.Pair;
 
@@ -51,14 +52,15 @@ class ByteCodeGenerator extends TestsGenerator {
     @Override
     public void accept(IRNode mainClass, IRNode privateClasses) {
         generateClassFiles(mainClass, privateClasses);
-        generateSeparateJtregHeader(mainClass);
+        //FIXME JNP Fix that obviously erroneous PseudoRandom (IRTreeGenerator has already used some seeds)
+        generateSeparateJtregHeader(PseudoRandom.getCurrentSeed(), mainClass);
         compilePrinter();
         generateGoldenOut(mainClass.getName());
     }
 
-    private void generateSeparateJtregHeader(IRNode mainClass) {
+    private void generateSeparateJtregHeader(long seed, IRNode mainClass) {
         String mainClassName = mainClass.getName();
-        writeFile(generatorDir, mainClassName + ".java", getJtregHeader(mainClassName));
+        writeFile(generatorDir, mainClassName + ".java", getJtregHeader(mainClassName, seed));
     }
 
     private void generateClassFiles(IRNode mainClass, IRNode privateClasses) {
@@ -104,9 +106,10 @@ class ByteCodeGenerator extends TestsGenerator {
         ByteCodeGenerator generator = new ByteCodeGenerator();
 
         for (String mainClass : ProductionParams.mainClassNames.value()) {
+            long specificSeed = PseudoRandom.getCurrentSeed();
             Pair<IRNode, IRNode> classes = IRTreeGenerator.generateIRTree(mainClass);
             generator.generateClassFiles(classes.first, classes.second);
-            generator.generateSeparateJtregHeader(classes.first);
+            generator.generateSeparateJtregHeader(specificSeed, classes.first);
         }
     }
 }

@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.function.Function;
 import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
 import jdk.test.lib.util.Pair;
+import jdk.test.lib.jittester.utils.PseudoRandom;
 
 /**
  * Generates java source code from IRTree
@@ -45,17 +46,18 @@ public class JavaCodeGenerator extends TestsGenerator {
     @Override
     public void accept(IRNode mainClass, IRNode privateClasses) {
         String mainClassName = mainClass.getName();
-        generateSources(mainClass, privateClasses);
+        //FIXME JNP Fix that obviously erroneous PseudoRandom (IRTreeGenerator has already used some seeds)
+        generateSources(PseudoRandom.getCurrentSeed(), mainClass, privateClasses);
         compilePrinter();
         compileJavaFile(mainClassName);
         generateGoldenOut(mainClassName);
     }
 
-    private void generateSources(IRNode mainClass, IRNode privateClasses) {
+    private void generateSources(long seed, IRNode mainClass, IRNode privateClasses) {
         String mainClassName = mainClass.getName();
         StringBuilder code = new StringBuilder();
         JavaCodeVisitor vis = new JavaCodeVisitor();
-        code.append(getJtregHeader(mainClassName));
+        code.append(getJtregHeader(mainClassName, seed));
         if (privateClasses != null) {
             code.append(privateClasses.accept(vis));
         }
@@ -91,8 +93,9 @@ public class JavaCodeGenerator extends TestsGenerator {
         JavaCodeGenerator generator = new JavaCodeGenerator();
 
         for (String mainClass : ProductionParams.mainClassNames.value()) {
+            long specificSeed = PseudoRandom.getCurrentSeed();
             Pair<IRNode, IRNode> classes = IRTreeGenerator.generateIRTree(mainClass);
-            generator.generateSources(classes.first, classes.second);
+            generator.generateSources(specificSeed, classes.first, classes.second);
         }
     }
 }
