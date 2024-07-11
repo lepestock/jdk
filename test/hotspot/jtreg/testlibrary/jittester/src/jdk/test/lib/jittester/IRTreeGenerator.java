@@ -79,6 +79,8 @@ public class IRTreeGenerator {
         if (ProductionParams.specificSeed.isSet()) {
             PseudoRandom.setCurrentSeed(ProductionParams.specificSeed.value());
         }
+        long seed = PseudoRandom.getCurrentSeed();
+        System.out.println("JNP Using seed: " + seed);
     }
 
 }
