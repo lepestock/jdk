@@ -3,6 +3,12 @@ ifneq "x$(SEED)" "x"
 	GENERATOR_ARGS += -z $(SEED)
 endif
 
+ifneq "x$(MAIN_CLASSES)" "x"
+	GENERATOR_ARGS += $(MAIN_CLASSES)
+else
+	GENERATOR_ARGS += --main-class Test_0
+endif
+
 clean_generated:
 	@rm -rf generated
 
@@ -15,8 +21,7 @@ generate_test: COMPILE
     --testbase-dir generated \
     --temp-dir tmp \
     --print-hierarchy true \
-    $(GENERATOR_ARGS) \
-    --main-class Test_0
+    $(GENERATOR_ARGS)
 
 run_test: clean_generated generate_test
 	$(JAVAC) -cp build/classes \
