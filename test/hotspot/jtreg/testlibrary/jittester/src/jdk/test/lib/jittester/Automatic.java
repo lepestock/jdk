@@ -52,7 +52,6 @@ public class Automatic {
     }
 
     public static void main(String[] args) {
-        IRTreeGenerator.initializeFromCmdlineArgs(args);
         int counter = 0;
         System.out.printf("Generating %d tests...%n",  ProductionParams.numberOfTests.value());
         System.out.printf(" %13s | %8s | %8s | %8s |%n", "start time", "count", "generat",
