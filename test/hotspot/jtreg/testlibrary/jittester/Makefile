@@ -96,10 +96,10 @@ manifest:
 	@echo 'Main-Class: jdk.test.lib.jittester.Automatic' >> $(MANIFEST)
 
 compile_testlib: INIT
-	$(JAVAC) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -Xlint $(TESTLIBRARY_SRC_FILES) -d $(CLASSES_DIR)
+	$(JAVAC) -nowarn -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -Xlint $(TESTLIBRARY_SRC_FILES) -d $(CLASSES_DIR)
 
 COMPILE: INIT filelist compile_testlib
-	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -Xlint -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) @filelist
+	$(JAVAC) -nowarn -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -Xlint -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) @filelist
 
 filelist: $(SRC_FILES)
 		@rm -f $@
@@ -137,3 +137,5 @@ testroot: $(TESTBASE_DIR)
 
 $(TESTBASE_DIR) $(DIST_DIR) $(TESTBASE_DIR)/jdk/test/lib/jittester/jtreg:
 	$(shell if [ ! -d $@ ]; then mkdir -p $@; fi)
+
+include commands.mk
