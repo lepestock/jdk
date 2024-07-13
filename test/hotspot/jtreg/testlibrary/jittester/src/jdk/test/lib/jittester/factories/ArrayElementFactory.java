@@ -58,7 +58,7 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
     @Override
     protected ArrayElement sproduce() throws ProductionFailedException {
         if (resultType instanceof TypeArray) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 14");
         }
         long arrayComplexityLimit = (long) (complexityLimit * 0.5 * PseudoRandom.random());
         int arrayOperatorLimit = (int) (operatorLimit * 0.5 * PseudoRandom.random());

@@ -62,7 +62,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         LinkedList<Type> types = new LinkedList<>(TypeList.getAll());
         PseudoRandom.shuffle(types);
         if (types.isEmpty()) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 24");
         }
         Type resultType = types.getFirst();
         IRNodeBuilder b = new IRNodeBuilder().setComplexityLimit(complexityLimit - 1)

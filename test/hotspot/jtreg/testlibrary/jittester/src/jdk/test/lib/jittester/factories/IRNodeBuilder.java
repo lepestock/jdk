@@ -211,7 +211,7 @@ public class IRNodeBuilder {
                         getOperatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
                         getNoConsts());
             default:
-                throw new ProductionFailedException();
+                throw new ProductionFailedException("JNP 10");
         }
     }
 
@@ -238,7 +238,7 @@ public class IRNodeBuilder {
                 return new IncDecOperatorFactory(o, getComplexityLimit(), getOperatorLimit(),
                         getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             default:
-                throw new ProductionFailedException();
+                throw new ProductionFailedException("JNP 11");
         }
     }
 

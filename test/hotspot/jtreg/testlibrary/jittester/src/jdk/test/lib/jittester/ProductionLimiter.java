@@ -48,7 +48,7 @@ public class ProductionLimiter {
             limit--;
         }
         if (limit != -1 && limit <= 0) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("Production limit reached");
         }
 
         if (Instant.now().isAfter(limitInstant)) {

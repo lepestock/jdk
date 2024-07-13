@@ -57,6 +57,6 @@ class LocalVariableFactory extends Factory<LocalVariable> {
                 }
             }
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 27");
     }
 }

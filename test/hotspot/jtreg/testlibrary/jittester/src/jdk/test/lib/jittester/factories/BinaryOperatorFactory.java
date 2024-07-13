@@ -56,7 +56,7 @@ abstract class BinaryOperatorFactory extends OperatorFactory<BinaryOperator> {
         long leftComplLimit = (long) (PseudoRandom.random() * (complexityLimit - 1));
         long rightComplLimit = complexityLimit - 1 - leftComplLimit;
         if (leftOpLimit == 0 || rightOpLimit == 0 || leftComplLimit == 0 || rightComplLimit == 0) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 30");
         }
         boolean swap = PseudoRandom.randomBoolean();
         IRNodeBuilder builder = new IRNodeBuilder().setExceptionSafe(exceptionSafe)
@@ -86,7 +86,7 @@ abstract class BinaryOperatorFactory extends OperatorFactory<BinaryOperator> {
         try {
             types = generateTypes();
         } catch (RuntimeException ex) {
-            throw new ProductionFailedException(ex.getMessage());
+            throw new ProductionFailedException("JNP 31: " + ex.getMessage());
         }
 
         try {

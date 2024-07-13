@@ -74,7 +74,7 @@ class LiteralFactory extends Factory<Literal> {
             }
             literal = new Literal(new String(str), TypeList.STRING);
         } else {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 35");
         }
         return literal;
     }

@@ -74,6 +74,15 @@ class BlockFactory extends Factory<Block> {
 
     @Override
     public Block produce() throws ProductionFailedException {
+        boolean problem = PseudoRandom.getCurrentSeed() == 1276981019112L;
+        long seed = PseudoRandom.getCurrentSeed();
+        if (problem) {
+            System.out.println("JNP(pseudo-random :current-seed " + PseudoRandom.getCurrentSeed() + ")");
+            System.out.println("JNP(Block-produce" +
+                    " :statementLimt " + statementLimit +
+                    " :complexityLimit " + complexityLimit +
+                    ")");
+        }
         if (statementLimit > 0 && complexityLimit > 0) {
             List<IRNode> content = new ArrayList<>();
             int slimit = PseudoRandom.randomNotZero(statementLimit);
@@ -162,7 +171,8 @@ class BlockFactory extends Factory<Block> {
             }
             return new Block(ownerClass, returnType, content, level);
         }
-        throw new ProductionFailedException();
+        System.out.println("Problem seed: " + seed);
+        throw new ProductionFailedException("JNP 19");
     }
 
     private void addControlFlowDeviation(Rule<IRNode> rule, IRNodeBuilder builder) {

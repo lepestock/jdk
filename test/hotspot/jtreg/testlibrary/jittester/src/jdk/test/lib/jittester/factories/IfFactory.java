@@ -129,6 +129,6 @@ class IfFactory extends SafeFactory<If> {
                 return new If(condition, thenBlock, elseBlock, level);
             }
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 25");
     }
 }

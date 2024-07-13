@@ -61,7 +61,7 @@ public abstract class UnaryOperatorFactory extends OperatorFactory<UnaryOperator
         try {
             type = generateType();
         } catch (Exception ex) {
-            throw new ProductionFailedException(ex.getMessage());
+            throw new ProductionFailedException("JNP 34: " + ex.getMessage());
         }
         try {
             SymbolTable.push();

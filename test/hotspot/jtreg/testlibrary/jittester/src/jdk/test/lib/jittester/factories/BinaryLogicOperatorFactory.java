@@ -57,7 +57,7 @@ public class BinaryLogicOperatorFactory extends BinaryOperatorFactory {
         long leftComplLimit = (long) (PseudoRandom.random() * (complexityLimit - 1));
         long rightComplLimit = complexityLimit - 1 - leftComplLimit;
         if (leftOpLimit == 0 || rightOpLimit == 0 || leftComplLimit == 0 || rightComplLimit == 0) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 36");
         }
         boolean swap = PseudoRandom.randomBoolean();
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)

@@ -100,6 +100,6 @@ class ArrayExtractionFactory extends SafeFactory<ArrayExtraction> {
                 return new ArrayExtraction(arrayReturningExpression, perDimensionExpression);
             }
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 15");
     }
 }

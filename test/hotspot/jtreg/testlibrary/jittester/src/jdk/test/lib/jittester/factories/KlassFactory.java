@@ -190,6 +190,20 @@ class KlassFactory extends Factory<Klass> {
             }
         } catch (ProductionFailedException e) {
             System.out.println("Exception during klass production process:");
+            System.out.println("JNP(exception" +
+                    " :message " + e.getMessage() +
+                    " :cause " + e.getCause() +
+                    " :stackTrace " + e.getStackTrace() +
+                    ")");
+            StackTraceElement[] stack = e.getStackTrace();
+            for (StackTraceElement element : stack) {
+                System.out.println("JNP(stack" +
+                        " :class " + element.getClassName() +
+                        " :method " + element.getMethodName() +
+                        " :line " + element.getLineNumber() +
+                        ")");
+            }
+
             e.printStackTrace(System.out);
             throw e;
         } finally {

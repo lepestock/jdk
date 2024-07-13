@@ -52,7 +52,7 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         long condComplLimit = complexityLimit - 1 - leftComplLimit - rightComplLimit;
         if (leftComplLimit == 0 || rightComplLimit == 0 || condComplLimit == 0
                 || leftOpLimit == 0 || rightOpLimit == 0 || condOpLimit == 0) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 6");
         }
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe);

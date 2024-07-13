@@ -78,6 +78,6 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                 }
             }
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 40");
     }
 }

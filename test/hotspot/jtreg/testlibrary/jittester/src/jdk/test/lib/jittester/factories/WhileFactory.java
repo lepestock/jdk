@@ -64,7 +64,7 @@ class WhileFactory extends SafeFactory<While> {
     protected While sproduce() throws ProductionFailedException {
         Block emptyBlock = new Block(ownerClass, returnType, new LinkedList<>(), level - 1);
         if (statementLimit <= 0 || complexityLimit <= 0) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 20");
         }
         long complexity = complexityLimit;
         // Loop header parameters
@@ -74,7 +74,7 @@ class WhileFactory extends SafeFactory<While> {
         // Loop body parameters
         thisLoopIterLimit = (long) (0.0001 * complexity * PseudoRandom.random());
         if (thisLoopIterLimit > Integer.MAX_VALUE || thisLoopIterLimit == 0) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 21");
         }
         complexity = thisLoopIterLimit > 0 ? complexity / thisLoopIterLimit : 0;
         long condComplLimit = (long) (complexity * PseudoRandom.random());

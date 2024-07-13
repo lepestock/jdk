@@ -58,7 +58,7 @@ class FunctionFactory extends SafeFactory<Function> {
     protected Function sproduce() throws ProductionFailedException {
         // Currently no function is exception-safe
         if (exceptionSafe) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 16");
         }
         ArrayList<Symbol> allFunctions;
         if (functionInfo.type == null) {
@@ -151,6 +151,6 @@ class FunctionFactory extends SafeFactory<Function> {
                 }
             }
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 17");
     }
 }

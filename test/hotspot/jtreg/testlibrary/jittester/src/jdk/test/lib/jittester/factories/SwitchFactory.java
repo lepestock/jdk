@@ -181,6 +181,6 @@ class SwitchFactory extends SafeFactory<Switch> {
                 }
             }
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 28");
     }
 }

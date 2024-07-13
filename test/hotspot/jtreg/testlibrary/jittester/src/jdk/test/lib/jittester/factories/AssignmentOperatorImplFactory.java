@@ -82,7 +82,7 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
                 leftOperandValue.getVariableInfo().flags |= VariableInfo.INITIALIZED;
             }
         } catch (Exception e) {
-            throw new ProductionFailedException(e.getMessage());
+            throw new ProductionFailedException("JNP 2" + e.getMessage());
         }
         return new BinaryOperator(opKind, resultType, leftOperandValue, rightOperandValue);
     }

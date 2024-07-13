@@ -67,7 +67,7 @@ class ForFactory extends SafeFactory<For> {
     protected For sproduce() throws ProductionFailedException {
         Block emptyBlock = new Block(ownerClass, returnType, new LinkedList<>(), level - 1);
         if (statementLimit <= 0 || complexityLimit <= 0) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 37");
         }
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)

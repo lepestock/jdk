@@ -94,7 +94,7 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
         }
         // should probably throw exception here..
         //return getChildren().size() > 0 ? getChild(0).produce() : null;
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 1");
     }
 
     private class RuleEntry extends Factory<T> implements Comparable<RuleEntry> {

@@ -102,6 +102,6 @@ class AssignmentOperatorFactory extends Factory<Operator> {
         } else {
             return fillRule(resultType).produce();
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 38");
     }
 }

@@ -67,7 +67,7 @@ class TryCatchBlockFactory extends Factory<TryCatchBlock> {
     @Override
     public TryCatchBlock produce() throws ProductionFailedException {
         if (complexityLimit < 1 || statementLimit < 1) {
-            throw new ProductionFailedException();
+            throw new ProductionFailedException("JNP 26");
         }
         List<Type> uncheckedThrowables = getUncheckedThrowables();
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)

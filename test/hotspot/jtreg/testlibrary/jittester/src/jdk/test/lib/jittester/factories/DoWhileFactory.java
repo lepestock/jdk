@@ -73,7 +73,7 @@ class DoWhileFactory extends SafeFactory<DoWhile> {
             // Loop body parameters
             thisLoopIterLimit = (long) (0.0001 * complexity * PseudoRandom.random());
             if (thisLoopIterLimit > Integer.MAX_VALUE || thisLoopIterLimit == 0) {
-                throw new ProductionFailedException();
+                throw new ProductionFailedException("JNP 3");
             }
             complexity = thisLoopIterLimit > 0 ? complexity / thisLoopIterLimit : 0;
             long condComplLimit = (long) (complexity * PseudoRandom.random());
@@ -146,6 +146,6 @@ class DoWhileFactory extends SafeFactory<DoWhile> {
             SymbolTable.pop();
             return new DoWhile(level, loop, thisLoopIterLimit, header, body1, body2);
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 4");
     }
 }

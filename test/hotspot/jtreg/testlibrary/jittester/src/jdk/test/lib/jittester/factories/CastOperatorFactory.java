@@ -72,6 +72,6 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
                 SymbolTable.pop();
             }
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 23");
     }
 }

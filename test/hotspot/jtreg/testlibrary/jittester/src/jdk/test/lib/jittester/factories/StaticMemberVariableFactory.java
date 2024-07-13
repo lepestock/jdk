@@ -60,6 +60,6 @@ class StaticMemberVariableFactory extends Factory<StaticMemberVariable> {
                 }
             }
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 13");
     }
 }

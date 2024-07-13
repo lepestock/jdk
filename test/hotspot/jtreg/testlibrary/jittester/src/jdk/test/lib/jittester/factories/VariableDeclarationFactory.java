@@ -53,7 +53,7 @@ class VariableDeclarationFactory extends Factory<VariableDeclaration> {
             LinkedList<Type> types = new LinkedList<>(TypeList.getAll());
             PseudoRandom.shuffle(types);
             if (types.isEmpty()) {
-                throw new ProductionFailedException();
+                throw new ProductionFailedException("JNP 8");
             }
             resultType = types.getFirst();
         }

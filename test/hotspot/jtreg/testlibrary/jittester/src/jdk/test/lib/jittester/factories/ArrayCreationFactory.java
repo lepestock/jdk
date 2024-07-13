@@ -92,6 +92,6 @@ class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
                     .produce();
             return new ArrayCreation(var, arrayResultType, dims);
         }
-        throw new ProductionFailedException();
+        throw new ProductionFailedException("JNP 24");
     }
 }
