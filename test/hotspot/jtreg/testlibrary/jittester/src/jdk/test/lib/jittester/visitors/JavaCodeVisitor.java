@@ -310,7 +310,7 @@ public class JavaCodeVisitor implements Visitor<String> {
                 int level = node.getLevel();
                 if (i instanceof Block) {
                     code.append(PrintingUtils.align(level + 1))
-                        .append("{\n")
+                        .append("{ //NodeId: " + node.nodeId + "\n")
                         .append(s)
                         .append(PrintingUtils.align(level + 1))
                         .append("}");
@@ -449,7 +449,9 @@ public class JavaCodeVisitor implements Visitor<String> {
         Loop loop = node.getLoop();
         StringBuilder code = new StringBuilder();
         int level = node.getLevel();
+        code.append("JNP loop:\n");
         code.append(loop.initialization.accept(this))
+            .append("JNP header:\n")
             .append("\n")
             .append(header.accept(this))
             .append(PrintingUtils.align(level))
@@ -462,11 +464,14 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append(")\n")
             .append(PrintingUtils.align(level))
             .append("{\n")
+            .append("JNP body1:\n")
             .append(body1.accept(this))
             .append(PrintingUtils.align(level + 1))
             .append(loop.manipulator.accept(this))
             .append(";\n")
+            .append("JNP body2:\n")
             .append(body2.accept(this))
+            .append("JNP body3:\n")
             .append(body3.accept(this))
             .append(PrintingUtils.align(level))
             .append("}");
@@ -592,6 +597,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     public String visit(If node) {
         int level = node.getLevel();
         String thenBlockString = PrintingUtils.align(level) + "{\n"
+                                 + "//JNP (if :thenNodeId " + node.getChild(If.IfPart.THEN.ordinal()).nodeId + ")\n"
                                  + node.getChild(If.IfPart.THEN.ordinal()).accept(this)
                                  + PrintingUtils.align(level) + "}";
 
@@ -765,7 +771,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(StaticConstructorDefinition node) {
         IRNode body = node.getChild(0);
-        return "static {\n"
+        return "static { //JNP(ids :StaticConstructorDefinition " + node.nodeId + " :Block " + body.nodeId + ")\n"
                 + (body != null ? body.accept(this): "")
                 + PrintingUtils.align(node.getLevel()) + "}";
     }

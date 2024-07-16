@@ -52,6 +52,14 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
     public StaticConstructorDefinition produce() throws ProductionFailedException {
         SymbolTable.push();
         IRNode body;
+        /*
+            try {
+                throw new Throwable("JNP a block has been created!");
+            } catch (Throwable thr) {
+                System.out.println("JNP stack trace");
+                thr.printStackTrace(System.out);
+            }
+            */
         try {
             SymbolTable.remove(SymbolTable.get("this", VariableInfo.class));
             long complLimit = (long) (PseudoRandom.random() * complexityLimit);
@@ -70,6 +78,9 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
                     .produce();
         } finally {
             SymbolTable.pop();
+        }
+        if (IRNode.nextNodeId == 6893) {
+            System.out.println("JNP Our block nodeId is " + body.nodeId);
         }
         return new StaticConstructorDefinition(body);
     }

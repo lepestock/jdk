@@ -35,6 +35,8 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.visitors.Visitor;
 
 public abstract class IRNode {
+    public static int nextNodeId = 0;
+    public final int nodeId;
     private IRNode parent;
     private final List<IRNode> children = new ArrayList<>();
     protected TypeKlass owner;
@@ -43,6 +45,7 @@ public abstract class IRNode {
 
     protected IRNode(Type resultType) {
         this.resultType = resultType;
+        this.nodeId = nextNodeId++;
     }
 
     public Type getResultType() {

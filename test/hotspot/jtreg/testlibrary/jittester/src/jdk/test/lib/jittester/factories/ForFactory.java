@@ -65,10 +65,17 @@ class ForFactory extends SafeFactory<For> {
 
     @Override
     protected For sproduce() throws ProductionFailedException {
+        boolean insertBreak = false;
+        if (BlockFactory.DEBUG) {
+            System.out.println("JNP(for-factory :sproduce-started)");
+            insertBreak = true;
+        }
+        if (BlockFactory.DEBUG) System.out.println("JNP -2");
         Block emptyBlock = new Block(ownerClass, returnType, new LinkedList<>(), level - 1);
         if (statementLimit <= 0 || complexityLimit <= 0) {
             throw new ProductionFailedException();
         }
+        if (BlockFactory.DEBUG) System.out.println("JNP -1");
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
                 .setResultType(returnType)
@@ -85,9 +92,17 @@ class ForFactory extends SafeFactory<For> {
         complexity -= statement1ComplLimit;
         // Loop body parameters
         long thisLoopIterLimit = (long) (0.0001 * complexity * PseudoRandom.random());
+        if (BlockFactory.DEBUG) thisLoopIterLimit = 40; //JNP Remove this!
+        if (BlockFactory.DEBUG) {
+            System.out.println("JNP(ForFactory.sproduce" +
+                    " :thisLoopIterLimit " + thisLoopIterLimit +
+                    " :complexity " + complexity +
+                    ")");
+        }
         if (thisLoopIterLimit > Integer.MAX_VALUE || thisLoopIterLimit == 0) {
             throw new ProductionFailedException();
         }
+        if (BlockFactory.DEBUG) System.out.println("JNP 0");
         complexity = thisLoopIterLimit > 0 ? complexity / thisLoopIterLimit : 0;
         long condComplLimit = (long) (complexity * PseudoRandom.random());
         complexity -= condComplLimit;
@@ -104,6 +119,7 @@ class ForFactory extends SafeFactory<For> {
         // Production
         loop.initialization = builder.getCounterInitializerFactory(0).produce();
         Block header;
+        if (BlockFactory.DEBUG) System.out.println("JNP 1");
         try {
             header = builder.setComplexityLimit(headerComplLimit)
                     .setStatementLimit(headerStatementLimit)
@@ -119,6 +135,7 @@ class ForFactory extends SafeFactory<For> {
         }
         SymbolTable.push();
         IRNode statement1;
+        if (BlockFactory.DEBUG) System.out.println("JNP 2");
         try {
             Rule<IRNode> rule = new Rule<>("statement1");
             builder.setComplexityLimit(statement1ComplLimit);
@@ -139,6 +156,7 @@ class ForFactory extends SafeFactory<For> {
                 .getLoopingConditionFactory(limiter)
                 .produce();
         IRNode statement2;
+        if (BlockFactory.DEBUG) System.out.println("JNP 3");
         try {
             statement2 = builder.setComplexityLimit(statement2ComplLimit)
                     .getAssignmentOperatorFactory().produce();
@@ -147,6 +165,7 @@ class ForFactory extends SafeFactory<For> {
         }
         Block body1;
         try {
+//            if (BlockFactory.DEBUG) BlockFactory.INSERT_BREAK = true;
             body1 = builder.setComplexityLimit(body1ComplLimit)
                     .setStatementLimit(body1StatementLimit)
                     .setLevel(level)
@@ -159,9 +178,12 @@ class ForFactory extends SafeFactory<For> {
         } catch (ProductionFailedException e) {
             body1 = emptyBlock;
         }
+        BlockFactory.INSERT_BREAK = false;
         loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
-        Block body2;
+        Block body2 = emptyBlock;
+        if (BlockFactory.DEBUG) System.out.println("JNP 4");
         try {
+//            if (insertBreak) BlockFactory.INSERT_BREAK = true;
             body2 = builder.setComplexityLimit(body2ComplLimit)
                     .setStatementLimit(body2StatementLimit)
                     .setLevel(level)
@@ -174,8 +196,10 @@ class ForFactory extends SafeFactory<For> {
         } catch (ProductionFailedException e) {
             body2 = emptyBlock;
         }
-        Block body3;
+        BlockFactory.INSERT_BREAK = false;
+        Block body3 = emptyBlock;
         try {
+            if (insertBreak) BlockFactory.INSERT_BREAK = true;
             body3 = builder.setComplexityLimit(body3ComplLimit)
                     .setStatementLimit(body3StatementLimit)
                     .setLevel(level)
@@ -188,6 +212,8 @@ class ForFactory extends SafeFactory<For> {
         } catch (ProductionFailedException e) {
             body3 = emptyBlock;
         }
+        BlockFactory.INSERT_BREAK = false;
+        if (BlockFactory.DEBUG) System.out.println("JNP 5");
         SymbolTable.pop();
         return new For(level, loop, thisLoopIterLimit, header,
                 new Statement(statement1, false),

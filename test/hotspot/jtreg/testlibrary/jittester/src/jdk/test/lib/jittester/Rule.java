@@ -36,6 +36,7 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
     private final String name;
     private final TreeSet<RuleEntry> variants;
     private Integer limit = -1;
+    public static boolean DEBUG = false;
 
     @Override
     public int compareTo(Rule<T> rule) {
@@ -82,6 +83,10 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                     }
                 } while (iterator.hasNext());
                 try {
+                    if (DEBUG) {
+                        System.out.println("JNP(rule-choice :rule " + ruleEntry + ")");
+                        DEBUG = false;
+                    }
                     return ruleEntry.produce();
                 } catch (ProductionFailedException e) {
                 }
@@ -94,6 +99,7 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
         }
         // should probably throw exception here..
         //return getChildren().size() > 0 ? getChild(0).produce() : null;
+        DEBUG = false;
         throw new ProductionFailedException();
     }
 
@@ -116,6 +122,15 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
         @Override
         public int compareTo(RuleEntry entry) {
             return name.compareTo(entry.name);
+        }
+
+        @Override
+        public String toString() {
+            return "(RuleEntry" +
+                " :name " + name +
+                " :weight " + weight +
+                " :factory " + factory +
+                ")";
         }
     }
 }

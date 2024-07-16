@@ -55,6 +55,8 @@ class BlockFactory extends Factory<Block> {
     private final boolean canHaveThrow;
     private final int level;
     private final TypeKlass ownerClass;
+    public static boolean DEBUG = false;
+    public static boolean INSERT_BREAK = false;
 
     BlockFactory(TypeKlass klass, Type returnType, long complexityLimit, int statementLimit,
                  int operatorLimit, int level, boolean subBlock, boolean canHaveBreaks,
@@ -74,6 +76,7 @@ class BlockFactory extends Factory<Block> {
 
     @Override
     public Block produce() throws ProductionFailedException {
+        int startNodeId = IRNode.nextNodeId;
         if (statementLimit > 0 && complexityLimit > 0) {
             List<IRNode> content = new ArrayList<>();
             int slimit = PseudoRandom.randomNotZero(statementLimit);
@@ -90,6 +93,8 @@ class BlockFactory extends Factory<Block> {
                     .setNoConsts(false);
             Rule<IRNode> rule;
             SymbolTable.push();
+            DEBUG = false;
+            boolean jnpToInsert = true;
             for (int i = 0; i < slimit && climit > 0; ) {
                 int subLimit = (int) (PseudoRandom.random() * (slimit - i - 1));
                 builder.setComplexityLimit((long) (PseudoRandom.random() * climit));
@@ -112,10 +117,28 @@ class BlockFactory extends Factory<Block> {
                                 .setCanHaveBreaks(canHaveBreaks)
                                 .setCanHaveContinues(canHaveContinues);
                     }
-                    addControlFlowDeviation(rule, builder);
+                    if (jnpToInsert && startNodeId == 6569) {  //static ctor block inner node...
+                        DEBUG = true;
+                        jnpToInsert = false;
+                        String toInsert = "for";
+                        System.out.println("JNP Inserting the '" + toInsert + "' into the static ctor block...");
+                        rule.add(toInsert, builder.getForFactory(), 10000.0);
+                        Rule.DEBUG = true;
+                    }
+                    else
+                    {
+                        addControlFlowDeviation(rule, builder);
+                    }
                 }
                 try {
                     IRNode choiceResult = rule.produce();
+                    if (DEBUG) {
+                        System.out.println("JNP(BlockFactory" +
+                                " :nodeChoiceResult " + choiceResult +
+                                " :nodeId " + choiceResult.nodeId +
+                                ")");
+                        DEBUG = false;
+                    }
                     if (choiceResult instanceof If || choiceResult instanceof While || choiceResult instanceof DoWhile
                             || choiceResult instanceof For || choiceResult instanceof Switch) {
                         i += subLimit;
@@ -131,9 +154,26 @@ class BlockFactory extends Factory<Block> {
             }
             // Ok, if the block can end with break and continue. Generate the appropriate productions.
             rule = new Rule<>("block_ending");
-            if (canHaveBreaks && !subBlock) {
-                rule.add("break", builder.getBreakFactory());
+            if (INSERT_BREAK) {
+                System.out.println("JNP(BlockFactory.produce.INSERT_BREAK" +
+                        " :canHaveBreaks " + canHaveBreaks +
+                        " :subBlock " + subBlock +
+                        ")");
+                rule.add("break", builder.getBreakFactory(), 100000.0);
+                System.out.println("JNP(BlockFactory.produce :insertBreak_0)");
+                INSERT_BREAK = false;
             }
+            if (canHaveBreaks && !subBlock) {
+                if (INSERT_BREAK) {
+                    rule.add("break", builder.getBreakFactory(), 100000.0);
+                    System.out.println("JNP(BlockFactory.produce :insertBreak)");
+                    INSERT_BREAK = false;
+                } else {
+                    rule.add("break", builder.getBreakFactory());
+                }
+            }
+            INSERT_BREAK = false;
+
             if (canHaveContinues && !subBlock) {
                 rule.add("continue", builder.getContinueFactory());
             }
@@ -160,6 +200,12 @@ class BlockFactory extends Factory<Block> {
             } else {
                 SymbolTable.merge();
             }
+            if (IRNode.nextNodeId == 6892) {
+                System.out.println("JNP block's start nodeId: " + startNodeId);
+            } 
+            if (IRNode.nextNodeId == 6672) {
+                System.out.println("JNP IF block's start nodeId: " + startNodeId);
+            } 
             return new Block(ownerClass, returnType, content, level);
         }
         throw new ProductionFailedException();
