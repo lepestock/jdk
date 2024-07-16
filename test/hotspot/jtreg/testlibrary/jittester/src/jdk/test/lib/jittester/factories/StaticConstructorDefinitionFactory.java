@@ -63,7 +63,7 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
                     .setOperatorLimit(operatorLimit)
                     .setLevel(level)
                     .setSubBlock(true)
-                    .setCanHaveBreaks(true)
+                    .setCanHaveBreaks(false)
                     .setCanHaveContinues(false)
                     .setCanHaveReturn(false)
                     .getBlockFactory()
