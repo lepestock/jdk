@@ -131,7 +131,7 @@ class BlockFactory extends Factory<Block> {
             }
             // Ok, if the block can end with break and continue. Generate the appropriate productions.
             rule = new Rule<>("block_ending");
-            if (canHaveBreaks) {
+            if (canHaveBreaks && !subBlock) {
                 rule.add("break", builder.getBreakFactory());
             }
             if (canHaveContinues && !subBlock) {
