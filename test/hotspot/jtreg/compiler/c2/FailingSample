@@ -1,0 +1,35 @@
+import compiler.lib.ir_framework.*;
+import java.util.Random;
+
+/*
+ * @test
+ * @library /test/lib /
+ * @run driver HelloWorld
+ */
+
+public class HelloWorld {
+    public static void main(String[] args) {
+        TestFramework.run();
+    }
+
+    static final A[] array = new A[1];
+
+    @Test
+    @IR(failOn = { IRNode.IF })
+    public static void test1(A a) {
+        array[0] = a;
+        if (new Random().nextInt(100) > 50) System.out.println("Woof!");
+    }
+
+    @Run(test = "test1")
+    private void test1Runner() {
+        test1(new A());
+        test1(new B());
+    }
+
+    static class A {
+    }
+
+    static class B extends A {
+    }
+}

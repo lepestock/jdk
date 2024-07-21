@@ -21,24 +21,17 @@
  * questions.
  */
 
-package compiler.c2;
-
 /*
  * @test
  * @bug 8318446 8335392
  * @summary Test merging of consecutive stores, and more specifically the MemPointer.
  * @modules java.base/jdk.internal.misc
  * @library /test/lib /
- * @run driver compiler.c2.TestMergeStoresFuzzer
+ * @compile ../lib/ir_framework/TestFramework.java
+ * @run driver TestMergeStoresFuzzer
  */
 
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaCompiler.CompilationTask;
-import javax.tools.JavaFileObject;
-import javax.tools.SimpleJavaFileObject;
-import javax.tools.ToolProvider;
+import compiler.lib.ir_framework.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -47,49 +40,47 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Arrays;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-
-import compiler.lib.ir_framework.*;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler.CompilationTask;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.SimpleJavaFileObject;
+import javax.tools.ToolProvider;
 
 public class TestMergeStoresFuzzer {
+
+  public static String generate() throws IOException {
+    return Files.readString(Path.of(System.getProperty("test.src"))
+            .resolve("PassingSample"));
+
+      /*
+    return Files.readString(Path.of(System.getProperty("test.src"))
+            .resolve("FailingSample"));
+            */
+  }
+
   public static void main(String args[]) throws IOException {
-      if (false) {
-          TestFramework.run(TestMergeStoresFuzzer.class);
-      }
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
 
-    StringWriter writer = new StringWriter();
-    PrintWriter out = new PrintWriter(writer);
-    out.println("import compiler.lib.ir_framework.*;"); // TODO make this work
-    out.println("");
-    out.println("public class HelloWorld {");
-    out.println("    public static void main(String args[]) {");
-    out.println("        System.out.println(\"This is in another java file\");");
-    out.println("        ");
-    out.println("        ");
-    out.println("        ");
-    out.println("        TestFramework.run(HelloWorld.class);");
-    out.println("        System.out.println(\"Done with IR framework.\");");
-    out.println("    }");
-    out.println("");
-    out.println("    @Test");
-    out.println("    static void test() {");
-    out.println("        throw new RuntimeException(\"xyz\");");
-    out.println("    }");
-    out.println("}");
-    out.close();
-    JavaFileObject file = new JavaSourceFromString("HelloWorld", writer.toString());
+    JavaFileObject file = new JavaSourceFromString("HelloWorld", generate());
 
     Iterable<? extends JavaFileObject> compilationUnits = Arrays.asList(file);
     List<String> optionList = new ArrayList<String>();
     optionList.add("-classpath");
-    //optionList.add(System.getProperty("test.classes"));
     optionList.add(System.getProperty("java.class.path"));
+    optionList.add("-d");
+    optionList.add(System.getProperty("test.classes"));
     CompilationTask task = compiler.getTask(null, null, diagnostics, optionList, null, compilationUnits);
 
+    System.out.println(Test.class.getName());
+    System.out.println(Test.class);
     System.out.println("classpath: " + System.getProperty("java.class.path"));
 
     boolean success = task.call();
@@ -109,7 +100,7 @@ public class TestMergeStoresFuzzer {
           ClassLoader sysLoader = ClassLoader.getSystemClassLoader();
           // Classpath for all included classes (e.g. IR Framework).
           URL[] urls = new URL[] { new File("").toURI().toURL(),
-                                   new File(System.getProperty("java.class.path")).toURI().toURL()};
+                                   new File(System.getProperty("test.classes")).toURI().toURL()};
           URLClassLoader classLoader = URLClassLoader.newInstance(urls, sysLoader);
           Class.forName("HelloWorld", true, classLoader).getDeclaredMethod("main", new Class[] { String[].class }).invoke(null, new Object[] { null });
 

@@ -1,0 +1,24 @@
+import compiler.lib.ir_framework.*;
+
+/*
+ * @test
+ * @modules java.base/jdk.internal.misc
+ * @library /test/lib /
+ * @compile ../lib/ir_framework/TestFramework.java
+ * @run driver HelloWorld
+ */
+
+public class HelloWorld {
+    public static void main(String args[]) {
+        System.out.println("This is in another java file");
+        System.out.println(Test.class.getName());
+        System.out.println(Test.class);
+        TestFramework.run(HelloWorld.class);
+        System.out.println("Done with IR framework.");
+    }
+
+    @Test  // TODO: somehow does not find this... why?
+    static void test() {
+        if (false) throw new RuntimeException("xyz");
+    }
+}
