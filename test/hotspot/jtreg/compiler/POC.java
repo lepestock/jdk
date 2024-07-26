@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2023, Red Hat, Inc.
- *
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,39 +20,25 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package compiler;
 
-/*
+import java.util.Arrays;
+import java.io.UnsupportedEncodingException;
+
+/**
  * @test
- * @bug 9999999
- * @requires (jdk.version.major >= 17)
- * @run main/othervm/timeout=30 -XX:CompileCommand=compileonly,POC::jitted* -XX:TieredStopAtLevel=1 POC
- * @author Martin Balao Alonso (mbalao@redhat.com)
+ * @run main/othervm -Xmx6g compiler.POC
  */
+public class POC {
 
-public final class POC {
-    private static void jitted(int val, int val1) {
-        int b = 0;
-        int[] array = {0, 1, 2};
-        val1 = val1 % 2 + val1;
-        if (val >= 0x7fffffff - 2 + val % 3 || val < 0) {
-            return;
+    public static void main(String[] args) {
+        byte[] b = new byte[(0x55555556 >> 1) + 0x30000];
+        Arrays.fill(b,(byte)0x81);
+        try {
+            String s = new String(b,"UTF-8");
+            Class c = Class.forName(s);
+        }catch(ClassNotFoundException|UnsupportedEncodingException e) {
+            e.printStackTrace();
         }
-        int i = array.length + val;
-        i += val1;
-        b += array[i + 0x1 - 0x1 + 0x80000000];
-        b += array[i + 0x0 + 0x1];
-        b += array[i + 0x2];
-    }
-
-    public static void main(String[] args) throws Throwable {
-        for (int i = 0; i < 100_000; ++i) {
-            try {
-                jitted(0x7fffffff - 2, 0x80000001);
-                throw new RuntimeException("No exception thrown");
-            } catch (java.lang.ArrayIndexOutOfBoundsException e) {
-                // Expected
-            }
-        }
-        System.out.println("TEST PASS - OK");
     }
 }
