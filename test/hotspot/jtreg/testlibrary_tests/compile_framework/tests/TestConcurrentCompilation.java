@@ -36,6 +36,12 @@ import compiler.lib.compile_framework.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import jdk.test.lib.Asserts;
+import java.util.stream.IntStream;
+import java.util.concurrent.Future;
+import java.util.stream.Stream;
 
 public class TestConcurrentCompilation {
 
@@ -50,7 +56,7 @@ public class TestConcurrentCompilation {
                              """, i);
     }
 
-    public static void test(int i) {
+    public static int test(int i) {
         System.out.println("Generate and compile XYZ for " + i);
         CompileFramework comp = new CompileFramework();
         comp.add(SourceCode.newJavaSourceCode("XYZ", generate(i)));
@@ -66,13 +72,9 @@ public class TestConcurrentCompilation {
 
         // Now, hopefully all threads have compiled and stored their class-files.
         // We can check if we get the expected result, i.e. the class-file from the current thread.
-        System.out.println("Run XYZ.test for " + i);
-        int j = (int)comp.invoke("XYZ", "test", new Object[] {});
-        if (i != j) {
-            System.out.println("Wrong value: " + i + " vs " + j);
-            throw new RuntimeException("Wrong value: " + i + " vs " + j);
-        }
-        System.out.println("Success for " + i);
+        System.out.println("Executing XYZ.test for " + i);
+        int result = (int)comp.invoke("XYZ", "test", new Object[] {});
+        return result;
     }
 
     public static class MyRunnable implements Runnable {
@@ -87,22 +89,18 @@ public class TestConcurrentCompilation {
         }
     }
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws Exception {
         System.out.println("Generating threads:");
-        List<Thread> threads = new ArrayList<Thread>();
-        for (int i = 0; i < 3; i++) {
-            Thread thread = new Thread(new MyRunnable(i));
-            thread.start();
-            threads.add(thread);
+        final int GENERATORS = 3;
+        var es = Executors.newFixedThreadPool(GENERATORS);
+        Future[] results = IntStream.range(0, GENERATORS).boxed()
+            .map(i -> es.submit(() -> {
+                return TestConcurrentCompilation.test(i);
+            }))
+            .toArray(Future[]::new);
+
+        for (int i = 0; i < GENERATORS; i++) {
+            Asserts.assertEquals(i, results[i].get());
         }
-        System.out.println("Waiting to join threads:");
-        try {
-            for (Thread thread : threads) {
-                thread.join();
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException("interrupted", e);
-        }
-        System.out.println("Success.");
     }
 }
