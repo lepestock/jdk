@@ -77,18 +77,6 @@ public class TestConcurrentCompilation {
         return result;
     }
 
-    public static class MyRunnable implements Runnable {
-        private int i;
-
-        public MyRunnable(int i) {
-            this.i = i;
-        }
-
-        public void run() {
-            TestConcurrentCompilation.test(i);
-        }
-    }
-
     public static void main(String args[]) throws Exception {
         System.out.println("Generating threads:");
         final int GENERATORS = 3;
