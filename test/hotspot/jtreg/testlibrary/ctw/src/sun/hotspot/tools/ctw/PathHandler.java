@@ -24,6 +24,14 @@
 package sun.hotspot.tools.ctw;
 
 import java.io.Closeable;
+import java.lang.classfile.ClassBuilder;
+import java.lang.classfile.ClassElement;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.ClassTransform;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.attribute.SignatureAttribute;
+import java.lang.classfile.constantpool.Utf8Entry;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -40,6 +48,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import jdk.test.whitebox.WhiteBox;
 
 /**
  * Handler for a path, responsible for processing classes in the path.
@@ -92,8 +101,47 @@ public class PathHandler implements Closeable {
         private final Function<String, byte[]> findByteCode;
 
         private PathEntryClassLoader(Function<String, byte[]> findByteCode) {
-            this.findByteCode = findByteCode;
+            this.findByteCode = findByteCode.andThen(
+                    PathEntryClassLoader::sterilizeClinits);
         }
+
+        private static byte[] sterilizeClinits(byte[] src) {
+            ClassFile classFile = ClassFile.of();
+            ClassModel classModel = classFile.parse(src);
+            String className = classModel.thisClass().name().stringValue();
+            ClassTransform droppingTransformer = ClassTransform.dropping(
+                    element -> {
+                        if (element instanceof MethodModel mm
+                                && mm.methodName().stringValue().equals("<clinit>")) {
+                            System.out.println("    JNP " + className + "::<clinit> removed due to security reasons");
+                            return true; } else {
+                                return false;
+                            }
+                    });
+
+            return classFile.transformClass(classModel, droppingTransformer);
+
+            /*
+            //FIXME JNP Remove
+            if (false) {
+                //FIXME JNP Ignoring/inspecting solution
+
+                boolean containsClinit = classModel.methods().stream()
+                    .map(MethodModel::methodName)
+                    .anyMatch(utf8Name -> "<clinit>".equals(utf8Name.stringValue()));
+
+                classModel.methods().stream()
+                    .map(MethodModel::methodName)
+                    .forEachOrdered(System.out::println);
+                if (containsClinit) {
+                    System.out.println("        JNP CLINIT FOUND!!!");
+                }
+            }
+
+            return src;
+            */
+        }
+
 
         @Override
         protected Class<?> findClass(String name) throws ClassNotFoundException {
@@ -225,7 +273,9 @@ public class PathHandler implements Closeable {
             Thread.currentThread().setContextClassLoader(entry.loader());
             try {
                 CompileTheWorld.OUT.println(String.format("[%d]\t%s", id, name));
+                // WhiteBox.getWhiteBox().disableClinitLoading();
                 aClass = entry.loader().loadClass(name);
+                // WhiteBox.getWhiteBox().enableClinitLoading();
                 Compiler.compileClass(aClass, id, executor);
             } catch (Throwable e) {
                 CompileTheWorld.OUT.println(String.format("[%d]\t%s\tWARNING skipped: %s",
