@@ -174,6 +174,12 @@ public class CtwRunner {
         long classStop = stop(totalClassCount);
 
         long classCount = classStop - classStart;
+        //FIXME JNP Make it controllable by a switch, and off by default
+        if (classCount == 0L) {
+            System.out.println("WARN: " + target + "(at " + targetPath + ") does not have any classes");
+            return;
+        }
+
         Asserts.assertGreaterThan(classCount, 0L,
                 target + "(at " + targetPath + ") does not have any classes");
 
@@ -270,6 +276,7 @@ public class CtwRunner {
         Random rng = Utils.getRandomInstance();
 
         ArrayList<String> Args = new ArrayList<String>(Arrays.asList(
+                "-Xlog:class=trace:stdout:uptime,level,tags",
                 "-Xbatch",
                 "-XX:-ShowMessageBoxOnError",
                 "-XX:+UnlockDiagnosticVMOptions",
@@ -287,6 +294,8 @@ public class CtwRunner {
                 "--add-exports", "java.base/jdk.internal.access=ALL-UNNAMED",
                 // enable diagnostic logging
                 "-XX:+LogCompilation",
+                //FIXME JNP Remove that Xlog printing?
+                // "-Xlog:class=debug:stdout:uptime,level,tags",
                 // use phase specific log, hs_err and ciReplay files
                 String.format("-XX:LogFile=hotspot_%s_%%p.log", phase),
                 String.format("-XX:ErrorFile=hs_err_%s_%%p.log", phase),

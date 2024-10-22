@@ -2691,6 +2691,8 @@ bool ClassFileParser::wb_clinit_removal_check(const Method * const method,
   };
 
   if (_clinit_loading_disabled && method->name() == vmSymbols::class_initializer_name() && !is_corelib_method()) {
+    log_debug(class)("JNP(wb_clinit_removal_check :ignore_clinit :class_name %s :method_name %s :index %d :length %d :offset %d)",  _class_name->as_C_string(), method->name()->as_C_string(), index, length, offset);
+
     // As it is not possible to change Array size, we have to create a new one
     Array<Method*>* new_methods = MetadataFactory::new_array<Method*>(_loader_data,
                   length-1,
@@ -2745,13 +2747,15 @@ void ClassFileParser::parse_methods(const ClassFileStream* const cfs,
        }
       )
 
+      log_debug(class)("JNP(wb_clinit_removal_check :load_method :class_name %s :method_name %s :index %d :length %d :offset %d)",  _class_name->as_C_string(), method->name()->as_C_string(), index, length, offset);
+
       if (method->is_final()) {
         *has_final_method = true;
       }
       // declares_nonstatic_concrete_methods: declares concrete instance methods, any access flags
       // used for interface initialization, and default method inheritance analysis
       if (is_interface && !(*declares_nonstatic_concrete_methods)
-        && !method->is_abstract() && !method->is_static()) {
+              && !method->is_abstract() && !method->is_static()) {
         *declares_nonstatic_concrete_methods = true;
       }
       _methods->at_put(index + skipping_offset, method);

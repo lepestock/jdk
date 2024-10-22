@@ -49,6 +49,7 @@ class InstanceKlass;
 class RecordComponent;
 class Symbol;
 class FieldLayoutBuilder;
+class WhiteBox;
 
 // Utility to collect and compact oop maps during layout
 class OopMapBlocksBuilder : public ResourceObj {
@@ -84,6 +85,7 @@ class FieldLayoutInfo : public ResourceObj {
 class ClassFileParser {
   friend class FieldLayoutBuilder;
   friend class FieldLayout;
+  friend class WhiteBox;
 
   class ClassAnnotationCollector;
   class FieldAnnotationCollector;

@@ -40,6 +40,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import jdk.test.whitebox.WhiteBox;
 
 /**
  * Handler for a path, responsible for processing classes in the path.
@@ -225,7 +226,9 @@ public class PathHandler implements Closeable {
             Thread.currentThread().setContextClassLoader(entry.loader());
             try {
                 CompileTheWorld.OUT.println(String.format("[%d]\t%s", id, name));
+                WhiteBox.getWhiteBox().disableClinitLoading();
                 aClass = entry.loader().loadClass(name);
+                WhiteBox.getWhiteBox().enableClinitLoading();
                 Compiler.compileClass(aClass, id, executor);
             } catch (Throwable e) {
                 CompileTheWorld.OUT.println(String.format("[%d]\t%s\tWARNING skipped: %s",
