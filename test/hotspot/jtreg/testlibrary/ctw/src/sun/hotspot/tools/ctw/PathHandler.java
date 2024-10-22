@@ -24,6 +24,9 @@
 package sun.hotspot.tools.ctw;
 
 import java.io.Closeable;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassTransform;
+import java.lang.classfile.MethodModel;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -92,7 +95,22 @@ public class PathHandler implements Closeable {
         private final Function<String, byte[]> findByteCode;
 
         private PathEntryClassLoader(Function<String, byte[]> findByteCode) {
-            this.findByteCode = findByteCode;
+            boolean allowClinits = "true".equals(
+                    System.getProperty("sun.hotspot.tools.ctwrunner.allow_clinits", "true"));
+
+            this.findByteCode = allowClinits ? findByteCode
+                : findByteCode.andThen(PathEntryClassLoader::sterilizeClinits);
+        }
+
+        /**
+         * Removes 'clinit' methods to prevent code execution
+         */
+        private static byte[] sterilizeClinits(byte[] src) {
+            ClassFile classFile = ClassFile.of();
+            return classFile.transformClass(classFile.parse(src),
+                    ClassTransform.dropping(
+                        element -> element instanceof MethodModel mm
+                                   && mm.methodName().stringValue().equals("<clinit>")));
         }
 
         @Override
