@@ -2755,7 +2755,7 @@ void ClassFileParser::parse_methods(const ClassFileStream* const cfs,
       // declares_nonstatic_concrete_methods: declares concrete instance methods, any access flags
       // used for interface initialization, and default method inheritance analysis
       if (is_interface && !(*declares_nonstatic_concrete_methods)
-              && !method->is_abstract() && !method->is_static()) {
+        && !method->is_abstract() && !method->is_static()) {
         *declares_nonstatic_concrete_methods = true;
       }
       _methods->at_put(index + skipping_offset, method);
