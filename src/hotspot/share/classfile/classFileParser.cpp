@@ -2747,7 +2747,7 @@ void ClassFileParser::parse_methods(const ClassFileStream* const cfs,
        }
       )
 
-      log_debug(class)("JNP(wb_clinit_removal_check :load_method :class_name %s :method_name %s :index %d :length %d :offset %d)",  _class_name->as_C_string(), method->name()->as_C_string(), index, length, offset);
+      log_debug(class)("JNP(wb_clinit_removal_check :load_method :class_name %s :method_name %s :index %d :length %d :skipping_offset %d)",  _class_name->as_C_string(), method->name()->as_C_string(), index, length, skipping_offset);
 
       if (method->is_final()) {
         *has_final_method = true;
