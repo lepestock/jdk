@@ -276,7 +276,8 @@ public class CtwRunner {
         Random rng = Utils.getRandomInstance();
 
         ArrayList<String> Args = new ArrayList<String>(Arrays.asList(
-                "-Xlog:class=trace:stdout:uptime,level,tags",
+                //FIXME JNP Remove "-Xlog:class=trace:stdout:uptime,level,tags",
+                "--enable-preview",
                 "-Xbatch",
                 "-XX:-ShowMessageBoxOnError",
                 "-XX:+UnlockDiagnosticVMOptions",

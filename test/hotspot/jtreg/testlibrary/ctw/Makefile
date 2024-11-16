@@ -83,12 +83,13 @@ $(DST_DIR)/ctwrunner.sh: $(DST_DIR)
 
 $(DST_DIR)/ctw.jar: filelist $(DST_DIR)/wb.jar
 	@mkdir -p $(OUTPUT_DIR)
-	$(JAVAC) $(EXPORTS) -sourcepath $(SRC_DIR) -d $(OUTPUT_DIR) -cp $(DST_DIR)/wb.jar @filelist
+	$(JAVAC) --enable-preview --source 24 $(EXPORTS) -sourcepath $(SRC_DIR) -d $(OUTPUT_DIR) -cp $(DST_DIR)/wb.jar @filelist
 	$(JAR) --create --file=$@ --main-class $(CTW_MAIN_CLASS) -C $(OUTPUT_DIR) .
 	@rm -rf $(OUTPUT_DIR)
 
 $(DST_DIR)/wb.jar: wb_filelist $(DST_DIR)
-	$(JAVAC)  -sourcepath $(TESTLIBRARY_DIR) \
+	$(JAVAC) --enable-preview --source 24 \
+	         -sourcepath $(TESTLIBRARY_DIR) \
 		-d $(DST_DIR) \
 		-cp $(OUTPUT_DIR) \
 		@wb_filelist
