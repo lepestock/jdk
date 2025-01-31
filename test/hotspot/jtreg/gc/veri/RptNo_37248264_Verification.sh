@@ -11,14 +11,18 @@ TIMEOUT=300 #seconds
 #FIXME JNP Debug mode TIMEOUT=5 #seconds
 PATH_TO_TMP=$(dirname "$(mktemp --dry-run)")
 
-echo "(environment"
-echo " :path $(pwd)"
-echo " :tmp-dir ${PATH_TO_TMP}"
-echo " :env-vars '("
-export | while read l; do echo "   $l"; done
-echo "))"
+#echo "(environment"
+#echo " :path $(pwd)"
+#echo " :tmp-dir ${PATH_TO_TMP}"
+#echo " :env-vars '("
+#export | while read l; do echo "   $l"; done
+#echo "))"
 
-for i in {100..200} ; do 
+#for i in {100..200}; do
+for i in $(seq 100 200); do
+    echo $(date): Iteration $i
     ${TESTJAVA}/bin/java -cp ${TESTCLASSPATH} -XX:ErrorFile=LTAF_MoreFonts_Crash_jdk_24b21_%p.log LTAF_MoreFonts ${TESTSRC}/UbuntuMono-Bold.ttf $i & sleep ${TIMEOUT}; kill $!
+
     find  ${PATH_TO_TMP} -name "*JF*.tmp" -delete
 done
+
