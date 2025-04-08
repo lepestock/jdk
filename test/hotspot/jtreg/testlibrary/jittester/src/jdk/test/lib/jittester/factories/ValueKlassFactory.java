@@ -156,7 +156,7 @@ class ValueKlassFactory extends Factory<ValueKlass> {
                     .setStatementLimit(statementsInFunctionLimit)
                     .setMemberFunctionsArgLimit(memberFunctionsArgLimit);
             variableDeclarations = builder.setComplexityLimit((long) (complexityLimit * 0.001 * PseudoRandom.random()))
-                    .getVariableDeclarationBlockFactory().produce();
+                    .getConstantVariableDeclarationBlockFactory().produce();
             if (!ProductionParams.disableFunctions.value()) {
                 // Try to implement all methods.
                 abstractFunctionsRedefinitions = builder.setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
@@ -179,6 +179,7 @@ class ValueKlassFactory extends Factory<ValueKlass> {
                         .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.6
                                 * PseudoRandom.random()))
                         .setFlags(FunctionInfo.NONE)
+                        .setIsSynchronizedAllowed(false)
                         .getFunctionDefinitionBlockFactory()
                         .produce();
                 constructorDefinitions = builder.setComplexityLimit((long) (complexityLimit * 0.2 * PseudoRandom.random()))
@@ -197,9 +198,8 @@ class ValueKlassFactory extends Factory<ValueKlass> {
         } finally {
             SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
         }
-        // a non-abstract class can be final, so we should allow this to happen.
-        if (!ProductionParams.disableFinalClasses.value() && !thisKlass.isAbstract()
-                && PseudoRandom.randomBoolean()) {
+        // a non-abstract value class is always final
+        if (!thisKlass.isAbstract()) {
             thisKlass.setFinal();
         }
         TypeList.add(thisKlass);
