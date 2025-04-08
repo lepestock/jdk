@@ -79,9 +79,10 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                     rule.add("basic_class", builder.setName(prefix + "_Class_" + i)
                             .setMemberFunctionsLimit(memberFunctionsLimit)
                             .getKlassFactory());
+                    //FIXME JNP Protect with ProductionParams, to avoid issues with ByteCodeGenerator?
                     rule.add("value_class", builder.setName(prefix + "_Value_Class_" + i)
                             .setMemberFunctionsLimit(memberFunctionsLimit)
-                            .getKlassFactory());
+                            .getValueKlassFactory());
                     if (!ProductionParams.disableInterfaces.value()) {
                         rule.add("interface", builder.setName(prefix + "_Interface_" + i)
                                 .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2))

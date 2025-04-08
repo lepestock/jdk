@@ -93,7 +93,7 @@ $(DIST_JAR): INIT COMPILE manifest
 	$(JAR) cfm $(DIST_JAR) $(MANIFEST) -C $(CLASSES_DIR) .
 
 rebuild:
-	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) @filelist
+	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) -Xmaxerrs 5 @filelist
 
 manifest:
 	@echo 'Manifest-Version: 1.0' > $(MANIFEST)

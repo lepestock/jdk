@@ -64,6 +64,7 @@ import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.classes.MainKlass;
+import jdk.test.lib.jittester.classes.ValueKlass;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
 import jdk.test.lib.jittester.functions.ConstructorDefinition;
 import jdk.test.lib.jittester.functions.ConstructorDefinitionBlock;
@@ -389,8 +390,8 @@ public class IRNodeBuilder {
                 getOperatorLimit(), getLevel());
     }
 
-    public Factory<Klass> getValueKlassFactory() {
-        return new KlassFactory(getName(), getComplexityLimit(),
+    public Factory<ValueKlass> getValueKlassFactory() {
+        return new ValueKlassFactory(getName(), getComplexityLimit(),
                 getMemberFunctionsLimit(), getMemberFunctionsArgLimit(), getStatementLimit(),
                 getOperatorLimit(), getLevel());
     }

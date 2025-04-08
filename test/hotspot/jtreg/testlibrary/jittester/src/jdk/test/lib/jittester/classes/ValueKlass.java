@@ -30,7 +30,8 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.visitors.Visitor;
 
 
-public class Klass extends IRNode {
+//FIXME JNP Make it inherit IRNode? Or Klass is ok?
+public class ValueKlass extends IRNode {
 
     public TypeKlass getThisKlass() {
         return thisKlass;
@@ -64,7 +65,7 @@ public class Klass extends IRNode {
     private final TypeKlass parentKlass;
     private final ArrayList<TypeKlass> interfaces;
 
-    public Klass(TypeKlass thisKlass, TypeKlass parent,
+    public ValueKlass(TypeKlass thisKlass, TypeKlass parent,
             ArrayList<TypeKlass> interfaces, String name, int level,
             IRNode variableDeclarations, IRNode constructorDefinitions,
             IRNode functionDefinitions, IRNode abstractFunctionRedefinitions,
