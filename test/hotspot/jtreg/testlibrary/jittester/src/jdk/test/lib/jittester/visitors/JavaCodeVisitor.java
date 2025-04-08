@@ -23,6 +23,7 @@
 
 package jdk.test.lib.jittester.visitors;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;

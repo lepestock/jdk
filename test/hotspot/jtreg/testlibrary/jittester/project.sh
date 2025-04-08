@@ -13,6 +13,16 @@ repl-run ()
         --testbase-dir testbase --temp-dir tmp --print-hierarchy true --main-class Gentest $@
 }
 
+repl-run-logging ()
+{
+    java -cp build/classes --add-opens java.base/java.util=ALL-UNNAMED \
+            -Djittester.log.enabled=true \
+        jdk.test.lib.jittester.JavaCodeGenerator \
+            --classes-file ./conf/classes.lst \
+            --exclude-methods-file ./conf/exclude.methods.lst \
+            --testbase-dir testbase --temp-dir tmp --print-hierarchy true --main-class Gentest $@
+}
+
 repl-gentest-build ()
 {
     javac -Xlint:none -cp ./build/classes/ --release 25 --enable-preview -Xmaxerrs 5 src/jdk/test/lib/jittester/jtreg/Printer.java testbase/java_tests/Gentest.java -d testbase/java_tests/
