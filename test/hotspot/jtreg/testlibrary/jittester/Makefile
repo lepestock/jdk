@@ -92,14 +92,19 @@ all: $(DIST_JAR)
 $(DIST_JAR): INIT COMPILE manifest
 	$(JAR) cfm $(DIST_JAR) $(MANIFEST) -C $(CLASSES_DIR) .
 
+rebuild:
+	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) @filelist
+
 manifest:
 	@echo 'Manifest-Version: 1.0' > $(MANIFEST)
 	@echo 'X-COMMENT: Main-Class will be added automatically by build' >> $(MANIFEST)
 	@echo 'Main-Class: jdk.test.lib.jittester.Automatic' >> $(MANIFEST)
 
-compile_asm: INIT
+$(CLASSES_DIR)/filelist_asm: INIT
 	$(shell find $(ASM_SRC_DIR) -name '*.java' > $(CLASSES_DIR)/filelist_asm)
 	${JAVAC} -d $(CLASSES_DIR) @$(CLASSES_DIR)/filelist_asm
+
+compile_asm: INIT $(CLASSES_DIR)/filelist_asm
 
 compile_testlib: INIT
 	$(JAVAC) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/org.objectweb.asm=ALL-UNNAMED -Xlint $(TESTLIBRARY_SRC_FILES) -d $(CLASSES_DIR)

@@ -37,6 +37,7 @@ import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
 
 class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
     private final String prefix;
@@ -78,6 +79,9 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                     rule.add("basic_class", builder.setName(prefix + "_Class_" + i)
                             .setMemberFunctionsLimit(memberFunctionsLimit)
                             .getKlassFactory());
+                    rule.add("value_class", builder.setName(prefix + "_Value_Class_" + i)
+                            .setMemberFunctionsLimit(memberFunctionsLimit)
+                            .getKlassFactory());
                     if (!ProductionParams.disableInterfaces.value()) {
                         rule.add("interface", builder.setName(prefix + "_Interface_" + i)
                                 .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2))
@@ -91,7 +95,11 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
         }
         ensureMinDepth(content);
         ensureMaxDepth(content);
-        return new ClassDefinitionBlock(content, level);
+        ClassDefinitionBlock result = new ClassDefinitionBlock(content, level);
+        System.out.println("====== JNP classss ");
+        System.out.println(new JavaCodeVisitor().visit(result));
+        System.out.println("");
+        return result;
     }
 
     private void ensureMinDepth(Collection<IRNode> content) throws ProductionFailedException {

@@ -389,6 +389,12 @@ public class IRNodeBuilder {
                 getOperatorLimit(), getLevel());
     }
 
+    public Factory<Klass> getValueKlassFactory() {
+        return new KlassFactory(getName(), getComplexityLimit(),
+                getMemberFunctionsLimit(), getMemberFunctionsArgLimit(), getStatementLimit(),
+                getOperatorLimit(), getLevel());
+    }
+
     public Factory<IRNode> getLimitedExpressionFactory() throws ProductionFailedException {
         return new LimitedExpressionFactory(getComplexityLimit(), getOperatorLimit(),
                 getOwnerClass(), getResultType(), getExceptionSafe(), getNoConsts());

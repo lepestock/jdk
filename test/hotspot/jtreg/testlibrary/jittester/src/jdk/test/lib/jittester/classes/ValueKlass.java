@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,7 +21,6 @@
  * questions.
  */
 
-//FIXME JNP Make it nice
 package jdk.test.lib.jittester.classes;
 
 import java.util.ArrayList;
@@ -31,8 +30,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.visitors.Visitor;
 
 
-//FIXME JNP Make it inherit IRNode? Or Klass is ok?
-public class ValueKlass extends Klass {
+public class Klass extends IRNode {
 
     public TypeKlass getThisKlass() {
         return thisKlass;
@@ -66,7 +64,7 @@ public class ValueKlass extends Klass {
     private final TypeKlass parentKlass;
     private final ArrayList<TypeKlass> interfaces;
 
-    public ValueKlass(TypeKlass thisKlass, TypeKlass parent,
+    public Klass(TypeKlass thisKlass, TypeKlass parent,
             ArrayList<TypeKlass> interfaces, String name, int level,
             IRNode variableDeclarations, IRNode constructorDefinitions,
             IRNode functionDefinitions, IRNode abstractFunctionRedefinitions,
