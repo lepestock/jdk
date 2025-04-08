@@ -65,6 +65,11 @@ public class FunctionInfo extends Symbol {
         complexity = value.complexity;
     }
 
+    @Override
+    public String toString() {
+        return "(FunctionInfo :name " + name + ")";
+    }
+
     public boolean isSynchronized() {
         return (flags & SYNCHRONIZED) > 0;
     }
@@ -130,4 +135,5 @@ public class FunctionInfo extends Symbol {
     public boolean isStatic() {
         return (flags & STATIC) > 0;
     }
+
 }

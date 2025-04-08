@@ -39,6 +39,7 @@ import jdk.test.lib.jittester.loops.For;
 import jdk.test.lib.jittester.loops.While;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -116,6 +117,7 @@ class BlockFactory extends Factory<Block> {
                 }
                 try {
                     IRNode choiceResult = rule.produce();
+        Logger.log(ownerClass, "(BlockFactory :point1 :choiceResult " + choiceResult + ")", content);
                     if (choiceResult instanceof If || choiceResult instanceof While || choiceResult instanceof DoWhile
                             || choiceResult instanceof For || choiceResult instanceof Switch) {
                         i += subLimit;
