@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,8 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.visitors.Visitor;
 
 
-public class Klass extends IRNode {
+//FIXME JNP Make it inherit IRNode? Or Klass is ok?
+public class ValueKlass extends IRNode {
 
     public TypeKlass getThisKlass() {
         return thisKlass;
@@ -53,7 +54,7 @@ public class Klass extends IRNode {
         DATA_MEMBERS,
         CONSTRUCTORS,
         REDEFINED_FUNCTIONS,
-        OVERRIDEN_FUNCTIONS,
+        OVERRIDEN_FUNCTIONS,    //FIXME JNP non-abstract VK are effectively final, do we need this?
         MEMBER_FUNCTIONS,
         MEMBER_FUNCTIONS_DECLARATIONS,
         PRINT_VARIABLES,
@@ -64,7 +65,7 @@ public class Klass extends IRNode {
     private final TypeKlass parentKlass;
     private final ArrayList<TypeKlass> interfaces;
 
-    public Klass(TypeKlass thisKlass, TypeKlass parent,
+    public ValueKlass(TypeKlass thisKlass, TypeKlass parent,
             ArrayList<TypeKlass> interfaces, String name, int level,
             IRNode variableDeclarations, IRNode constructorDefinitions,
             IRNode functionDefinitions, IRNode abstractFunctionRedefinitions,

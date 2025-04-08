@@ -44,7 +44,7 @@ public class TypeKlass extends Type {
     public static final int FINAL = 0x01;
     public static final int INTERFACE = 0x02;
     public static final int ABSTRACT = 0x04;
-
+    public static final int VALUE_KLASS = 0x08;
 
     public TypeKlass(String name) {
         this(name, NONE);
@@ -187,6 +187,14 @@ public class TypeKlass extends Type {
 
     public void setAbstract() {
         flags |= ABSTRACT;
+    }
+
+    public boolean isValueKlass() {
+        return (flags & VALUE_KLASS) > 0;
+    }
+
+    public void setValueKlass() {
+        flags |= VALUE_KLASS;
     }
 
     public boolean isInterface() {

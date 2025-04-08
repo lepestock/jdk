@@ -75,9 +75,13 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
             for (int i = 0; i < limit; i++) {
                 try {
                     Rule<IRNode> rule = new Rule<>("class");
-                    rule.add("basic_class", builder.setName(prefix + "_Class_" + i)
+                    rule.add("identity_class", builder.setName(prefix + "_Class_" + i)
                             .setMemberFunctionsLimit(memberFunctionsLimit)
                             .getKlassFactory());
+                    //FIXME JNP Protect with ProductionParams, to avoid issues with ByteCodeGenerator?
+                    rule.add("value_class", builder.setName(prefix + "_Value_Class_" + i)
+                            .setMemberFunctionsLimit(memberFunctionsLimit)
+                            .getValueKlassFactory(), 10.0);
                     if (!ProductionParams.disableInterfaces.value()) {
                         rule.add("interface", builder.setName(prefix + "_Interface_" + i)
                                 .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2))
@@ -91,7 +95,8 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
         }
         ensureMinDepth(content);
         ensureMaxDepth(content);
-        return new ClassDefinitionBlock(content, level);
+        ClassDefinitionBlock result = new ClassDefinitionBlock(content, level);
+        return result;
     }
 
     private void ensureMinDepth(Collection<IRNode> content) throws ProductionFailedException {

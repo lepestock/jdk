@@ -81,6 +81,7 @@ import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.classes.MainKlass;
+import jdk.test.lib.jittester.classes.ValueKlass;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
 import jdk.test.lib.jittester.functions.ConstructorDefinition;
 import jdk.test.lib.jittester.functions.ConstructorDefinitionBlock;
@@ -1091,6 +1092,12 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
         currentClass = prevClass;
         return byteCode;
     }
+
+    @Override
+    public byte[] visit(ValueKlass node) {
+        throw new UnsupportedOperationException("ByteCodeVisitor doesn't support Value classes");
+    }
+
 
     private void visitLiteral(boolean value) {
         double chance = PseudoRandom.random();
