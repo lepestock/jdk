@@ -23,6 +23,7 @@
 
 package jdk.test.lib.jittester.visitors;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -653,6 +654,100 @@ public class JavaCodeVisitor implements Visitor<String> {
              + printVariables.accept(this)
              + "}\n";
         return r;
+    }
+
+    private static final String[] ownerClassFilter = new String[] {"Gentest_Value_Class_1"};
+//    private static final String[] breakpoints = new String[] { "false ? this : this"};
+    private static final String[] breakpoints = new String[] { }; 
+    private static final String breakCode = null;
+
+    public static void log(TypeKlass ownerClass, String point, List<IRNode> nodes) {
+        if (Arrays.stream(ownerClassFilter).anyMatch(ownerClass.toString()::equals)) {
+//        if (ownerClass.toString().equals("Gentest_Value_Class_1")) {
+            System.out.println("\n\n==== " + point + " ====");
+
+            String result = new JavaCodeVisitor().universal(nodes);
+            System.out.println(result);
+            if (Arrays.stream(breakpoints).anyMatch(result::equals) && breakCode != null && breakCode.equals(point)) {
+                throw new Error("Breakpoint reached");
+            }
+        }
+    }
+
+    public static void log(TypeKlass ownerClass, String point, IRNode node) {
+        if (Arrays.stream(ownerClassFilter).anyMatch(ownerClass.toString()::equals)) {
+//        if (ownerClass.toString().equals("Gentest_Value_Class_1")) {
+            System.out.println("\n\n==== " + point + " ====");
+
+            String result = new JavaCodeVisitor().universal(node);
+            System.out.println(result);
+            if (Arrays.stream(breakpoints).anyMatch(result::equals) && breakCode != null && breakCode.equals(point)) {
+                throw new Error("Breakpoint reached");
+            }
+        }
+    }
+
+    public String universal(List<IRNode> nodes) {
+        return nodes.stream()
+            .map(this::universal)
+            .collect(Collectors.joining("\n"));
+    }
+
+    public String universal(IRNode nodde) {
+        return switch (nodde) {
+            case ArgumentDeclaration node -> visit(node);
+            case ArrayCreation node -> visit(node);
+            case ArrayElement node -> visit(node);
+            case ArrayExtraction node -> visit(node);
+            case BinaryOperator node -> visit(node);
+            case Block node -> visit(node);
+            case Break node -> visit(node);
+            case CastOperator node -> visit(node);
+            case ClassDefinitionBlock node -> visit(node);
+            case ConstructorDefinition node -> visit(node);
+            case ConstructorDefinitionBlock node -> visit(node);
+            case Continue node -> visit(node);
+            case CounterInitializer node -> visit(node);
+            case CounterManipulator node -> visit(node);
+            case Declaration node -> visit(node);
+            case DoWhile node -> visit(node);
+            case For node -> visit(node);
+            case Function node -> visit(node);
+            case FunctionDeclaration node -> visit(node);
+            case FunctionDeclarationBlock node -> visit(node);
+            case FunctionDefinition node -> visit(node);
+            case FunctionDefinitionBlock node -> visit(node);
+            case FunctionRedefinition node -> visit(node);
+            case FunctionRedefinitionBlock node -> visit(node);
+            case If node -> visit(node);
+            case Initialization node -> visit(node);
+            case Interface node -> visit(node);
+            case Klass node -> visit(node);
+            case ValueKlass node -> visit(node);
+            case Literal node -> visit(node);
+            case LocalVariable node -> visit(node);
+            case LoopingCondition node -> visit(node);
+            case MainKlass node -> visit(node);
+            case NonStaticMemberVariable node -> visit(node);
+            case Nothing node -> visit(node);
+            case PrintVariables node -> visit(node);
+            case Return node -> visit(node);
+            case Throw node -> visit(node);
+            case Statement node -> visit(node);
+            case StaticConstructorDefinition node -> visit(node);
+            case StaticMemberVariable node -> visit(node);
+            case Switch node -> visit(node);
+            case TernaryOperator node -> visit(node);
+            case TypeArray node -> visit(node);
+            case Type node -> visit(node);
+            case UnaryOperator node -> visit(node);
+            case VariableDeclaration node -> visit(node);
+            case VariableDeclarationBlock node -> visit(node);
+            case While node -> visit(node);
+            case CatchBlock node -> visit(node);
+            case TryCatchBlock node -> visit(node);
+            default -> throw new Error("Unsupported node: " + nodde);
+        };
     }
 
     //FIXME JNP Make override? Support in ByteCodeGenerator?

@@ -35,6 +35,7 @@ import jdk.test.lib.jittester.functions.ConstructorDefinition;
 import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
 
 class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
     private final long complexityLimit;
@@ -98,6 +99,7 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
                         .setSubBlock(true)
                         .getBlockFactory()
                         .produce();
+        JavaCodeVisitor.log(ownerClass, "(ConstructorDefinitionFactory :point1)", body);
             } catch (ProductionFailedException e) {
                 body = null;
             }

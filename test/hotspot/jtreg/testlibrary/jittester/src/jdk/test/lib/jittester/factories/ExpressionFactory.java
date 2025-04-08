@@ -31,12 +31,15 @@ import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
 
 class ExpressionFactory extends SafeFactory<IRNode> {
     private final Rule<IRNode> rule;
+    private final TypeKlass ownerClass;
 
     ExpressionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean exceptionSafe, boolean noconsts) throws ProductionFailedException {
+        this.ownerClass = ownerClass; //FIXME JNP Remove
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setComplexityLimit(complexityLimit)
                 .setOperatorLimit(operatorLimit)
@@ -74,6 +77,8 @@ class ExpressionFactory extends SafeFactory<IRNode> {
     @Override
     protected IRNode sproduce() throws ProductionFailedException {
         ProductionLimiter.limitProduction();
-        return rule.produce();
+        IRNode result = rule.produce();
+        JavaCodeVisitor.log(ownerClass, "(ExpressionFactory :point1)", result);
+        return result;
     }
 }

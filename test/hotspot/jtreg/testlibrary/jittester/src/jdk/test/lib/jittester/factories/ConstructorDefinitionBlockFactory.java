@@ -30,6 +30,7 @@ import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.functions.ConstructorDefinitionBlock;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
 
 class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlock> {
     private final long complexityLimit;
@@ -60,6 +61,7 @@ class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlo
                 .setOperatorLimit(operatorLimit)
                 .setLevel(level);
         ArrayList<IRNode> content = new ArrayList<>();
+        JavaCodeVisitor.log(ownerClass, "Point 1", content);
         int memFunLimit = PseudoRandom.randomNotZero(memberFunctionsLimit);
         builder.setComplexityLimit(complexityLimit / memFunLimit);
         if (!ProductionParams.disableStatic.value() && PseudoRandom.randomBoolean()) {
@@ -68,22 +70,27 @@ class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlo
             // take static constructor into account
             --memFunLimit;
         }
+        JavaCodeVisitor.log(ownerClass, "Point 2", content);
         // No matter what, generate default constructor first.
         // This would guarantee a way to initialize a data member in case,
         // when arguments to a non-default constructor cannot be generated.
         content.add(builder.setMemberFunctionsArgLimit(0)
                 .getConstructorDefinitionFactory()
                 .produce());
+        JavaCodeVisitor.log(ownerClass, "Point 3", content);
         if (--memFunLimit > 0) {
             for (int i = 0; i < memFunLimit; i++) {
                 try {
                     content.add(builder.setMemberFunctionsArgLimit(memberFunctionsArgLimit)
                             .getConstructorDefinitionFactory()
                             .produce());
+        JavaCodeVisitor.log(ownerClass, "Point 4", content);
                 } catch (ProductionFailedException e) {
                 }
             }
         }
-        return new ConstructorDefinitionBlock(content, level);
+        ConstructorDefinitionBlock result = new ConstructorDefinitionBlock(content, level);
+        JavaCodeVisitor.log(ownerClass, "Result", content);
+        return result;
     }
 }

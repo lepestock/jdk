@@ -97,9 +97,11 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
         ensureMinDepth(content);
         ensureMaxDepth(content);
         ClassDefinitionBlock result = new ClassDefinitionBlock(content, level);
-        System.out.println("====== JNP classss ");
-        System.out.println(new JavaCodeVisitor().visit(result));
-        System.out.println("");
+        if (false) {//FIXME JNP Remove
+            System.out.println("====== JNP classss ");
+            System.out.println(new JavaCodeVisitor().visit(result));
+            System.out.println("");
+        }
         return result;
     }
 

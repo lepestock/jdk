@@ -36,6 +36,7 @@ import jdk.test.lib.jittester.functions.Function;
 import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
 
 class FunctionFactory extends SafeFactory<Function> {
     private final FunctionInfo functionInfo;
@@ -142,6 +143,7 @@ class FunctionFactory extends SafeFactory<Function> {
                                 accum.add(b.setResultType(argType.type)
                                         .getExpressionFactory()
                                         .produce());
+            JavaCodeVisitor.log(ownerClass, "(FunctionFactory :point1 :function " + function + ")", accum);
                             }
                         }
                         return new Function(ownerClass, functionInfo, accum);

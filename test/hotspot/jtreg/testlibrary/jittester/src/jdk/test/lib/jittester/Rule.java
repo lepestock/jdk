@@ -47,6 +47,11 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
         variants = new TreeSet<>();
     }
 
+    @Override
+    public String toString() {
+        return "(Rule :name " + name + ")";
+    }
+
     public void add(String ruleName, Factory<? extends T> factory) {
         add(ruleName, factory, 1.0);
     }
