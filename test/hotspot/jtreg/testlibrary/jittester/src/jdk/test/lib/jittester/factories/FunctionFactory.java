@@ -38,12 +38,15 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.Logger;
 
-class FunctionFactory extends SafeFactory<Function> {
+public class FunctionFactory extends SafeFactory<Function> {
     private final FunctionInfo functionInfo;
     private final int operatorLimit;
     private final long complexityLimit;
     private final boolean exceptionSafe;
     private final TypeKlass ownerClass;
+    public static long SEED;
+    private static long INTERVENTION = 131992649516573L;
+    public static VariableInfo forbiddenThizz = null;
 
     FunctionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe) {
@@ -57,6 +60,19 @@ class FunctionFactory extends SafeFactory<Function> {
 
     @Override
     protected Function sproduce() throws ProductionFailedException {
+        PseudoRandom.randomBoolean(); //Make the calls from SafeFactory predictable
+        SEED = PseudoRandom.getCurrentSeed();
+        Logger.log(SEED == INTERVENTION, "FunctionFactory :ownerClass " + ownerClass);
+        VariableInfo removedThizz = null;
+        boolean thizzRemoved = false;
+        if (forbiddenThizz != null && ownerClass.equals(forbiddenThizz.getOwner())) {
+            Logger.log(SEED == INTERVENTION, "FunctionFactory :forbiddenThizz " + forbiddenThizz +
+                    " :thizz-type " + forbiddenThizz.type +
+                    " :result-type " + functionInfo.type +
+                    " :types-equals? " + functionInfo.type.equals(forbiddenThizz.type));
+            SymbolTable.removeVariable(forbiddenThizz);
+            thizzRemoved = true;
+        }
         // Currently no function is exception-safe
         if (exceptionSafe) {
             throw new ProductionFailedException();
@@ -146,6 +162,11 @@ class FunctionFactory extends SafeFactory<Function> {
             Logger.log(ownerClass, "(FunctionFactory :point1 :function " + function + ")", accum);
                             }
                         }
+
+            //if (SEED == INTERVENTION) {
+            if (thizzRemoved) {
+                SymbolTable.add(forbiddenThizz);
+            }
                         return new Function(ownerClass, functionInfo, accum);
                     } catch (ProductionFailedException e) {
                         // removeAllChildren();

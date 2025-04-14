@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import jdk.test.lib.jittester.types.TypeKlass;
@@ -85,7 +86,7 @@ public class SymbolTable {
         }
     }
 
-    protected static Collection<Symbol> get(Type type) {
+    public static Collection<Symbol> get(Type type) {
         HashMap<Type, ArrayList<Symbol>> vars = SYMBOL_STACK.peek();
         if (vars.containsKey(type)) {
             return vars.get(type);
@@ -102,6 +103,16 @@ public class SymbolTable {
         }
         return new ArrayList<>();
     }
+
+    public static void removeVariable(VariableInfo variable) {
+        HashMap<Type, ArrayList<Symbol>> vars = SYMBOL_STACK.peek();
+
+        if (vars.containsKey(variable.type)) {
+            vars.get(variable.type).remove(variable);
+        }
+    }
+
+
 
     protected static Collection<Symbol> get(TypeKlass typeKlass, Type type,
             Class<?> classToCheck) {
