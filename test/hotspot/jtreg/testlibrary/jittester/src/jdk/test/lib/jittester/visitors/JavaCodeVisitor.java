@@ -891,6 +891,7 @@ public class JavaCodeVisitor implements Visitor<String> {
             result.append(" | ").append(node.throwables.get(i).accept(this));
         }
         result.append(" ex) {\n");
+        result.append("ex.printStackTrace(); //JNP Block\n");   //FIXME JNP Remove this debug printout
         result.append(node.getChild(0).accept(this));
         result.append(PrintingUtils.align(level)).append("}\n");
         return result.toString();
