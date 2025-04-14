@@ -32,6 +32,7 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
 class LocalVariableFactory extends Factory<LocalVariable> {
     private final Type type;
@@ -44,6 +45,8 @@ class LocalVariableFactory extends Factory<LocalVariable> {
 
     @Override
     public LocalVariable produce() throws ProductionFailedException {
+        Logger.log(PseudoRandom.getCurrentSeed() == 132795661563799L,
+                "LocalVariableFactory :type");
         // Get the variables of the requested type from SymbolTable
         ArrayList<Symbol> allVariables = new ArrayList<>(SymbolTable.get(type, VariableInfo.class));
         if (!allVariables.isEmpty()) {

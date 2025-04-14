@@ -24,6 +24,8 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+import java.util.stream.Collectors;
+
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.NonStaticMemberVariable;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -33,6 +35,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
 class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
     private final Type type;
@@ -55,7 +58,10 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
     @Override
     public NonStaticMemberVariable produce() throws ProductionFailedException {
         // Get the variables of the requested type from SymbolTable
+        long SEED = PseudoRandom.getCurrentSeed();
         ArrayList<Symbol> variables = new ArrayList<>(SymbolTable.get(type, VariableInfo.class));
+        Logger.log(SEED == 194820577109216L,
+                ":variables " + variables.stream().map(Symbol::toString).collect(Collectors.joining(", ")));
         if (!variables.isEmpty()) {
             PseudoRandom.shuffle(variables);
             IRNodeBuilder builder = new IRNodeBuilder().setComplexityLimit(complexityLimit)
@@ -70,6 +76,7 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                         && (varInfo.flags & VariableInfo.STATIC) == 0
                         && (varInfo.flags & VariableInfo.LOCAL) == 0) {
                     try {
+                        Logger.log(SEED == 194820577109216L, ":expressionSeed " + PseudoRandom.getCurrentSeed());
                         IRNode object = builder.setResultType(varInfo.owner)
                                 .getExpressionFactory().produce();
                         return new NonStaticMemberVariable(object, varInfo);
