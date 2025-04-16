@@ -32,13 +32,17 @@ import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.Logger;
+import jdk.test.lib.jittester.Formatter;
+import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class ExpressionFactory extends SafeFactory<IRNode> {
     private final Rule<IRNode> rule;
     private final TypeKlass ownerClass;
+    private final long SEED;
 
     ExpressionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean exceptionSafe, boolean noconsts) throws ProductionFailedException {
+        SEED = PseudoRandom.getCurrentSeed();
         this.ownerClass = ownerClass; //FIXME JNP Remove
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setComplexityLimit(complexityLimit)
@@ -77,8 +81,9 @@ class ExpressionFactory extends SafeFactory<IRNode> {
     @Override
     protected IRNode sproduce() throws ProductionFailedException {
         ProductionLimiter.limitProduction();
+        Logger.trace(":expression-seed " + PseudoRandom.getCurrentSeed());
         IRNode result = rule.produce();
-        Logger.log(ownerClass, "(ExpressionFactory :point1)", result);
+
         return result;
     }
 }

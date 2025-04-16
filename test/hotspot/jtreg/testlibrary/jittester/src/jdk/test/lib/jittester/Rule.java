@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.TreeSet;
 import jdk.test.lib.jittester.factories.Factory;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.factories.FunctionFactory;
 
 /**
  * The Rule. A helper to perform production.
@@ -66,6 +67,7 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
 
     @Override
     public T produce() throws ProductionFailedException {
+        long seed = PseudoRandom.getCurrentSeed();
         if (!variants.isEmpty()) {
             // Begin production.
             LinkedList<RuleEntry> rulesList = new LinkedList<>(variants);
@@ -87,6 +89,7 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                     }
                 } while (iterator.hasNext());
                 try {
+                    Logger.log(seed == 58799071311715L, ":rule-seed " + PseudoRandom.getCurrentSeed());
                     return ruleEntry.produce();
                 } catch (ProductionFailedException e) {
                 }
@@ -113,9 +116,38 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
             this.factory = factory;
         }
 
+//        final String breakpoint = "java.lang.Character.isMirrored((java.lang.Character.isUpperCase((byte) 15 % (byte) 35) ? this : this).var_1);";
+//        final String breakpoint = "(java.lang.Character.isUpperCase((byte) 15 % (byte) 35) ? this : this)";
+//        final String breakpoint = "java.lang.Character.isMirrored((java.lang.Character.isUpperCase((byte) 15 % (byte) 20) ? this : this).var_1)";
+        final String breakpoint = "java.lang.Character.isUpperCase((byte) 15 % (byte) 20) ? this : this";
+
         @Override
         public T produce() throws ProductionFailedException {
-            return factory.produce();
+            long seed = PseudoRandom.getCurrentSeed();
+            T result = factory.produce();
+            if (result instanceof IRNode) {
+                String resultStr = Formatter.format(result);
+//                if (seed == 132795661563799L) {
+                //if (seed == 58799071311715L) {
+                if (resultStr.startsWith(breakpoint)) {
+                    Logger.log(true, "(Rule.RuleEntry.produce :factory " + factory.getClass().getSimpleName() +
+                            " :rule-name " + name + " :seed " + seed + ")");
+                    Logger.log(true, "(Rule.RuleEntry.produce :seed " + FunctionFactory.SEED + ")");
+                    Logger.log(true, "(Rule.RuleEntry.produce FunctionFactory.forbiddenThizz " +
+                            " :name " + FunctionFactory.forbiddenThizz.name + 
+                            " :owner " + FunctionFactory.forbiddenThizz.owner + ")");
+                for (Symbol symbol : SymbolTable.get(FunctionFactory.forbiddenThizz.type)) {
+                    System.out.println("(Rule.RuleEntry.produce :check-symbol-table: " + symbol);
+                }
+                    System.out.println("(Rule.RuleEntry.produce :production-result: " + resultStr);
+                    throw new Error("JNP Artificial error");
+                }
+
+                //Logger.log("Rule", ":BF.rule-selected " + ruleEntry, (IRNode)result);
+            }
+            return result;
+
+            //FIXME JNP Restore            return factory.produce();
         }
 
         @Override

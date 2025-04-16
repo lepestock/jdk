@@ -46,6 +46,7 @@ import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.Logger;
+import jdk.test.lib.jittester.Formatter;
 
 class ValueKlassFactory extends Factory<ValueKlass> {
     private final String name;
@@ -101,17 +102,17 @@ class ValueKlassFactory extends Factory<ValueKlass> {
 //            Logger.log(nonAbstractSet.size() > 0, "Non-Abstract size: " + nonAbstractSet.size());
             Logger.log(true, "(JNP :thisKlass " + thisKlass +
                     " :non-abstract-size " + nonAbstractSet.size() + "\n" +
-                    "Symbols: " + 
+                    "Symbols: " +
                     nonAbstractSet.stream().map(Symbol::toString).collect(Collectors.joining(", ")));
-            Logger.log(thisKlass, ":VKF.non-abstract-list", Logger.format(nonAbstractSet));
-            Logger.log(thisKlass, ":VKF.abstract-list-before", Logger.format(abstractSet));
+            Logger.log(thisKlass, ":VKF.non-abstract-list", Formatter.format(nonAbstractSet));
+            Logger.log(thisKlass, ":VKF.abstract-list-before", Formatter.format(abstractSet));
             abstractSet.removeAll(nonAbstractSet);
             // We may randomly remove some elements from the abstract set in order to force generation
             // of an abstract class.
             if (abstractSet.removeIf(( _ ) -> PseudoRandom.randomBoolean(0.2))) {
                         thisKlass.setAbstract();
             }
-            Logger.log(thisKlass, ":VKF.abstract-list-after", Logger.format(abstractSet));
+            Logger.log(thisKlass, ":VKF.abstract-list-after", Formatter.format(abstractSet));
 
             if (PseudoRandom.randomBoolean(0.2)) {
                 int redefineLimit = (int) (memberFunctionsLimit * PseudoRandom.random());
@@ -150,8 +151,9 @@ class ValueKlassFactory extends Factory<ValueKlass> {
             thisKlass.setParent(parent);
             parent.addChild(name);
         }
-        SymbolTable.add(new VariableInfo("this", thisKlass, thisKlass,
-                VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED));
+       VariableInfo thizzVariable = new VariableInfo("this", thisKlass, thisKlass,
+                VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+        SymbolTable.add(thizzVariable);
         IRNode variableDeclarations = null;
         IRNode constructorDefinitions = null;
         IRNode functionDefinitions = null;
@@ -197,6 +199,8 @@ class ValueKlassFactory extends Factory<ValueKlass> {
                         .setIsSynchronizedAllowed(false)
                         .getFunctionDefinitionBlockFactory()
                         .produce();
+
+                FunctionFactory.forbiddenThizz = thizzVariable;
                 constructorDefinitions = builder.setComplexityLimit((long) (complexityLimit * 0.2 * PseudoRandom.random()))
                         .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2
                                 * PseudoRandom.random()))
@@ -205,6 +209,7 @@ class ValueKlassFactory extends Factory<ValueKlass> {
                         .setLevel(level + 1)
                         .getConstructorDefinitionBlockFactory()
                         .produce();
+                FunctionFactory.forbiddenThizz = null;
             }
         } catch (ProductionFailedException e) {
             System.out.println("Exception during klass production process:");
