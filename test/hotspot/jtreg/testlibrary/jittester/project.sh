@@ -106,7 +106,6 @@ repl-gentest-full-dev() {
         fi
     fi
 
-
     if [ $success -eq 0 ]; then
         echo ":gentest-run";
         timeout 15s java -cp testbase/java_tests/ --enable-preview Gentest > testbase/Gentest.output 2>&1
