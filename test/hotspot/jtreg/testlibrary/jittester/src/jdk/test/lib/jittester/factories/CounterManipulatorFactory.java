@@ -30,18 +30,38 @@ import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Statement;
 import jdk.test.lib.jittester.UnaryOperator;
 import jdk.test.lib.jittester.loops.CounterManipulator;
+import jdk.test.lib.jittester.Monotonically;
+import jdk.test.lib.jittester.Literal;
+import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class CounterManipulatorFactory extends Factory<CounterManipulator> {
     private final LocalVariable counter;
+    private Monotonically direction = Monotonically.DECREASING;
 
     CounterManipulatorFactory(LocalVariable counter) {
         this.counter = counter;
     }
 
+    public CounterManipulatorFactory calculateDirection(Literal initializer, Literal limiter) {
+        try {   //FIXME JNP Only to check if that is used with other types.
+                //Remove the try.. catch after development
+            int initValue = (Integer) (initializer.getValue());
+            int limitValue = (Integer) (limiter.getValue());
+
+            direction = (initValue < limitValue) ? Monotonically.INCREASING : Monotonically.DECREASING;
+        } catch (Throwable thr) {
+            throw new Error("An exception is caught on [SEED " + PseudoRandom.getCurrentSeed() + "]", thr);
+        }
+
+        return this;
+    }
+
     @Override
     public CounterManipulator produce() throws ProductionFailedException {
         // We'll keep it simple for the time being..
-        IRNode manipulator = new UnaryOperator(OperatorKind.POST_DEC, counter);
+        OperatorKind operatorKind = (direction == Monotonically.DECREASING) ?
+            OperatorKind.POST_DEC : OperatorKind.POST_INC;
+        IRNode manipulator = new UnaryOperator(operatorKind, counter);
         return new CounterManipulator(new Statement(manipulator, false));
     }
 }

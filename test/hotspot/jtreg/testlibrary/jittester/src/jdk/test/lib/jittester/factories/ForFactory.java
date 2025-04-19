@@ -38,6 +38,8 @@ import jdk.test.lib.jittester.loops.For;
 import jdk.test.lib.jittester.loops.Loop;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Formatter;
+import jdk.test.lib.jittester.Logger;
 
 import java.util.LinkedList;
 
@@ -134,16 +136,26 @@ class ForFactory extends SafeFactory<For> {
         }
         LocalVariable counter = new LocalVariable(loop.initialization.getVariableInfo());
         Literal limiter = new Literal((int) thisLoopIterLimit, TypeList.INT);
+        long SEED = PseudoRandom.getCurrentSeed();
+        if (SEED == 131299968015990L) Logger.enableTrace();
         loop.condition = builder.setComplexityLimit(condComplLimit)
                 .setLocalVariable(counter)
                 .getLoopingConditionFactory(limiter)
                 .produce();
+        if (SEED == 131299968015990L) Logger.disableTrace();
         IRNode statement2;
         try {
             statement2 = builder.setComplexityLimit(statement2ComplLimit)
                     .getAssignmentOperatorFactory().produce();
         } catch (ProductionFailedException e) {
             statement2 = new Nothing();
+        }
+        String formattedCondition = Formatter.format(loop.condition);
+        if (formattedCondition.contains("var_279")) {
+            System.out.println("ForFactory.sproduce :seed " + SEED +
+                    " :statement2 " + Formatter.format(statement2) +
+                    " :statement1 " + Formatter.format(statement1) +
+                    " :condition " + formattedCondition);
         }
         Block body1;
         try {
@@ -159,7 +171,11 @@ class ForFactory extends SafeFactory<For> {
         } catch (ProductionFailedException e) {
             body1 = emptyBlock;
         }
-        loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
+//        loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
+        loop.manipulator = builder.setLocalVariable(counter)
+                                  .getCounterManipulatorFactory()
+                                  .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
+                                  .produce();
         Block body2;
         try {
             body2 = builder.setComplexityLimit(body2ComplLimit)
@@ -189,10 +205,12 @@ class ForFactory extends SafeFactory<For> {
             body3 = emptyBlock;
         }
         SymbolTable.pop();
-        return new For(level, loop, thisLoopIterLimit, header,
+        For result = new For(level, loop, thisLoopIterLimit, header,
                 new Statement(statement1, false),
                 new Statement(statement2, false),
                 body1,
                 body2, body3);
+        if (SEED == 131299968015990L) System.out.println("For.produce :result " + Formatter.format(result));
+        return result;
     }
 }

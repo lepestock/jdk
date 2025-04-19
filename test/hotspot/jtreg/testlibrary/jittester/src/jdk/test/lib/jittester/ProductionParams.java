@@ -57,6 +57,7 @@ public class ProductionParams {
     public static Option<Boolean> disableFinalVariables = null;
     public static Option<Boolean> disableIf = null;
     public static Option<Boolean> disableSwitch = null;
+    public static Option<Boolean> complexLoops = null;   //FIXME JNP Replace with (very low?) probability?
     public static Option<Boolean> disableWhile = null;
     public static Option<Boolean> disableDoWhile = null;
     public static Option<Boolean> disableFor = null;
@@ -112,6 +113,7 @@ public class ProductionParams {
         disableFinalVariables = optionResolver.addBooleanOption("disable-final-variabless", "Don\'t use final variables");
         disableIf = optionResolver.addBooleanOption("disable-if", "Don\'t use conditionals");
         disableSwitch = optionResolver.addBooleanOption("disable-switch", "Don\'t use switch");
+        complexLoops = optionResolver.addBooleanOption("complex-loops", "Generate loops with non-trivial conditions");
         disableWhile = optionResolver.addBooleanOption("disable-while", "Don\'t use while");
         disableDoWhile = optionResolver.addBooleanOption("disable-do-while", "Don\'t use do-while");
         disableFor = optionResolver.addBooleanOption("disable-for", "Don\'t use for");

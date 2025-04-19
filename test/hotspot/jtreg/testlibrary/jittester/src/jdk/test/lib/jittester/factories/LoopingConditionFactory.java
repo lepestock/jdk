@@ -33,6 +33,9 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.loops.LoopingCondition;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
+import jdk.test.lib.jittester.Formatter;
+import jdk.test.lib.jittester.ProductionParams;
 
 class LoopingConditionFactory extends Factory<LoopingCondition> {
     private final LocalVariable counter;
@@ -40,6 +43,9 @@ class LoopingConditionFactory extends Factory<LoopingCondition> {
     private final int operatorLimit;
     private final long complexityLimit;
     private final TypeKlass ownerClass;
+
+    public static enum Direction { INCREASING, DECREASING, UNKNOWN };
+    private Direction direction = Direction.UNKNOWN;
 
     LoopingConditionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             LocalVariable counter, Literal limiter) {
@@ -50,8 +56,13 @@ class LoopingConditionFactory extends Factory<LoopingCondition> {
         this.ownerClass = ownerClass;
     }
 
+    public void setDirection(Direction direction) {
+        this.direction = direction;
+    }
+
     @Override
     public LoopingCondition produce() throws ProductionFailedException {
+        long SEED = PseudoRandom.getCurrentSeed();
         IRNode leftExpression = null;
         IRNode rightExpression = null;
         Factory<IRNode> exprFactory = new IRNodeBuilder()
@@ -62,12 +73,20 @@ class LoopingConditionFactory extends Factory<LoopingCondition> {
                 .setExceptionSafe(false)
                 .setNoConsts(false)
                 .getLimitedExpressionFactory();
-        if (PseudoRandom.randomBoolean()) {
-            leftExpression = exprFactory.produce();
+        if (!ProductionParams.complexLoops.value()) {
+            // Complex loops have high probability of failing execution, so we
+            // give them only a low probability
+            if (PseudoRandom.randomBoolean(0.1)) {
+                leftExpression = exprFactory.produce();
+            }
+            if (PseudoRandom.randomBoolean(0.1)) {
+                rightExpression = exprFactory.produce();
+            }
         }
-        if (PseudoRandom.randomBoolean()) {
-            rightExpression = exprFactory.produce();
-        }
+
+        Logger.trace("LoopingCondition.produce :expressions-before" +
+                " :left " + Formatter.format(leftExpression) +
+                " :right " + Formatter.format(rightExpression));
         // Depending on loop counter direction, we should synthesize limiting condition.
         // Example: If the counter is counting forward. Then the looping condition can be:
         // counter < n, counter <= n, n > counter, n >= counter, n - counter > 0, etc..
@@ -75,11 +94,18 @@ class LoopingConditionFactory extends Factory<LoopingCondition> {
         // Just as a temporary solution we'll assume that the counter is monotonically increasing.
         // And use counter < n condition to limit the loop.
         // In future we may introduce other equivalent relations as well.
-        BinaryOperator condition = new BinaryOperator(OperatorKind.LT, TypeList.BOOLEAN, counter, limiter);
+        OperatorKind operatorKind = (direction == Direction.DECREASING) ? OperatorKind.GT : OperatorKind.LT;
+        BinaryOperator condition = new BinaryOperator(operatorKind, TypeList.BOOLEAN, counter, limiter);
+        Logger.trace("LoopingCondition.produce :condition-before " + Formatter.format(condition));
+
+        //FIXME JNP You need to catch these right or left not equal null.
+        //How is it possible that they generate boolean expressions for loops?!!!
         condition = (rightExpression != null) ? new BinaryOperator(OperatorKind.AND, TypeList.BOOLEAN, condition,
                 rightExpression) : condition;
         condition = (leftExpression != null) ? new BinaryOperator(OperatorKind.AND, TypeList.BOOLEAN, leftExpression,
                 condition) : condition;
-        return new LoopingCondition(condition);
+        LoopingCondition result = new LoopingCondition(condition);
+        Logger.trace("LoopintConditionFactory.produce :result " + Formatter.format(condition));
+        return result;
     }
 }

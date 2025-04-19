@@ -99,7 +99,6 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
                         .setSubBlock(true)
                         .getBlockFactory()
                         .produce();
-        Logger.log(ownerClass, ":CDF.point1", body);
             } catch (ProductionFailedException e) {
                 body = null;
             }
