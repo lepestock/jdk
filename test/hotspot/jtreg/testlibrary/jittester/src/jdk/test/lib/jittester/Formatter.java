@@ -77,6 +77,7 @@ public class Formatter {
 
     public static String format(IRNode nodde) {
         return switch (nodde) {
+            case null -> "null";
             case ArgumentDeclaration node -> VISITOR.visit(node);
             case ArrayCreation node -> VISITOR.visit(node);
             case ArrayElement node -> VISITOR.visit(node);

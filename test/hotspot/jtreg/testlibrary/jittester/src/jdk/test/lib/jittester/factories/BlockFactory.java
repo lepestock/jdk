@@ -116,11 +116,7 @@ class BlockFactory extends Factory<Block> {
                     addControlFlowDeviation(rule, builder);
                 }
                 try {
-                    if (i == 21) { Logger.enableBreakpoint("BF."); Logger.enableClass("Rule"); }
                     IRNode choiceResult = rule.produce();
-//FIXME JNP Not needed?        Logger.log(ownerClass, "(BlockFactory :point1 :choiceResult " + choiceResult + ")", content);
-                    Logger.log(ownerClass, ":BF.sampleLog " + i, choiceResult);
-                    Logger.disableBreakpoint("BF."); Logger.disableClass("Rule");
                     if (choiceResult instanceof If || choiceResult instanceof While || choiceResult instanceof DoWhile
                             || choiceResult instanceof For || choiceResult instanceof Switch) {
                         i += subLimit;

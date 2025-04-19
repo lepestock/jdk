@@ -29,6 +29,7 @@ import java.util.TreeSet;
 import jdk.test.lib.jittester.factories.Factory;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.factories.FunctionFactory;
+import jdk.test.lib.jittester.factories.DoWhileFactory;
 
 /**
  * The Rule. A helper to perform production.
@@ -119,7 +120,7 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
 //        final String breakpoint = "java.lang.Character.isMirrored((java.lang.Character.isUpperCase((byte) 15 % (byte) 35) ? this : this).var_1);";
 //        final String breakpoint = "(java.lang.Character.isUpperCase((byte) 15 % (byte) 35) ? this : this)";
 //        final String breakpoint = "java.lang.Character.isMirrored((java.lang.Character.isUpperCase((byte) 15 % (byte) 20) ? this : this).var_1)";
-        final String breakpoint = "java.lang.Character.isUpperCase((byte) 15 % (byte) 20) ? this : this";
+        final String breakpoint = "var_279--";
 
         @Override
         public T produce() throws ProductionFailedException {
@@ -129,16 +130,11 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                 String resultStr = Formatter.format(result);
 //                if (seed == 132795661563799L) {
                 //if (seed == 58799071311715L) {
-                if (resultStr.startsWith(breakpoint)) {
+                if (resultStr.contains(breakpoint)) {
+                    Logger.log(true, "Rule.RuleEntry.produce :DoWhileFactory-seed " + DoWhileFactory.SEED);
                     Logger.log(true, "(Rule.RuleEntry.produce :factory " + factory.getClass().getSimpleName() +
                             " :rule-name " + name + " :seed " + seed + ")");
                     Logger.log(true, "(Rule.RuleEntry.produce :seed " + FunctionFactory.SEED + ")");
-                    Logger.log(true, "(Rule.RuleEntry.produce FunctionFactory.forbiddenThizz " +
-                            " :name " + FunctionFactory.forbiddenThizz.name + 
-                            " :owner " + FunctionFactory.forbiddenThizz.owner + ")");
-                for (Symbol symbol : SymbolTable.get(FunctionFactory.forbiddenThizz.type)) {
-                    System.out.println("(Rule.RuleEntry.produce :check-symbol-table: " + symbol);
-                }
                     System.out.println("(Rule.RuleEntry.produce :production-result: " + resultStr);
                     throw new Error("JNP Artificial error");
                 }

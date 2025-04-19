@@ -67,6 +67,10 @@ public class Logger {
         log("TRACE", ":trace", message);
     }
 
+    public static boolean isTraceEnabled() {
+        return (ownerClassFilter.contains("TRACE") && breakpoints.contains("trace"));
+    }
+
     public static void enableBreakpoint(String breakpoint) {
         breakpoints.add(breakpoint);
     }
