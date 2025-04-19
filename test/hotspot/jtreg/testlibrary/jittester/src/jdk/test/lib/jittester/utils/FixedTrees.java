@@ -137,9 +137,10 @@ public class FixedTrees {
             Block emptyBlock = new Block(owner, TypeList.VOID, new LinkedList<>(), 3);
             loop.initialization = new CounterInitializer(iInfo, new Literal(0, TypeList.INT));
             loop.manipulator = new CounterManipulator(new Statement(increaseCounter, false));
+            int limit = PseudoRandom.randomNotZero(500);
             loop.condition = new LoopingCondition(new BinaryOperator(OperatorKind.LT, TypeList.BOOLEAN, iVar,
-                    new Literal(150000, TypeList.INT)));
-            For forNode = new For(4, loop, 150000, emptyBlock, new Statement(nothing, false),
+                    new Literal(limit, TypeList.INT)));
+            For forNode = new For(4, loop, limit, emptyBlock, new Statement(nothing, false),
                     new Statement(nothing, false), testCallNodeBlock, emptyBlock, emptyBlock);
             tryNode = forNode;
         }
