@@ -53,7 +53,7 @@ class StatementFactory extends Factory<Statement> {
                 .setResultType(PseudoRandom.randomElement(TypeList.getAll()));
         rule.add("array_creation", builder.getArrayCreationFactory());
         rule.add("assignment", builder.getAssignmentOperatorFactory());
-        rule.add("function", builder.getFunctionFactory(), 0.1);
+//        rule.add("function", builder.getFunctionFactory(), 0.1);
     }
 
     @Override
