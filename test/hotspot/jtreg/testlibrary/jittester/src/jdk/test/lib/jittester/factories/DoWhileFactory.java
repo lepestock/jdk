@@ -146,17 +146,10 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
                 body1 = emptyBlock;
             }
             // getChildren().set(DoWhile.DoWhilePart.BODY1.ordinal(), body1);
-            if (false && SEED == 99649021304063L) {
-                loop.manipulator = builder
-                    .setLocalVariable(counter)
-                    .getCounterManipulatorFactory()
-                    .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter).produce();
-            } else {
-                loop.manipulator = builder
-                    .setLocalVariable(counter)
-                    .getCounterManipulatorFactory()
-                    .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter).produce();
-            }
+            loop.manipulator = builder.setLocalVariable(counter)
+                                      .getCounterManipulatorFactory()
+                                      .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
+                                      .produce();
             Block body2;
             try {
                 body2 = builder.setComplexityLimit(body2ComplLimit)

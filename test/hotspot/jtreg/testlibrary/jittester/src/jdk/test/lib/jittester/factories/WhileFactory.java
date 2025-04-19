@@ -127,7 +127,11 @@ class WhileFactory extends SafeFactory<While> {
         } catch (ProductionFailedException e) {
             body1 = emptyBlock;
         }
-        loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
+        loop.manipulator = builder.setLocalVariable(counter)
+                                  .getCounterManipulatorFactory()
+                                  .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
+                                  .produce();
+
         Block body2;
         try {
             body2 = builder.setComplexityLimit(body2ComplLimit)
