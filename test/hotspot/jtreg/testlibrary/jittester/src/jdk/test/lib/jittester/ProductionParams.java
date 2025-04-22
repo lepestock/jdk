@@ -76,6 +76,7 @@ public class ProductionParams {
     public static Option<Boolean> enableFinalizers = null;
     // workaraound: to reduce chance throwing ArrayIndexOutOfBoundsException
     public static Option<Integer> chanceExpressionIndex = null;
+    public static Option<Integer> chanceThrow = null;
     public static Option<String> testbaseDir = null;
     public static Option<String> tempDir = null;
     public static Option<Integer> numberOfTests = null;
@@ -123,7 +124,7 @@ public class ProductionParams {
         disableExternalSymbols = optionResolver.addBooleanOption("disable-external-symbols", "Don\'t use external symbols");
         addExternalSymbols = optionResolver.addStringOption("add-external-symbols", "all", "Add symbols for listed classes (comma-separated list)");
         disableInheritance = optionResolver.addBooleanOption("disable-inheritance", "Disable inheritance");
-        disableDowncasts = optionResolver.addBooleanOption("disable-downcasts", "Disable downcasting of objects");
+        disableDowncasts = optionResolver.addBooleanOption(null, "disable-downcasts", true, "Disable downcasting of objects");
         disableStatic = optionResolver.addBooleanOption("disable-static", "Disable generation of static objects and functions");
         disableInterfaces = optionResolver.addBooleanOption("disable-interfaces", "Disable generation of interfaces");
         disableClasses = optionResolver.addBooleanOption("disable-classes", "Disable generation of classes");
@@ -131,6 +132,7 @@ public class ProductionParams {
         disableArrays = optionResolver.addBooleanOption("disable-arrays", "Disable generation of arrays");
         enableFinalizers = optionResolver.addBooleanOption("enable-finalizers", "Enable finalizers (for stress testing)");
         chanceExpressionIndex = optionResolver.addIntegerOption("chance-expression-index", 0, "A non negative decimal integer used to restrict chane of generating expression in array index while creating or accessing by index");
+        chanceThrow = optionResolver.addIntegerOption("chance-throw", 30, "A non negative decimal integer used to restrict chane of 'throw' statement (is adjusted by 30% afterwards, i.e. value of 100 means 30% chance of generating such a statement)");
         testbaseDir = optionResolver.addStringOption("testbase-dir", ".", "Testbase dir");
         tempDir = optionResolver.addStringOption("temp-dir", ".", "Temp dir path");
         numberOfTests = optionResolver.addIntegerOption('n', "number-of-tests", 0, "Number of test classes to generate");

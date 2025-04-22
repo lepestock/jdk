@@ -107,6 +107,7 @@ class BlockFactory extends Factory<Block> {
                                 .setCanHaveBreaks(false)
                                 .setCanHaveContinues(false)
                                 .getBlockFactory());
+
                         rule.add("try-catch", builder.getTryCatchBlockFactory(), 0.3);
                         builder.setCanHaveReturn(canHaveReturn)
                                 .setCanHaveThrow(canHaveThrow)
@@ -148,6 +149,11 @@ class BlockFactory extends Factory<Block> {
                         .setComplexityLimit(Math.max(climit, 5))
                         .setOperatorLimit(Math.max(operatorLimit, 5))
                         .getThrowFactory());
+                System.out.println("JNP BlockFactory.produce :rule " + rule);
+
+                        // Throws leave huge chunks of code unexecuted, hence the 30% adjustment.
+                        //double adjustedThrowChance = 0.3 * ProductionParams.chanceThrow.value() / 100.0;
+                        //rule.add("try-catch", builder.getTryCatchBlockFactory(), adjustedThrowChance);
             }
 
             try {

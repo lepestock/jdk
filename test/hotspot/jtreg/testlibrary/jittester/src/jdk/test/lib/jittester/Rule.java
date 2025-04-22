@@ -30,6 +30,7 @@ import jdk.test.lib.jittester.factories.Factory;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.factories.FunctionFactory;
 import jdk.test.lib.jittester.factories.DoWhileFactory;
+import java.util.stream.Collectors;
 
 /**
  * The Rule. A helper to perform production.
@@ -51,7 +52,13 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
 
     @Override
     public String toString() {
-        return "(Rule :name " + name + ")";
+        return "(Rule :name " + name +
+            ":variants (list" +
+                variants.stream()
+                        .map(entry -> "(rule-entry :name " + entry.name + " :weight " + entry.weight + ")")
+                        .collect(Collectors.joining(" "))
+            + ")" +
+          ")";
     }
 
     public void add(String ruleName, Factory<? extends T> factory) {
