@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,14 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.classes.ValueKlass;
 import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
-import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class ValueKlassFactory extends AbstractKlassFactory<ValueKlass> {
 
@@ -76,6 +75,17 @@ class ValueKlassFactory extends AbstractKlassFactory<ValueKlass> {
                 .setIsSynchronizedAllowed(false)
                 .getFunctionDefinitionBlockFactory()
                 .produce();
+    }
+
+    @Override
+    protected IRNode produceConstructorDefinitions(IRNodeBuilder builder, VariableInfo thizzVariable)
+            throws ProductionFailedException {
+        FunctionFactory.forbiddenThizz = thizzVariable;
+        try {
+            return super.produceConstructorDefinitions(builder, thizzVariable);
+        } finally {
+            FunctionFactory.forbiddenThizz = null;
+        }
     }
 
     @Override

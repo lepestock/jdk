@@ -152,36 +152,33 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                     .setMemberFunctionsArgLimit(memberFunctionsArgLimit);
             variableDeclarations = produceVariableDeclarations(builder,
                     (long) (complexityLimit * 0.001 * PseudoRandom.random()));
+
             if (!ProductionParams.disableFunctions.value()) {
-                // Try to implement all methods.
-                abstractFunctionsRedefinitions = builder.setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
+                abstractFunctionsRedefinitions = builder
+                        .setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
                         .setLevel(level + 1)
                         .getFunctionRedefinitionBlockFactory(abstractSet)
                         .produce();
-                overridenFunctionsRedefinitions = builder.setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
+                overridenFunctionsRedefinitions = builder
+                        .setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
                         .getFunctionRedefinitionBlockFactory(overrideSet)
                         .produce();
-                if (PseudoRandom.randomBoolean(0.2)) { // wanna be abstract ?
-                    functionDeclarations = builder.setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2
-                                    * PseudoRandom.random()))
+
+                if (PseudoRandom.randomBoolean(0.2)) {
+                    functionDeclarations = builder
+                            .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2 * PseudoRandom.random()))
                             .getFunctionDeclarationBlockFactory()
                             .produce();
                     if (((FunctionDeclarationBlock) functionDeclarations).size() > 0) {
                         thisKlass.setAbstract();
                     }
                 }
+
                 functionDefinitions = produceFunctionDefinitions(builder,
                         (long) (complexityLimit * 0.5 * PseudoRandom.random()),
                         (int) (memberFunctionsLimit * 0.6 * PseudoRandom.random()));
 
-                constructorDefinitions = builder
-                        .setComplexityLimit((long) (complexityLimit * 0.2 * PseudoRandom.random()))
-                        .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2 * PseudoRandom.random()))
-                        .setStatementLimit(statementsInFunctionLimit)
-                        .setOperatorLimit(operatorLimit)
-                        .setLevel(level + 1)
-                        .getConstructorDefinitionBlockFactory()
-                        .produce();
+                constructorDefinitions = produceConstructorDefinitions(builder, thizzVariable);
             }
         } catch (ProductionFailedException e) {
             System.out.println("Exception during klass production process:");
@@ -213,6 +210,18 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                 .setMemberFunctionsLimit(memberLimit)
                 .setFlags(FunctionInfo.NONE)
                 .getFunctionDefinitionBlockFactory()
+                .produce();
+    }
+
+    protected IRNode produceConstructorDefinitions(IRNodeBuilder builder, VariableInfo thizzVariable)
+            throws ProductionFailedException {
+        return builder
+                .setComplexityLimit((long) (complexityLimit * 0.2 * PseudoRandom.random()))
+                .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2 * PseudoRandom.random()))
+                .setStatementLimit(statementsInFunctionLimit)
+                .setOperatorLimit(operatorLimit)
+                .setLevel(level + 1)
+                .getConstructorDefinitionBlockFactory()
                 .produce();
     }
 
