@@ -91,14 +91,20 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
             }
             long blockComplLimit = (long) (PseudoRandom.random() * complexityLimit);
             try {
-                body = builder.setResultType(TypeList.VOID)
-                        .setComplexityLimit(blockComplLimit)
-                        .setStatementLimit(statementLimit)
-                        .setOperatorLimit(operatorLimit)
-                        .setLevel(level)
-                        .setSubBlock(true)
-                        .getBlockFactory()
-                        .produce();
+                ThisVariableControl.pushForbidThis();
+                try {
+                    body = builder.setResultType(TypeList.VOID)
+                            .setComplexityLimit(blockComplLimit)
+                            .setStatementLimit(statementLimit)
+                            .setOperatorLimit(operatorLimit)
+                            .setLevel(level)
+                            .setSubBlock(true)
+                            .getBlockFactory()
+                            .produce();
+                } finally {
+                    ThisVariableControl.popForbidThis();
+                }
+        Logger.log(ownerClass, ":CDF.point1", body);
             } catch (ProductionFailedException e) {
                 body = null;
             }

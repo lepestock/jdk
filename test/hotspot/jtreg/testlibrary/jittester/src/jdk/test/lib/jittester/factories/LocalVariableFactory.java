@@ -55,6 +55,9 @@ class LocalVariableFactory extends Factory<LocalVariable> {
             ArrayList<Symbol> eligible = new ArrayList<>();
             for (Symbol symbol : allVariables) {
                 VariableInfo varInfo = (VariableInfo) symbol;
+                if (ThisVariableControl.isThisForbidden() && "this".equals(varInfo.name)) {
+                    continue;
+                }
                 if ((varInfo.flags & VariableInfo.FINAL) == (flags & VariableInfo.FINAL)
                         && (varInfo.flags & VariableInfo.INITIALIZED) == (flags & VariableInfo.INITIALIZED)
                         && (varInfo.flags & VariableInfo.LOCAL) > 0) {
