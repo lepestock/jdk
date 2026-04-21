@@ -34,6 +34,7 @@ import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.classes.MainKlass;
+import jdk.test.lib.jittester.classes.ValueKlass;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
 import jdk.test.lib.jittester.functions.ConstructorDefinition;
 import jdk.test.lib.jittester.functions.ConstructorDefinitionBlock;
@@ -105,6 +106,7 @@ public class Formatter {
             case If node -> VISITOR.visit(node);
             case Initialization node -> VISITOR.visit(node);
             case Interface node -> VISITOR.visit(node);
+            case ValueKlass node -> VISITOR.visit(node);
             case Klass node -> VISITOR.visit(node);
             case Literal node -> VISITOR.visit(node);
             case LocalVariable node -> VISITOR.visit(node);
