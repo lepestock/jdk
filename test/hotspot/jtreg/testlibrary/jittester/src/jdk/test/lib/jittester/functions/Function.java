@@ -33,7 +33,9 @@ import jdk.test.lib.jittester.visitors.Visitor;
 
 
 public class Function extends IRNode {
+    public static final long UNSET_EXPRESSION_GENE_SEED = Long.MIN_VALUE;
     private FunctionInfo functionInfo = new FunctionInfo();
+    private long expressionGeneSeed = UNSET_EXPRESSION_GENE_SEED;
 
     public Function(TypeKlass ownerClass, FunctionInfo functionInfo, List<IRNode> args) {
         super(functionInfo.type);
@@ -83,5 +85,21 @@ public class Function extends IRNode {
 
     public FunctionInfo getValue() {
         return functionInfo;
+    }
+
+    public void setExpressionGeneSeed(long seed) {
+        this.expressionGeneSeed = seed;
+    }
+
+    public boolean hasExpressionGeneSeed() {
+        return expressionGeneSeed != UNSET_EXPRESSION_GENE_SEED;
+    }
+
+    public long getExpressionGeneSeed() {
+        return expressionGeneSeed;
+    }
+
+    public String getExpressionGeneToken() {
+        return hasExpressionGeneSeed() ? "E" + expressionGeneSeed : "E<unset>";
     }
 }

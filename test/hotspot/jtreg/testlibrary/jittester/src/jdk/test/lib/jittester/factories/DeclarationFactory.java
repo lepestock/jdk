@@ -32,6 +32,8 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class DeclarationFactory extends Factory<Declaration> {
+    private static final double LOCAL_CONST_DECL_WEIGHT = 0.10;
+    private static final double NONLOCAL_CONST_DECL_WEIGHT = 0.20;
     private final int operatorLimit;
     private final long complexityLimit;
     private final boolean isLocal;
@@ -59,16 +61,17 @@ class DeclarationFactory extends Factory<Declaration> {
                 .setExceptionSafe(exceptionSafe);
         rule.add("decl", builder
                 .setIsStatic(false)
-                .getVariableDeclarationFactory());
+                .getVariableDeclarationFactory(), isLocal ? 0.08 : 1.0);
         rule.add("decl_and_init", builder
                 .setIsConstant(false)
                 .setIsStatic(false)
-                .getVariableInitializationFactory());
+                .getVariableInitializationFactory(), isLocal ? 1.4 : 1.0);
         if (!ProductionParams.disableFinalVariables.value()) {
             rule.add("const_decl_and_init", builder
                     .setIsConstant(true)
                     .setIsStatic(false)
-                    .getVariableInitializationFactory());
+                    .getVariableInitializationFactory(),
+                    isLocal ? LOCAL_CONST_DECL_WEIGHT : NONLOCAL_CONST_DECL_WEIGHT);
         }
         if (!isLocal && !ProductionParams.disableStatic.value()) {
             rule.add("static_decl", builder
@@ -83,7 +86,8 @@ class DeclarationFactory extends Factory<Declaration> {
                 rule.add("static_const_decl_and_init", builder
                         .setIsConstant(true)
                         .setIsStatic(true)
-                        .getVariableInitializationFactory());
+                        .getVariableInitializationFactory(),
+                        NONLOCAL_CONST_DECL_WEIGHT);
             }
         }
         return new Declaration(rule.produce());

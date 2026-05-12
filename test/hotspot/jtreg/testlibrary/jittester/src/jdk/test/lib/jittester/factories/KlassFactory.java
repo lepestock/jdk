@@ -153,7 +153,7 @@ class KlassFactory extends Factory<Klass> {
                     .setOperatorLimit(operatorLimit)
                     .setStatementLimit(statementsInFunctionLimit)
                     .setMemberFunctionsArgLimit(memberFunctionsArgLimit);
-            variableDeclarations = builder.setComplexityLimit((long) (complexityLimit * 0.001 * PseudoRandom.random()))
+            variableDeclarations = builder.setComplexityLimit((long) (complexityLimit * (0.01 + 0.09 * PseudoRandom.random())))
                     .getVariableDeclarationBlockFactory().produce();
             if (!ProductionParams.disableFunctions.value()) {
                 // Try to implement all methods.

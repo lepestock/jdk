@@ -299,7 +299,7 @@ public class IRNodeBuilder {
         return new CounterInitializerFactory(getOwnerClass(), counterValue);
     }
 
-    public Factory<CounterManipulator> getCounterManipulatorFactory() {
+    public CounterManipulatorFactory getCounterManipulatorFactory() {
         return new CounterManipulatorFactory(getLocalVariable());
     }
 

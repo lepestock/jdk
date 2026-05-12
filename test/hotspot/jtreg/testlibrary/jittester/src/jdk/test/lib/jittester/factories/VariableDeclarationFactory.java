@@ -23,7 +23,7 @@
 
 package jdk.test.lib.jittester.factories;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.SymbolTable;
@@ -32,7 +32,6 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableDeclaration;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
-import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class VariableDeclarationFactory extends Factory<VariableDeclaration> {
     private final boolean isStatic;
@@ -50,12 +49,11 @@ class VariableDeclarationFactory extends Factory<VariableDeclaration> {
     @Override
     public VariableDeclaration produce() throws ProductionFailedException {
         if (resultType.equals(TypeList.VOID)) {
-            LinkedList<Type> types = new LinkedList<>(TypeList.getAll());
-            PseudoRandom.shuffle(types);
+            ArrayList<Type> types = new ArrayList<>(TypeList.getAll());
             if (types.isEmpty()) {
                 throw new ProductionFailedException();
             }
-            resultType = types.getFirst();
+            resultType = TypeSelectionUtil.pickPreferredOrAnyType(ownerClass, types);
         }
         String resultName = "var_" + SymbolTable.getNextVariableNumber();
         int flags = VariableInfo.NONE;

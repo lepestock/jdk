@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015, 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -84,6 +84,8 @@ TESTLIBRARY_SRC_FILES = $(TESTLIBRARY_SRC_DIR)/Asserts.java \
                         $(TESTLIBRARY_SRC_DIR)/util/Pair.java
 
 ASM_SRC_DIR = ../asm/org/objectweb/asm/
+GENERATORS_SRC_DIR = ../../compiler/lib/generators
+GENERATORS_SRC_FILES = $(shell find $(GENERATORS_SRC_DIR) -name '*.java')
 
 .PHONY: cleantmp
 
@@ -104,7 +106,10 @@ compile_asm: INIT
 compile_testlib: INIT
 	$(JAVAC) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/org.objectweb.asm=ALL-UNNAMED -Xlint $(TESTLIBRARY_SRC_FILES) -d $(CLASSES_DIR)
 
-COMPILE: INIT filelist compile_asm compile_testlib
+compile_generators: INIT
+	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/org.objectweb.asm=ALL-UNNAMED -Xlint $(GENERATORS_SRC_FILES) -d $(CLASSES_DIR)
+
+COMPILE: INIT filelist compile_asm compile_testlib compile_generators
 	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -Xlint -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) @filelist
 
 filelist: $(SRC_FILES)

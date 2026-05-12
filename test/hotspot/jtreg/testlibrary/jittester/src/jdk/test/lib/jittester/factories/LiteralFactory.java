@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,59 +23,67 @@
 
 package jdk.test.lib.jittester.factories;
 
+import compiler.lib.generators.Generators;
+import compiler.lib.generators.RestrictableGenerator;
 import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.utils.PseudoRandom;
-
-import java.util.Locale;
+import jdk.test.lib.jittester.utils.PseudoRandomnessSourceAdapter;
 
 class LiteralFactory extends Factory<Literal> {
+    private static final int PRINTABLE_CHAR_MIN = 32;
+    private static final int PRINTABLE_CHAR_MAX = 126;
+
     protected final Type resultType;
 
     LiteralFactory(Type resultType) {
         this.resultType = resultType;
     }
 
+    private static Generators generators() {
+        return new Generators(new PseudoRandomnessSourceAdapter());
+    }
+
     @Override
     public Literal produce() throws ProductionFailedException {
         Literal literal;
-        if (resultType.equals(TypeList.BOOLEAN)) {
-            literal = new Literal(PseudoRandom.randomBoolean(), TypeList.BOOLEAN);
-        } else if (resultType.equals(TypeList.CHAR)) {
-            literal = new Literal((char) ((char) (PseudoRandom.random() * ('z' - 'A')) + 'A'), TypeList.CHAR);
-        } else if (resultType.equals(TypeList.INT)) {
-            literal = new Literal((int) (PseudoRandom.random() * Integer.MAX_VALUE), TypeList.INT);
-        } else if (resultType.equals(TypeList.LONG)) {
-            literal = new Literal((long) (PseudoRandom.random() * Long.MAX_VALUE), TypeList.LONG);
-        } else if (resultType.equals(TypeList.FLOAT)) {
-            literal = new Literal(Float.valueOf(String.format(
-                    (Locale) null,
-                    "%." + ProductionParams.floatingPointPrecision.value() + "EF",
-                    (float) PseudoRandom.random() * Float.MAX_VALUE)),
-                    TypeList.FLOAT);
-        } else if (resultType.equals(TypeList.DOUBLE)) {
-            literal = new Literal(Double.valueOf(String.format(
-                    (Locale) null,
-                    "%." + 2 * ProductionParams.floatingPointPrecision.value() + "E",
-                    PseudoRandom.random() * Double.MAX_VALUE)),
-                    TypeList.DOUBLE);
-        } else if (resultType.equals(TypeList.BYTE)) {
-            literal = new Literal((byte)(PseudoRandom.random() * Byte.MAX_VALUE), TypeList.BYTE);
-        } else if (resultType.equals(TypeList.SHORT)) {
-            literal = new Literal((short)(PseudoRandom.random() * Short.MAX_VALUE), TypeList.SHORT);
+        Generators g = generators();
+        if (resultType.equals(TypeList.BOOLEAN) || isTypeName("java.lang.Boolean")) {
+            literal = new Literal(PseudoRandom.randomBoolean(), resultType);
+        } else if (resultType.equals(TypeList.CHAR) || isTypeName("java.lang.Character")) {
+            int c = g.safeRestrict(g.ints(), PRINTABLE_CHAR_MIN, PRINTABLE_CHAR_MAX).next();
+            literal = new Literal((char) c, resultType);
+        } else if (resultType.equals(TypeList.INT) || isTypeName("java.lang.Integer")) {
+            literal = new Literal(g.ints().next(), resultType);
+        } else if (resultType.equals(TypeList.LONG) || isTypeName("java.lang.Long")) {
+            literal = new Literal(g.longs().next(), resultType);
+        } else if (resultType.equals(TypeList.FLOAT) || isTypeName("java.lang.Float")) {
+            literal = new Literal(g.floats().next(), resultType);
+        } else if (resultType.equals(TypeList.DOUBLE) || isTypeName("java.lang.Double")) {
+            literal = new Literal(g.doubles().next(), resultType);
+        } else if (resultType.equals(TypeList.BYTE) || isTypeName("java.lang.Byte")) {
+            RestrictableGenerator<Integer> bounded = g.safeRestrict(g.ints(), Byte.MIN_VALUE, Byte.MAX_VALUE);
+            literal = new Literal((byte) (int) bounded.next(), resultType);
+        } else if (resultType.equals(TypeList.SHORT) || isTypeName("java.lang.Short")) {
+            RestrictableGenerator<Integer> bounded = g.safeRestrict(g.ints(), Short.MIN_VALUE, Short.MAX_VALUE);
+            literal = new Literal((short) (int) bounded.next(), resultType);
         } else if (resultType.equals(TypeList.STRING)) {
             int size = (int) (PseudoRandom.random() * ProductionParams.stringLiteralSizeLimit.value());
             byte[] str = new byte[size];
             for (int i = 0; i < size; i++) {
                 str[i] = (byte) ((int) (('z' - 'a') * PseudoRandom.random()) + 'a');
             }
-            literal = new Literal(new String(str), TypeList.STRING);
+            literal = new Literal(new String(str), resultType);
         } else {
             throw new ProductionFailedException();
         }
         return literal;
+    }
+
+    private boolean isTypeName(String expectedName) {
+        return resultType.getName().equals(expectedName);
     }
 }

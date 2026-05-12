@@ -26,18 +26,42 @@ package jdk.test.lib.jittester;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Comparator;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.Genome;
 
 
 public class SymbolTable {
+    private static final String MAGNET_DECL_CHANNEL = "symbol.decl";
+    private static final boolean DEBUG_DEPTH = Boolean.getBoolean("jittester.debug.symbol.depth");
+    private static int maxObservedDepth = 1;
 
     private static final Stack<HashMap<Type, ArrayList<Symbol>>> SYMBOL_STACK
             = new Stack<>();
+
+    private static List<Type> sortedTypes(Map<Type, ArrayList<Symbol>> vars) {
+        return vars.keySet().stream()
+                .sorted(Comparator.comparing(Type::getName))
+                .toList();
+    }
     private static int VARIABLE_NUMBER = 0;
     private static int FUNCTION_NUMBER = 0;
+
+    private static final Comparator<Symbol> SYMBOL_ORDER = Comparator
+            .comparing((Symbol s) -> s.getClass().getName())
+            .thenComparing(s -> s.owner == null ? "" : s.owner.getName())
+            .thenComparing(s -> s.name == null ? "" : s.name)
+            .thenComparing(s -> s.type == null ? "" : s.type.getName());
+
+    private static ArrayList<Symbol> sortedSymbols(List<Symbol> input) {
+        ArrayList<Symbol> out = new ArrayList<>(input);
+        out.sort(SYMBOL_ORDER);
+        return out;
+    }
 
     private static void initExternalSymbols() {
 
@@ -67,6 +91,10 @@ public class SymbolTable {
     }
 
     public static void add(Symbol symbol) {
+        if (symbol == null) {
+            return;
+        }
+        assignMagnetismGeneIfNeeded(symbol);
         HashMap<Type, ArrayList<Symbol>> vars = SYMBOL_STACK.peek();
         if (!vars.containsKey(symbol.type)) {
             vars.put(symbol.type, new ArrayList<>());
@@ -85,10 +113,10 @@ public class SymbolTable {
         }
     }
 
-    protected static Collection<Symbol> get(Type type) {
+    public static Collection<Symbol> get(Type type) {
         HashMap<Type, ArrayList<Symbol>> vars = SYMBOL_STACK.peek();
         if (vars.containsKey(type)) {
-            return vars.get(type);
+            return sortedSymbols(vars.get(type));
         }
         return new ArrayList<>();
     }
@@ -98,10 +126,21 @@ public class SymbolTable {
         if (vars.containsKey(type)) {
             return vars.get(type).stream()
                 .filter(classToCheck::isInstance)
+                .sorted(SYMBOL_ORDER)
                 .collect(Collectors.toList());
         }
         return new ArrayList<>();
     }
+
+    public static void removeVariable(VariableInfo variable) {
+        HashMap<Type, ArrayList<Symbol>> vars = SYMBOL_STACK.peek();
+
+        if (vars.containsKey(variable.type)) {
+            vars.get(variable.type).remove(variable);
+        }
+    }
+
+
 
     protected static Collection<Symbol> get(TypeKlass typeKlass, Type type,
             Class<?> classToCheck) {
@@ -113,6 +152,7 @@ public class SymbolTable {
                     result.add(symbol);
                 }
             }
+            result.sort(SYMBOL_ORDER);
             return result;
         }
         return new ArrayList<>();
@@ -125,7 +165,7 @@ public class SymbolTable {
     protected static HashMap<Type, ArrayList<Symbol>> getAll(Class<?> classToCheck) {
         HashMap<Type, ArrayList<Symbol>> result = new HashMap<>();
 
-        for (Type type : SYMBOL_STACK.peek().keySet()) {
+        for (Type type : sortedTypes(SYMBOL_STACK.peek())) {
             ArrayList<Symbol> symbolsOfType = SYMBOL_STACK.peek().get(type);
             for (Symbol symbol : symbolsOfType) {
                 if (classToCheck.isInstance(symbol)) {
@@ -143,7 +183,7 @@ public class SymbolTable {
     protected static HashMap<Type, ArrayList<Symbol>> getAll(TypeKlass typeKlass, Class<?> classToCheck) {
         HashMap<Type, ArrayList<Symbol>> result = new HashMap<>();
 
-        for (Type type : SYMBOL_STACK.peek().keySet()) {
+        for (Type type : sortedTypes(SYMBOL_STACK.peek())) {
             ArrayList<Symbol> symbolsOfType =  SYMBOL_STACK.peek().get(type);
             for (Symbol symbol : symbolsOfType) {
                 if (classToCheck.isInstance(symbol) && typeKlass.equals(symbol.owner)) {
@@ -160,8 +200,8 @@ public class SymbolTable {
 
     protected static ArrayList<Symbol> getAllCombined() {
         ArrayList<Symbol> result = new ArrayList<>();
-        for (Type type : SYMBOL_STACK.peek().keySet()) {
-            ArrayList<Symbol> symbolsOfType = SYMBOL_STACK.peek().get(type);
+        for (Type type : sortedTypes(SYMBOL_STACK.peek())) {
+            ArrayList<Symbol> symbolsOfType = sortedSymbols(SYMBOL_STACK.peek().get(type));
             for (Symbol symbol : symbolsOfType) {
                 result.add(symbol);
             }
@@ -172,8 +212,8 @@ public class SymbolTable {
 
     public static ArrayList<Symbol> getAllCombined(Class<?> classToCheck) {
         ArrayList<Symbol> result = new ArrayList<>();
-        for (Type type : SYMBOL_STACK.peek().keySet()) {
-            ArrayList<Symbol> symbolsOfType = SYMBOL_STACK.peek().get(type);
+        for (Type type : sortedTypes(SYMBOL_STACK.peek())) {
+            ArrayList<Symbol> symbolsOfType = sortedSymbols(SYMBOL_STACK.peek().get(type));
             for (Symbol symbol : symbolsOfType) {
                 if (classToCheck.isInstance(symbol)) {
                     result.add(symbol);
@@ -186,8 +226,8 @@ public class SymbolTable {
 
     public static ArrayList<Symbol> getAllCombined(TypeKlass typeKlass, Class<?> classToCheck) {
         ArrayList<Symbol> result = new ArrayList<>();
-        for (Type type : SYMBOL_STACK.peek().keySet()) {
-            ArrayList<Symbol> symbolsOfType = SYMBOL_STACK.peek().get(type);
+        for (Type type : sortedTypes(SYMBOL_STACK.peek())) {
+            ArrayList<Symbol> symbolsOfType = sortedSymbols(SYMBOL_STACK.peek().get(type));
             for (Symbol symbol : symbolsOfType) {
                 if (classToCheck.isInstance(symbol) && typeKlass.equals(symbol.owner)) {
                     result.add(symbol);
@@ -200,8 +240,8 @@ public class SymbolTable {
 
     public static ArrayList<Symbol> getAllCombined(TypeKlass typeKlass) {
         ArrayList<Symbol> result = new ArrayList<>();
-        for (Type t : SYMBOL_STACK.peek().keySet()) {
-            ArrayList<Symbol> symbolsOfType = SYMBOL_STACK.peek().get(t);
+        for (Type t : sortedTypes(SYMBOL_STACK.peek())) {
+            ArrayList<Symbol> symbolsOfType = sortedSymbols(SYMBOL_STACK.peek().get(t));
             for (Symbol symbol : symbolsOfType) {
                 if (typeKlass.equals(symbol.owner)) {
                     result.add(symbol);
@@ -214,8 +254,8 @@ public class SymbolTable {
 
     protected static ArrayList<Symbol> getAllCombined(String name, Class<?> classToCheck) {
         ArrayList<Symbol> result = new ArrayList<>();
-        for (Type type : SYMBOL_STACK.peek().keySet()) {
-            ArrayList<Symbol> symbolsOfType = SYMBOL_STACK.peek().get(type);
+        for (Type type : sortedTypes(SYMBOL_STACK.peek())) {
+            ArrayList<Symbol> symbolsOfType = sortedSymbols(SYMBOL_STACK.peek().get(type));
             for (Symbol symbol : symbolsOfType) {
                 if (classToCheck.isInstance(symbol) && name.equals(symbol.name)) {
                     result.add(symbol);
@@ -227,8 +267,8 @@ public class SymbolTable {
     }
 
     public static Symbol get(String name, Class<?> classToCheck) {
-        for (Type type : SYMBOL_STACK.peek().keySet()) {
-            ArrayList<Symbol> symbolsOfType = SYMBOL_STACK.peek().get(type);
+        for (Type type : sortedTypes(SYMBOL_STACK.peek())) {
+            ArrayList<Symbol> symbolsOfType = sortedSymbols(SYMBOL_STACK.peek().get(type));
             for (Symbol symbol : symbolsOfType) {
                 if (classToCheck.isInstance(symbol) && name.equals(symbol.name)) {
                     return symbol;
@@ -261,6 +301,7 @@ public class SymbolTable {
                 topArray.add(symbol.copy());
             }
         }
+        maybeReportNewMaxDepth("push");
     }
 
     public static void merge() {
@@ -269,6 +310,7 @@ public class SymbolTable {
         HashMap<Type, ArrayList<Symbol>> top = SYMBOL_STACK.pop();
         SYMBOL_STACK.pop();
         SYMBOL_STACK.push(top);
+        maybeReportNewMaxDepth("merge");
     }
 
     public static void pop() {
@@ -281,6 +323,122 @@ public class SymbolTable {
 
     public static int getNextFunctionNumber() {
         return ++FUNCTION_NUMBER;
+    }
+
+    public static int getScopeDepth() {
+        return SYMBOL_STACK.size();
+    }
+
+    public static int checkpoint() {
+        return SYMBOL_STACK.size();
+    }
+
+    public static void rollbackToCheckpoint(int checkpointDepth) {
+        if (checkpointDepth < 1) {
+            throw new IllegalArgumentException("Invalid SymbolTable checkpoint depth: " + checkpointDepth);
+        }
+        if (SYMBOL_STACK.size() < checkpointDepth) {
+            throw new RuntimeException("SymbolTable rollback underflow: currentDepth="
+                    + SYMBOL_STACK.size() + ", checkpointDepth=" + checkpointDepth);
+        }
+        while (SYMBOL_STACK.size() > checkpointDepth) {
+            SYMBOL_STACK.pop();
+        }
+        maybeReportNewMaxDepth("rollback");
+    }
+
+    private static void maybeReportNewMaxDepth(String op) {
+        if (!DEBUG_DEPTH) {
+            return;
+        }
+        int depth = SYMBOL_STACK.size();
+        if (depth <= maxObservedDepth) {
+            return;
+        }
+        maxObservedDepth = depth;
+        RuntimeException trace = new RuntimeException(
+                "[JTDBG][SymbolTable] new max depth=" + depth + " op=" + op);
+        trace.printStackTrace(System.err);
+    }
+
+    public static String dumpSnapshot() {
+        return dumpSnapshot(24, 16);
+    }
+
+    public static String dumpSnapshot(int maxTypes, int maxSymbolsPerType) {
+        StringBuilder sb = new StringBuilder();
+        HashMap<Type, ArrayList<Symbol>> top = SYMBOL_STACK.peek();
+        sb.append("SymbolTable{depth=").append(SYMBOL_STACK.size())
+                .append(", types=").append(top.size())
+                .append(", varNo=").append(VARIABLE_NUMBER)
+                .append(", funNo=").append(FUNCTION_NUMBER)
+                .append("}\n");
+        int shownTypes = 0;
+        for (Type type : sortedTypes(top)) {
+            if (shownTypes >= maxTypes) {
+                sb.append("  ... ").append(top.size() - shownTypes).append(" more types\n");
+                break;
+            }
+            ArrayList<Symbol> symbols = top.get(type);
+            sb.append("  type=").append(type.getName())
+                    .append(" count=").append(symbols.size()).append('\n');
+            int shownSymbols = 0;
+            for (Symbol symbol : symbols) {
+                if (shownSymbols >= maxSymbolsPerType) {
+                    sb.append("    ... ").append(symbols.size() - shownSymbols)
+                            .append(" more symbols\n");
+                    break;
+                }
+                sb.append("    - ")
+                        .append(symbol.getClass().getSimpleName())
+                        .append(" owner=").append(symbol.owner == null ? "<null>" : symbol.owner.getName())
+                        .append(" name=").append(symbol.name)
+                        .append(" magnet=").append(symbol.hasMagnetismGeneId()
+                                ? Long.toString(symbol.getMagnetismGeneId()) : "<none>")
+                        .append('\n');
+                shownSymbols++;
+            }
+            shownTypes++;
+        }
+        return sb.toString();
+    }
+
+    public static long consumeMagnetTargetGene(String channel) {
+        if (channel == null || channel.isBlank()) {
+            throw new IllegalArgumentException("Magnet channel must not be blank");
+        }
+        Long magnetGeneId = Genome.consumeMagnetTargetGene("magnet.use." + channel, 0L);
+        if (magnetGeneId == null) {
+            throw new RuntimeException("Genome broken around magnet gene <missing> for channel '"
+                    + channel + "'");
+        }
+        return magnetGeneId;
+    }
+
+    public static void recordMagnetTargetGene(String channel, long magnetGeneId) {
+        if (channel == null || channel.isBlank()) {
+            return;
+        }
+        Genome.recordMagnetTargetGene("magnet.use." + channel, magnetGeneId);
+    }
+
+    public static <T extends Symbol> T attractByMagnet(List<T> candidates, long magnetId, String channel) {
+        if (candidates != null) {
+            for (T candidate : candidates) {
+                if (candidate.hasMagnetismGeneId() && candidate.getMagnetismGeneId() == magnetId) {
+                    return candidate;
+                }
+            }
+        }
+        throw new RuntimeException("Genome broken around magnet gene " + magnetId
+                + " for channel '" + channel + "'");
+    }
+
+    private static void assignMagnetismGeneIfNeeded(Symbol symbol) {
+        if (symbol.hasMagnetismGeneId()) {
+            return;
+        }
+        symbol.setMagnetismGeneId(Genome.createOrConsumeMagnetGene(MAGNET_DECL_CHANNEL));
     }
 
     @Override

@@ -48,6 +48,11 @@ public class ProductionLimiter {
             limit--;
         }
         if (limit != -1 && limit <= 0) {
+            if (ProductionParams.abortOnHardLimit.value()) {
+                throw new GenerationAbortedException(
+                        "Hard production-limit reached (production-limit="
+                                + ProductionParams.productionLimit.value() + ")");
+            }
             throw new ProductionFailedException();
         }
 

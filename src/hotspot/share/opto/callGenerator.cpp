@@ -742,7 +742,7 @@ void CallGenerator::do_late_inline_helper() {
         result = kit.gvn().transform(new OpaqueParseNode(C, result, result_type));
       }
     }
-
+    C->record_optimization_event(OptEvent_FunctionInlining);
     kit.replace_call(call, result, true, do_asserts);
   }
 }

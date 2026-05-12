@@ -47,7 +47,8 @@ class ArithmeticOperatorFactory extends Factory<Operator> {
         rule.add("sub", builder.setOperatorKind(OperatorKind.SUB).getBinaryOperatorFactory());
         rule.add("mul", builder.setOperatorKind(OperatorKind.MUL).getBinaryOperatorFactory());
         if (!exceptionSafe) {
-            rule.add("div", builder.setOperatorKind(OperatorKind.DIV).getBinaryOperatorFactory());
+            // Low probability is due to div operator often leads to the divizion by zero
+            rule.add("div", builder.setOperatorKind(OperatorKind.DIV).getBinaryOperatorFactory(), 0.1);
             rule.add("mod", builder.setOperatorKind(OperatorKind.MOD).getBinaryOperatorFactory());
         }
         rule.add("unary_plus", builder.setOperatorKind(OperatorKind.UNARY_PLUS).getUnaryOperatorFactory());

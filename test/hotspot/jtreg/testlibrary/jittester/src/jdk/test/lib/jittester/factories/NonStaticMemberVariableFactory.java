@@ -24,7 +24,10 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+import java.util.stream.Collectors;
+
 import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.NonStaticMemberVariable;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Symbol;
@@ -32,9 +35,16 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
 class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
+    private static final String MAGNET_CHANNEL = "use.member.variable";
+    private static final boolean DEBUG_REPLAY_FAIL =
+            Boolean.getBoolean("jittester.debug.member.replay.fail");
+    private static final boolean DEBUG_SELECTION =
+            Boolean.getBoolean("jittester.debug.member.selection");
     private final Type type;
     private final int flags;
     private final long complexityLimit;
@@ -55,9 +65,22 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
     @Override
     public NonStaticMemberVariable produce() throws ProductionFailedException {
         // Get the variables of the requested type from SymbolTable
+        long SEED = PseudoRandom.getCurrentSeed();
         ArrayList<Symbol> variables = new ArrayList<>(SymbolTable.get(type, VariableInfo.class));
+        Logger.log(SEED == 194820577109216L,
+                ":variables " + variables.stream().map(Symbol::toString).collect(Collectors.joining(", ")));
         if (!variables.isEmpty()) {
-            PseudoRandom.shuffle(variables);
+            boolean replayMode = Genome.isReplayActive();
+            if (replayMode) {
+                long replayTargetGene = SymbolTable.consumeMagnetTargetGene(MAGNET_CHANNEL);
+                // Previous record attempt for this selection point ended up with no usable variables.
+                if (replayTargetGene == -1L) {
+                    throw new ProductionFailedException();
+                }
+                Symbol selected = SymbolTable.attractByMagnet(variables, replayTargetGene, MAGNET_CHANNEL);
+                variables = new ArrayList<>();
+                variables.add(selected);
+            }
             IRNodeBuilder builder = new IRNodeBuilder().setComplexityLimit(complexityLimit)
                     .setOperatorLimit(operatorLimit)
                     .setOwnerKlass((TypeKlass) ownerClass)
@@ -69,13 +92,63 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                         && (varInfo.flags & VariableInfo.INITIALIZED) == (flags & VariableInfo.INITIALIZED)
                         && (varInfo.flags & VariableInfo.STATIC) == 0
                         && (varInfo.flags & VariableInfo.LOCAL) == 0) {
+                    GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
                     try {
+                        if (DEBUG_SELECTION) {
+                            System.err.println("[JTDBG][NonStaticMemberVariableFactory] selection mode="
+                                    + (replayMode ? "replay" : "record")
+                                    + " channel=" + MAGNET_CHANNEL
+                                    + " ownerClass=" + ownerClass
+                                    + " requestedType=" + type
+                                    + " selectedOwner=" + varInfo.owner
+                                    + " selectedName=" + varInfo.name
+                                    + " selectedMagnet=" + varInfo.getMagnetismGeneId()
+                                    + " flags=" + varInfo.flags);
+                        }
+                        if (!replayMode) {
+                            Genome.beginSpeculativeRecord();
+                            SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, varInfo.getMagnetismGeneId());
+                        }
+                        Logger.log(SEED == 194820577109216L, ":expressionSeed " + PseudoRandom.getCurrentSeed());
                         IRNode object = builder.setResultType(varInfo.owner)
                                 .getExpressionFactory().produce();
+                        if (!replayMode) {
+                            Genome.commitSpeculativeRecord();
+                        }
                         return new NonStaticMemberVariable(object, varInfo);
                     } catch (ProductionFailedException e) {
+                        GenerationState.rollbackTo(stateCheckpoint);
+                        if (!replayMode) {
+                            Genome.rollbackSpeculativeRecord();
+                        } else {
+                            if (DEBUG_REPLAY_FAIL) {
+                                System.err.println("[JTDBG][NonStaticMemberVariableFactory] replay failure on selected member"
+                                        + " channel=" + MAGNET_CHANNEL
+                                        + " ownerClass=" + ownerClass
+                                        + " requestedType=" + type
+                                        + " selectedOwner=" + varInfo.owner
+                                        + " selectedName=" + varInfo.name
+                                        + " selectedMagnet=" + varInfo.getMagnetismGeneId()
+                                        + " flags=" + varInfo.flags);
+                                System.err.print(GenerationState.dumpSnapshot(
+                                        "C" + varInfo.getMagnetismGeneId()));
+                                e.printStackTrace(System.err);
+                            }
+                            throw new RuntimeException("Genome broken around magnet gene "
+                                    + varInfo.getMagnetismGeneId() + " for channel '" + MAGNET_CHANNEL
+                                    + "': selected variable failed in replay", e);
+                        }
+                    } catch (RuntimeException e) {
+                        GenerationState.rollbackTo(stateCheckpoint);
+                        if (!replayMode) {
+                            Genome.rollbackSpeculativeRecord();
+                        }
+                        throw e;
                     }
                 }
+            }
+            if (!replayMode) {
+                SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, -1L);
             }
         }
         throw new ProductionFailedException();

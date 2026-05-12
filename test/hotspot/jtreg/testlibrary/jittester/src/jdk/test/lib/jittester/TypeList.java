@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.Comparator;
 
 public class TypeList {
     public static final TypeVoid VOID = new TypeVoid();
@@ -166,5 +167,57 @@ public class TypeList {
                        .forEach(l -> l.removeIf(isNotBasic));
         TYPES.removeIf(isNotBasicType);
         REFERENCE_TYPES.removeIf(isNotBasicType);
+    }
+
+    /**
+     * Returns a rollback checkpoint for list-append mutations.
+     */
+    public static int checkpoint() {
+        return TYPES.size();
+    }
+
+    /**
+     * Rolls back appended types to a previous checkpoint.
+     * Existing prefix order is preserved.
+     */
+    public static void rollbackToCheckpoint(int checkpoint) {
+        if (checkpoint < 0 || checkpoint > TYPES.size()) {
+            throw new IllegalArgumentException("Invalid TypeList checkpoint: " + checkpoint);
+        }
+        while (TYPES.size() > checkpoint) {
+            Type last = TYPES.get(TYPES.size() - 1);
+            remove(last);
+        }
+    }
+
+    public static String dumpSnapshot() {
+        return dumpSnapshot(48);
+    }
+
+    public static String dumpSnapshot(int maxTypes) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("TypeList{")
+                .append("total=").append(TYPES.size())
+                .append(", reference=").append(REFERENCE_TYPES.size())
+                .append(", builtin=").append(BUILTIN_TYPES.size())
+                .append("}\n");
+
+        List<Type> ordered = TYPES.stream()
+                .sorted(Comparator.comparing(Type::getName))
+                .toList();
+        int shown = 0;
+        for (Type type : ordered) {
+            if (shown >= maxTypes) {
+                sb.append("  ... ").append(ordered.size() - shown).append(" more types\n");
+                break;
+            }
+            boolean builtin = isBuiltIn(type);
+            boolean reference = isReferenceType(type);
+            sb.append("  - name=").append(type.getName())
+                    .append(" kind=").append(builtin ? "builtin" : (reference ? "reference" : "other"))
+                    .append('\n');
+            shown++;
+        }
+        return sb.toString();
     }
 }

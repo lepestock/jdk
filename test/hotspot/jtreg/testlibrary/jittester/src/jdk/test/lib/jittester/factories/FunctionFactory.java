@@ -25,9 +25,13 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.ProductionFailedException;
+import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
@@ -35,14 +39,20 @@ import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.functions.Function;
 import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
-class FunctionFactory extends SafeFactory<Function> {
+public class FunctionFactory extends SafeFactory<Function> {
+    private static final String MAGNET_CHANNEL = "use.function";
     private final FunctionInfo functionInfo;
     private final int operatorLimit;
     private final long complexityLimit;
     private final boolean exceptionSafe;
     private final TypeKlass ownerClass;
+    public static long SEED;
+    private static long INTERVENTION = 131992649516573L;
+    public static VariableInfo forbiddenThizz = null;
 
     FunctionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe) {
@@ -56,6 +66,19 @@ class FunctionFactory extends SafeFactory<Function> {
 
     @Override
     protected Function sproduce() throws ProductionFailedException {
+        PseudoRandom.randomBoolean(); //Make the calls from SafeFactory predictable
+        SEED = PseudoRandom.getCurrentSeed();
+        Logger.log(SEED == INTERVENTION, "FunctionFactory :ownerClass " + ownerClass);
+        VariableInfo removedThizz = null;
+        boolean thizzRemoved = false;
+        if (forbiddenThizz != null && ownerClass.equals(forbiddenThizz.getOwner())) {
+            Logger.log(SEED == INTERVENTION, "FunctionFactory :forbiddenThizz " + forbiddenThizz +
+                    " :thizz-type " + forbiddenThizz.type +
+                    " :result-type " + functionInfo.type +
+                    " :types-equals? " + functionInfo.type.equals(forbiddenThizz.type));
+            SymbolTable.removeVariable(forbiddenThizz);
+            thizzRemoved = true;
+        }
         // Currently no function is exception-safe
         if (exceptionSafe) {
             throw new ProductionFailedException();
@@ -66,11 +89,19 @@ class FunctionFactory extends SafeFactory<Function> {
         } else {
             allFunctions = new ArrayList<>(SymbolTable.get(functionInfo.type, FunctionInfo.class));
         }
+        int intrinsicBonus = Math.max(0, ProductionParams.intrinsicCallWeightBonus.value());
+        int nondeterminism = Math.max(0, ProductionParams.nondeterminism.value());
+        boolean nondeterministicMode = nondeterminism > 0;
+        int nondeterministicBonus = nondeterminism;
         if (!allFunctions.isEmpty()) {
-            PseudoRandom.shuffle(allFunctions);
+            boolean replayMode = Genome.isReplayActive();
+            List<FunctionInfo> remainingFunctions = toFunctionList(allFunctions);
+            remainingFunctions.sort(FUNCTION_ORDER);
             Collection<TypeKlass> klassHierarchy = ownerClass.getAllParents();
-            for (Symbol function : allFunctions) {
-                FunctionInfo functionInfo = (FunctionInfo) function;
+            while (!remainingFunctions.isEmpty()) {
+                FunctionInfo functionInfo = selectWeightedFunction(remainingFunctions, intrinsicBonus,
+                        nondeterministicMode, nondeterministicBonus);
+                removeFunctionOnce(remainingFunctions, functionInfo);
                 // Don't try to construct abstract classes.
                 if (functionInfo.isConstructor() && functionInfo.owner.isAbstract()) {
                     continue;
@@ -109,7 +140,32 @@ class FunctionFactory extends SafeFactory<Function> {
                     }
                 }
                 if (functionInfo.complexity < complexityLimit - 1) {
+                    Long replayTargetGene = null;
+                    if (replayMode) {
+                        replayTargetGene = Genome.consumeMagnetTargetGene("magnet.use." + MAGNET_CHANNEL, 0L);
+                        // Failed record attempts keep selection RNG (N...) but roll back magnet target (U...).
+                        // In replay we may encounter those attempts and should skip them.
+                        if (replayTargetGene == null) {
+                            continue;
+                        }
+                        if (replayTargetGene == -1L) {
+                            throw new RuntimeException("Genome broken around magnet gene -1 for channel '"
+                                    + MAGNET_CHANNEL + "': selected function magnet is "
+                                    + functionInfo.getMagnetismGeneId());
+                        }
+                        if (replayTargetGene != functionInfo.getMagnetismGeneId()) {
+                            throw new RuntimeException("Genome broken around magnet gene "
+                                    + replayTargetGene + " for channel '" + MAGNET_CHANNEL
+                                    + "': selected function magnet is "
+                                    + functionInfo.getMagnetismGeneId());
+                        }
+                    }
+                    GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
                     try {
+                        if (!replayMode) {
+                            Genome.beginSpeculativeRecord();
+                            SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, functionInfo.getMagnetismGeneId());
+                        }
                         List<IRNode> accum = new ArrayList<>();
                         if (!functionInfo.argTypes.isEmpty()) {
                             // Here we should do some analysis here to determine if
@@ -124,7 +180,7 @@ class FunctionFactory extends SafeFactory<Function> {
                             Collection<Symbol> allFuncsInKlass = SymbolTable.getAllCombined(functionInfo.owner,
                                     FunctionInfo.class);
                             for (Symbol s2 : allFuncsInKlass) {
-                                FunctionInfo i2 = (FunctionInfo) function;
+                                FunctionInfo i2 = (FunctionInfo) s2;
                                 if (!i2.equals(functionInfo) && i2.name.equals(functionInfo.name)
                                         && i2.argTypes.size() == functionInfo.argTypes.size()) {
                                     noconsts = true;
@@ -142,15 +198,141 @@ class FunctionFactory extends SafeFactory<Function> {
                                 accum.add(b.setResultType(argType.type)
                                         .getExpressionFactory()
                                         .produce());
+            Logger.log(ownerClass, "(FunctionFactory :point1 :function " + functionInfo + ")", accum);
                             }
                         }
-                        return new Function(ownerClass, functionInfo, accum);
+
+            //if (SEED == INTERVENTION) {
+            if (thizzRemoved) {
+                SymbolTable.add(forbiddenThizz);
+            }
+                        Function produced = new Function(ownerClass, functionInfo, accum);
+                        Long expressionScopeSeed = Genome.getCurrentExpressionScopeSeed();
+                        if (expressionScopeSeed != null) {
+                            produced.setExpressionGeneSeed(expressionScopeSeed);
+                        }
+                        if (!replayMode) {
+                            Genome.commitSpeculativeRecord();
+                        }
+                        return produced;
                     } catch (ProductionFailedException e) {
-                        // removeAllChildren();
+                        GenerationState.rollbackTo(stateCheckpoint);
+                        if (!replayMode) {
+                            Genome.rollbackSpeculativeRecord();
+                        } else if (replayTargetGene != null) {
+                            throw new RuntimeException("Genome broken around magnet gene "
+                                    + replayTargetGene + " for channel '" + MAGNET_CHANNEL
+                                    + "': selected function failed in replay", e);
+                        }
+                        // Failed attempts are normal here; keep trying other candidates.
+                    } catch (RuntimeException e) {
+                        GenerationState.rollbackTo(stateCheckpoint);
+                        if (!replayMode) {
+                            Genome.rollbackSpeculativeRecord();
+                        }
+                        throw e;
                     }
                 }
             }
         }
+        if (!Genome.isReplayActive()) {
+            SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, -1L);
+        } else {
+            long replayTargetGene = SymbolTable.consumeMagnetTargetGene(MAGNET_CHANNEL);
+            if (replayTargetGene != -1L) {
+                throw new RuntimeException("Genome broken around magnet gene "
+                        + replayTargetGene + " for channel '" + MAGNET_CHANNEL
+                        + "': expected terminal -1 marker");
+            }
+        }
         throw new ProductionFailedException();
+    }
+
+    private static List<FunctionInfo> toFunctionList(List<Symbol> symbols) {
+        ArrayList<FunctionInfo> out = new ArrayList<>(symbols.size());
+        for (Symbol symbol : symbols) {
+            out.add((FunctionInfo) symbol);
+        }
+        return out;
+    }
+
+    private static final Comparator<FunctionInfo> FUNCTION_ORDER = Comparator
+            .comparing((FunctionInfo f) -> f.owner == null ? "" : f.owner.getName())
+            .thenComparing(f -> f.name == null ? "" : f.name)
+            .thenComparingInt(f -> f.flags)
+            .thenComparing(f -> f.type == null ? "" : f.type.getName())
+            .thenComparingInt(f -> f.argTypes == null ? -1 : f.argTypes.size())
+            .thenComparing(FunctionFactory::argumentTypeSignature);
+
+    private static String argumentTypeSignature(FunctionInfo f) {
+        if (f.argTypes == null || f.argTypes.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (VariableInfo v : f.argTypes) {
+            if (sb.length() > 0) {
+                sb.append(',');
+            }
+            sb.append(v == null || v.type == null ? "<null>" : v.type.getName());
+        }
+        return sb.toString();
+    }
+
+    private static void removeFunctionOnce(List<FunctionInfo> functions, FunctionInfo target) {
+        Iterator<FunctionInfo> it = functions.iterator();
+        while (it.hasNext()) {
+            if (it.next() == target) {
+                it.remove();
+                return;
+            }
+        }
+    }
+
+        private static boolean isNondeterministicPreferred(FunctionInfo info) {
+        return info != null
+                && info.isStatic()
+                && info.owner != null
+                && "java.lang.System".equals(info.owner.getName())
+                && "nanoTime".equals(info.name)
+                && info.argTypes != null
+                && info.argTypes.isEmpty()
+                && info.type != null
+                && "long".equals(info.type.getName());
+    }
+
+    private static int getWeight(FunctionInfo info, int intrinsicBonus, boolean nondeterministicMode, int nondeterministicBonus) {
+        int weight = info.intrinsic ? 1 + intrinsicBonus : 1;
+        if (nondeterministicMode && isNondeterministicPreferred(info)) {
+            weight += nondeterministicBonus;
+        }
+        return weight;
+    }
+
+    private static FunctionInfo selectWeightedFunction(List<FunctionInfo> functions, int intrinsicBonus,
+            boolean nondeterministicMode, int nondeterministicBonus) {
+        if (functions.isEmpty()) {
+            throw new IllegalArgumentException("functions is empty");
+        }
+        if (intrinsicBonus <= 0 && (!nondeterministicMode || nondeterministicBonus <= 0)) {
+            return PseudoRandom.randomElement(functions);
+        }
+
+        double totalWeight = 0.0;
+        for (FunctionInfo functionInfo : functions) {
+            totalWeight += getWeight(functionInfo, intrinsicBonus, nondeterministicMode, nondeterministicBonus);
+        }
+        if (totalWeight <= 0.0) {
+            return PseudoRandom.randomElement(functions);
+        }
+
+        double draw = PseudoRandom.random() * totalWeight;
+        double prefix = 0.0;
+        for (FunctionInfo functionInfo : functions) {
+            prefix += getWeight(functionInfo, intrinsicBonus, nondeterministicMode, nondeterministicBonus);
+            if (draw < prefix) {
+                return functionInfo;
+            }
+        }
+        return functions.get(functions.size() - 1);
     }
 }

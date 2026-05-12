@@ -31,8 +31,8 @@ import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableBase;
-import jdk.test.lib.jittester.utils.TypeUtil;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory {
@@ -43,13 +43,13 @@ class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory 
 
     @Override
     protected boolean isApplicable(Type resultType) {
-        return TypeList.isBuiltIn(resultType) && !resultType.equals(TypeList.BOOLEAN);
+        return TypeBoxingUtil.isPrimitiveNumeric(resultType);
     }
 
     @Override
     protected Pair<Type, Type> generateTypes() {
         return new Pair<>(resultType, PseudoRandom.randomElement(
-                TypeUtil.getExplicitlyCastable(TypeList.getBuiltIn(), resultType)));
+                TypeBoxingUtil.getCompoundAssignmentRightOperandTypes(resultType)));
     }
 
     @Override

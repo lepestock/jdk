@@ -81,7 +81,7 @@ class MainKlassFactory extends Factory<MainKlass> {
                 .setLevel(1)
                 .setExceptionSafe(true);
         IRNode variableDeclarations = builder
-                .setComplexityLimit((long) (complexityLimit * 0.05))
+                .setComplexityLimit((long) (complexityLimit * 0.08))
                 .getVariableDeclarationBlockFactory().produce();
         IRNode functionDefinitions = null;
         if (!ProductionParams.disableFunctions.value()) {

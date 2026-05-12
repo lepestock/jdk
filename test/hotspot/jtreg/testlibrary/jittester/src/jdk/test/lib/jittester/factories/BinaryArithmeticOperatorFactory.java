@@ -29,11 +29,11 @@ import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
-import jdk.test.lib.jittester.utils.TypeUtil;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
-import java.util.Collection;
+import java.util.List;
 
 class BinaryArithmeticOperatorFactory extends BinaryOperatorFactory {
     BinaryArithmeticOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
@@ -54,7 +54,7 @@ class BinaryArithmeticOperatorFactory extends BinaryOperatorFactory {
 
     @Override
     protected Pair<Type, Type> generateTypes() {
-        Collection<Type> castableFromResultType = TypeUtil.getImplicitlyCastable(TypeList.getBuiltIn(), resultType);
+        List<Type> castableFromResultType = TypeBoxingUtil.getArithmeticOperandTypesForResult(resultType);
         // built-in types less capacious than int are automatically casted to int in arithmetic.
         final Type leftType = PseudoRandom.randomElement(castableFromResultType);
         final Type rightType = resultType.equals(TypeList.INT) ?

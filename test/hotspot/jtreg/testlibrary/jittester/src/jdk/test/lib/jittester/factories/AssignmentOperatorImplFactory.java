@@ -32,10 +32,10 @@ import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableBase;
-import jdk.test.lib.jittester.utils.TypeUtil;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
     AssignmentOperatorImplFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
@@ -51,7 +51,7 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
     @Override
     protected Pair<Type, Type> generateTypes() {
         return new Pair<>(resultType, PseudoRandom.randomElement(
-                TypeUtil.getImplicitlyCastable(TypeList.getAll(), resultType)));
+                TypeBoxingUtil.getAssignmentCompatibleWithBoxing(TypeList.getAll(), resultType)));
     }
 
     @Override
@@ -60,7 +60,11 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         long leftComplexityLimit = (long) (PseudoRandom.random() * complexityLimit);
         long rightComplexityLimit = complexityLimit - leftComplexityLimit;
         int leftOperatorLimit = (int) (PseudoRandom.random() * operatorLimit);
-        int rightOperatorLimit = operatorLimit = leftOperatorLimit;
+        int rightOperatorLimit = operatorLimit - leftOperatorLimit;
+        if (leftOperatorLimit <= 0 || rightOperatorLimit <= 0
+                || leftComplexityLimit <= 0 || rightComplexityLimit <= 0) {
+            throw new ProductionFailedException();
+        }
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts)

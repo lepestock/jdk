@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.types;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.TreeSet;
 import jdk.test.lib.jittester.ProductionParams;
@@ -32,12 +33,14 @@ import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
+import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
 public class TypeKlass extends Type {
     private TypeKlass parentKlass;
     private final HashSet<String> parentsList;
     private final HashSet<String> childrenList;
-    private final HashSet<Symbol> symbolsSet;
+    private final LinkedHashSet<Symbol> symbolsSet;
     private int flags;
 
     public static final int NONE = 0x00;
@@ -55,7 +58,7 @@ public class TypeKlass extends Type {
         this.flags = flags;
         parentsList = new HashSet<>();
         childrenList = new HashSet<>();
-        symbolsSet = new HashSet<>();
+        symbolsSet = new LinkedHashSet<>();
     }
 
     public boolean addSymbol(Symbol s) {

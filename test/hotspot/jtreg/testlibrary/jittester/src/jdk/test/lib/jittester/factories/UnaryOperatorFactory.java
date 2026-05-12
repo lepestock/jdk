@@ -63,13 +63,17 @@ public abstract class UnaryOperatorFactory extends OperatorFactory<UnaryOperator
         } catch (Exception ex) {
             throw new ProductionFailedException(ex.getMessage());
         }
+        int symbolCheckpoint = SymbolTable.checkpoint();
         try {
             SymbolTable.push();
             UnaryOperator result = generateProduction(type);
             SymbolTable.merge();
             return result;
         } catch (ProductionFailedException e) {
-            SymbolTable.pop();
+            SymbolTable.rollbackToCheckpoint(symbolCheckpoint);
+            throw e;
+        } catch (RuntimeException e) {
+            SymbolTable.rollbackToCheckpoint(symbolCheckpoint);
             throw e;
         }
     }

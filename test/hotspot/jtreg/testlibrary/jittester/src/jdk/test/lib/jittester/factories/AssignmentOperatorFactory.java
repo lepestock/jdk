@@ -90,13 +90,17 @@ class AssignmentOperatorFactory extends Factory<Operator> {
             ArrayList<Type> allTypes = new ArrayList<>(TypeList.getAll());
             PseudoRandom.shuffle(allTypes);
             for (Type type : allTypes) {
+                int symbolCheckpoint = SymbolTable.checkpoint();
                 SymbolTable.push();
                 try {
                     Operator result =  fillRule(type).produce();
                     SymbolTable.merge();
                     return result;
                 } catch (ProductionFailedException e) {
-                    SymbolTable.pop();
+                    SymbolTable.rollbackToCheckpoint(symbolCheckpoint);
+                } catch (RuntimeException e) {
+                    SymbolTable.rollbackToCheckpoint(symbolCheckpoint);
+                    throw e;
                 }
             }
         } else {

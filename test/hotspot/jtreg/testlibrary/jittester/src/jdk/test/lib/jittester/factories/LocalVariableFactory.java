@@ -31,9 +31,12 @@ import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
 class LocalVariableFactory extends Factory<LocalVariable> {
+    private static final String MAGNET_CHANNEL = "use.local.variable";
     private final Type type;
     private final int flags;
 
@@ -44,18 +47,35 @@ class LocalVariableFactory extends Factory<LocalVariable> {
 
     @Override
     public LocalVariable produce() throws ProductionFailedException {
+        Logger.log(PseudoRandom.getCurrentSeed() == 132795661563799L,
+                "LocalVariableFactory :type");
         // Get the variables of the requested type from SymbolTable
         ArrayList<Symbol> allVariables = new ArrayList<>(SymbolTable.get(type, VariableInfo.class));
         if (!allVariables.isEmpty()) {
-            PseudoRandom.shuffle(allVariables);
+            ArrayList<Symbol> eligible = new ArrayList<>();
             for (Symbol symbol : allVariables) {
                 VariableInfo varInfo = (VariableInfo) symbol;
                 if ((varInfo.flags & VariableInfo.FINAL) == (flags & VariableInfo.FINAL)
                         && (varInfo.flags & VariableInfo.INITIALIZED) == (flags & VariableInfo.INITIALIZED)
                         && (varInfo.flags & VariableInfo.LOCAL) > 0) {
-                    return new LocalVariable(varInfo);
+                    eligible.add(varInfo);
                 }
             }
+            if (eligible.isEmpty()) {
+                throw new ProductionFailedException();
+            }
+            VariableInfo selected;
+            if (Genome.isReplayActive()) {
+                long replayTargetGene = SymbolTable.consumeMagnetTargetGene(MAGNET_CHANNEL);
+                selected = (VariableInfo) SymbolTable.attractByMagnet(eligible, replayTargetGene, MAGNET_CHANNEL);
+            } else {
+                // Replay selects directly by recorded magnet target and does not consume shuffle RNG events.
+                // Keep this shuffle out of genome event stream.
+                PseudoRandom.shuffleSilent(eligible);
+                selected = (VariableInfo) eligible.get(0);
+                SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, selected.getMagnetismGeneId());
+            }
+            return new LocalVariable(selected);
         }
         throw new ProductionFailedException();
     }

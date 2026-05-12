@@ -25,9 +25,14 @@ package jdk.test.lib.jittester;
 
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.TreeSet;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import jdk.test.lib.jittester.factories.Factory;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import java.util.stream.Collectors;
 
 /**
  * The Rule. A helper to perform production.
@@ -36,6 +41,7 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
     private final String name;
     private final TreeSet<RuleEntry> variants;
     private Integer limit = -1;
+    private static final Set<String> TRACE_RULE_GENES = parseTraceRuleGenes();
 
     @Override
     public int compareTo(Rule<T> rule) {
@@ -45,6 +51,17 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
     public Rule(String name) {
         this.name = name;
         variants = new TreeSet<>();
+    }
+
+    @Override
+    public String toString() {
+        return "(Rule :name " + name +
+            ":variants (list" +
+                variants.stream()
+                        .map(entry -> "(rule-entry :name " + entry.name + " :weight " + entry.weight + ")")
+                        .collect(Collectors.joining(" "))
+            + ")" +
+          ")";
     }
 
     public void add(String ruleName, Factory<? extends T> factory) {
@@ -62,39 +79,197 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
     @Override
     public T produce() throws ProductionFailedException {
         if (!variants.isEmpty()) {
+            // Rule identity gene (R): unique long marker for this rule decision site.
+            // It is recorded once per rule invocation and is not speculative.
+            long ruleGene = Genome.createOrConsumeRuleGene(name);
+            boolean trace = isTraceRuleGene(ruleGene);
+
             // Begin production.
-            LinkedList<RuleEntry> rulesList = new LinkedList<>(variants);
-            PseudoRandom.shuffle(rulesList);
+            ArrayList<RuleEntry> originals = new ArrayList<>(variants);
+            LinkedList<IndexedRuleEntry> rulesList = new LinkedList<>();
+            for (int i = 0; i < originals.size(); i++) {
+                rulesList.add(new IndexedRuleEntry(i, originals.get(i)));
+            }
+            if (trace) {
+                traceRule("enter", ruleGene, rulesList, null);
+            }
+
+            if (Genome.isReplayActive()) {
+                Long replayChoice = Genome.consumeChoiceGene(name, -1L);
+                if (trace) {
+                    traceRule("replay-choice", ruleGene, rulesList, replayChoice);
+                }
+                if (replayChoice == null) {
+                    throw new RuntimeException("Genome replay desync: missing choice event for rule '"
+                            + name + "'");
+                }
+                if (replayChoice == -1L) {
+                    // Explicit failure marker: this rule invocation failed in record mode.
+                    throw new ProductionFailedException();
+                }
+                IndexedRuleEntry selected = removeByOriginalIndex(rulesList, replayChoice);
+                if (selected == null) {
+                    throw new RuntimeException("Genome replay desync: rule '" + name
+                            + "' requested missing variant index " + replayChoice);
+                }
+                GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
+                SymbolTable.push();
+                try {
+                    T produced = selected.entry.produce();
+                    SymbolTable.merge();
+                    if (trace) {
+                        traceRule("replay-success", ruleGene, rulesList, replayChoice);
+                    }
+                    return produced;
+                } catch (ProductionFailedException e) {
+                    if (e instanceof MutationScopeProductionFailedException
+                            && !Genome.isReplayMutationScopeActive()) {
+                        throw new RuntimeException("Failed to mutate: failure escaped mutable scope in rule '"
+                                + name + "'", e);
+                    }
+                    GenerationState.rollbackTo(stateCheckpoint);
+                    if (trace) {
+                        traceRule("replay-failed", ruleGene, rulesList, replayChoice);
+                    }
+                    throw e;
+                } catch (RuntimeException e) {
+                    GenerationState.rollbackTo(stateCheckpoint);
+                    throw e;
+                }
+            }
+            PseudoRandom.shuffleSilent(rulesList);
 
             while (!rulesList.isEmpty() && (limit == -1 || limit > 0)) {
-                double sum = rulesList.stream()
-                        .mapToDouble(r -> r.weight)
-                        .sum();
-                double rnd = PseudoRandom.random() * sum;
-                Iterator<RuleEntry> iterator = rulesList.iterator();
-                RuleEntry ruleEntry;
-                double weightAccumulator = 0;
-                do {
-                    ruleEntry = iterator.next();
-                    weightAccumulator += ruleEntry.weight;
-                    if (weightAccumulator >= rnd) {
-                        break;
-                    }
-                } while (iterator.hasNext());
-                try {
-                    return ruleEntry.produce();
-                } catch (ProductionFailedException e) {
+                long selectedOriginalIndex = pickWeightedOriginalIndex(rulesList);
+                IndexedRuleEntry selected = removeByOriginalIndex(rulesList, selectedOriginalIndex);
+                if (selected == null) {
+                    throw new RuntimeException("Rule '" + name
+                            + "' selected missing variant index " + selectedOriginalIndex);
                 }
-                iterator.remove();
+                GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
+                SymbolTable.push();
+                Genome.beginSpeculativeRecord();
+                try {
+                    Genome.recordChoiceGene(name, selected.originalIndex);
+                    if (trace) {
+                        traceRule("record-choice", ruleGene, rulesList, (long) selected.originalIndex);
+                    }
+                    T produced = selected.entry.produce();
+                    Genome.commitSpeculativeRecord();
+                    SymbolTable.merge();
+                    if (trace) {
+                        traceRule("record-success", ruleGene, rulesList, (long) selected.originalIndex);
+                    }
+                    return produced;
+                } catch (ProductionFailedException e) {
+                    if (e instanceof MutationScopeProductionFailedException
+                            && !Genome.isReplayMutationScopeActive()) {
+                        throw new RuntimeException("Failed to mutate: failure escaped mutable scope in rule '"
+                                + name + "'", e);
+                    }
+                    Genome.rollbackSpeculativeRecord();
+                    GenerationState.rollbackTo(stateCheckpoint);
+                    if (trace) {
+                        traceRule("record-failed", ruleGene, rulesList, (long) selected.originalIndex);
+                    }
+                } catch (RuntimeException e) {
+                    Genome.rollbackSpeculativeRecord();
+                    GenerationState.rollbackTo(stateCheckpoint);
+                    throw e;
+                }
                 if (limit != -1) {
                     limit--;
                 }
             }
-            //throw new ProductionFailedException();
+            // Explicitly record a failed rule invocation so every R has a corresponding C.
+            Genome.recordChoiceGene(name, -1L);
+            if (Genome.isReplayMutationScopeActive()) {
+                throw new MutationScopeProductionFailedException();
+            }
+            if (trace) {
+                traceRule("record-terminal-fail", ruleGene, rulesList, -1L);
+            }
         }
         // should probably throw exception here..
         //return getChildren().size() > 0 ? getChild(0).produce() : null;
         throw new ProductionFailedException();
+    }
+
+    private static Set<String> parseTraceRuleGenes() {
+        String raw = System.getProperty("jittester.debug.rule.trace.genes");
+        if (raw == null || raw.isBlank()) {
+            return Set.of();
+        }
+        LinkedHashSet<String> out = new LinkedHashSet<>();
+        for (String part : raw.split("[,\\s]+")) {
+            String t = part == null ? "" : part.trim();
+            if (!t.isEmpty()) {
+                out.add(t);
+            }
+        }
+        return out;
+    }
+
+    private static boolean isTraceRuleGene(long ruleGene) {
+        if (TRACE_RULE_GENES.isEmpty()) {
+            return false;
+        }
+        String raw = Long.toString(ruleGene);
+        return TRACE_RULE_GENES.contains(raw) || TRACE_RULE_GENES.contains("R" + raw);
+    }
+
+    private void traceRule(String phase, long ruleGene, LinkedList<IndexedRuleEntry> rulesList, Long choice) {
+        String variantsDump = rulesList.stream()
+                .map(r -> r.originalIndex + ":" + r.entry.name + ":" + r.entry.weight)
+                .collect(Collectors.joining(", "));
+        System.err.println("[JTDBG][Rule] phase=" + phase
+                + " rule=" + name
+                + " gene=R" + ruleGene
+                + " replay=" + Genome.isReplayActive()
+                + " choice=" + (choice == null ? "<null>" : choice)
+                + " variants=[" + variantsDump + "]");
+    }
+
+    private long pickWeightedOriginalIndex(LinkedList<IndexedRuleEntry> rulesList) {
+        double sum = rulesList.stream().mapToDouble(r -> r.entry.weight).sum();
+        double rnd = PseudoRandom.randomSilent() * sum;
+        double weightAccumulator = 0;
+        IndexedRuleEntry selected = null;
+        Iterator<IndexedRuleEntry> iterator = rulesList.iterator();
+        while (iterator.hasNext()) {
+            IndexedRuleEntry candidate = iterator.next();
+            selected = candidate;
+            weightAccumulator += candidate.entry.weight;
+            if (weightAccumulator >= rnd) {
+                break;
+            }
+        }
+        if (selected == null) {
+            throw new RuntimeException("Rule '" + name + "' has no selectable variants");
+        }
+        return selected.originalIndex;
+    }
+
+    private IndexedRuleEntry removeByOriginalIndex(LinkedList<IndexedRuleEntry> rulesList, long index) {
+        Iterator<IndexedRuleEntry> it = rulesList.iterator();
+        while (it.hasNext()) {
+            IndexedRuleEntry candidate = it.next();
+            if (candidate.originalIndex == index) {
+                it.remove();
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private final class IndexedRuleEntry {
+        final int originalIndex;
+        final RuleEntry entry;
+
+        IndexedRuleEntry(int originalIndex, RuleEntry entry) {
+            this.originalIndex = originalIndex;
+            this.entry = entry;
+        }
     }
 
     private class RuleEntry extends Factory<T> implements Comparable<RuleEntry> {

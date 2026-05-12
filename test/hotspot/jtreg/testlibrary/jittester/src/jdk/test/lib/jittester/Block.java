@@ -28,12 +28,32 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.visitors.Visitor;
 
 public class Block extends IRNode {
+    private static final long UNSET_BLOCK_RNG_SEED = Long.MIN_VALUE;
+    private final Gene blockGene;
 
     public Block(TypeKlass owner, Type returnType, List<? extends IRNode> content, int level) {
+        this(owner, returnType, content, level, null);
+    }
+
+    public Block(TypeKlass owner, Type returnType, List<? extends IRNode> content, int level,
+            Gene blockGene) {
         super(returnType);
         setOwner(owner);
         addChildren(content);
         this.level = level;
+        this.blockGene = blockGene;
+    }
+
+    public boolean hasBlockRngSeed() {
+        return blockGene != null;
+    }
+
+    public long getBlockRngSeed() {
+        return blockGene == null ? UNSET_BLOCK_RNG_SEED : blockGene.blockSeed();
+    }
+
+    public Gene getBlockGene() {
+        return blockGene;
     }
 
     protected int size() {

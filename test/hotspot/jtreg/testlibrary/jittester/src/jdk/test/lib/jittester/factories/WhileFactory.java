@@ -35,8 +35,6 @@ import jdk.test.lib.jittester.loops.While;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
-import java.util.LinkedList;
-
 class WhileFactory extends SafeFactory<While> {
     private final Loop loop;
     private final long complexityLimit;
@@ -62,7 +60,6 @@ class WhileFactory extends SafeFactory<While> {
 
     @Override
     protected While sproduce() throws ProductionFailedException {
-        Block emptyBlock = new Block(ownerClass, returnType, new LinkedList<>(), level - 1);
         if (statementLimit <= 0 || complexityLimit <= 0) {
             throw new ProductionFailedException();
         }
@@ -104,7 +101,7 @@ class WhileFactory extends SafeFactory<While> {
                     .getBlockFactory()
                     .produce();
         } catch (ProductionFailedException e) {
-            header = emptyBlock;
+            header = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
         }
         LocalVariable counter = new LocalVariable(loop.initialization.getVariableInfo());
         Literal limiter = new Literal((int) thisLoopIterLimit, TypeList.INT);
@@ -125,9 +122,13 @@ class WhileFactory extends SafeFactory<While> {
                     .getBlockFactory()
                     .produce();
         } catch (ProductionFailedException e) {
-            body1 = emptyBlock;
+            body1 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
         }
-        loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
+        loop.manipulator = builder.setLocalVariable(counter)
+                                  .getCounterManipulatorFactory()
+                                  .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
+                                  .produce();
+
         Block body2;
         try {
             body2 = builder.setComplexityLimit(body2ComplLimit)
@@ -140,7 +141,7 @@ class WhileFactory extends SafeFactory<While> {
                     .getBlockFactory()
                     .produce();
         } catch (ProductionFailedException e) {
-            body2 = emptyBlock;
+            body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
         }
         Block body3;
         try {
@@ -154,7 +155,7 @@ class WhileFactory extends SafeFactory<While> {
                     .getBlockFactory()
                     .produce();
         } catch (ProductionFailedException e) {
-            body3 = emptyBlock;
+            body3 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
         }
         SymbolTable.pop();
         return new While(level, loop, thisLoopIterLimit, header, body1, body2, body3);

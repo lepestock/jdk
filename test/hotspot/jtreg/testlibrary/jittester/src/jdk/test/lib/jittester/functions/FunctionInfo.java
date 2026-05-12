@@ -37,6 +37,7 @@ public class FunctionInfo extends Symbol {
     public static final int ABSTRACT = 0x40;
     public static final int NONRECURSIVE = 0x80;
     public static final int SYNCHRONIZED = 0x100;
+    public boolean intrinsic = false;
 
     public FunctionInfo() {
     }
@@ -63,6 +64,12 @@ public class FunctionInfo extends Symbol {
             argTypes.add(new VariableInfo(i));
         }
         complexity = value.complexity;
+        intrinsic = value.intrinsic;
+    }
+
+    @Override
+    public String toString() {
+        return "(FunctionInfo :name " + name + ")";
     }
 
     public boolean isSynchronized() {
@@ -71,7 +78,7 @@ public class FunctionInfo extends Symbol {
 
     @Override
     protected Symbol copy() {
-        return this;
+        return new FunctionInfo(this);
     }
 
     @Override
@@ -130,4 +137,5 @@ public class FunctionInfo extends Symbol {
     public boolean isStatic() {
         return (flags & STATIC) > 0;
     }
+
 }

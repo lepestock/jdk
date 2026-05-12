@@ -31,6 +31,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
 class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
     private final Type resultType;
@@ -44,6 +45,7 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
     }
 
     private TernaryOperator generateProduction() throws ProductionFailedException {
+        long seed = PseudoRandom.getCurrentSeed();
         int leftOpLimit = (int) (PseudoRandom.random() * 0.3 * (operatorLimit - 1));
         int rightOpLimit = (int) (PseudoRandom.random() * 0.3 * (operatorLimit - 1));
         int condOpLimit = operatorLimit - 1 - leftOpLimit - rightOpLimit;
@@ -66,12 +68,14 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         IRNode leftExp;
         SymbolTable.push();
         try {
+            if (seed == 18218056952499L) Logger.enableTrace();
             leftExp = builder.setComplexityLimit(leftComplLimit)
                     .setOperatorLimit(leftOpLimit)
                     .setResultType(resultType)
                     .setNoConsts(false)
                     .getExpressionFactory()
                     .produce();
+            if (seed == 18218056952499L) Logger.disableTrace();
         } finally {
             SymbolTable.pop();
         }

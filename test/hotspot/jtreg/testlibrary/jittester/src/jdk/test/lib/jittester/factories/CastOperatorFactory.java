@@ -24,6 +24,8 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+import java.util.stream.Collectors;
+
 import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -32,6 +34,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
 
 class CastOperatorFactory extends OperatorFactory<CastOperator> {
     private final Type resultType;
@@ -46,9 +49,24 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
 
     @Override
     public CastOperator produce() throws ProductionFailedException {
+        long castSeed = PseudoRandom.getCurrentSeed();
+        boolean castDebug = Boolean.getBoolean("jittester.debug.cast");
+        long castDebugSeed = Long.getLong("jittester.debug.cast.seed", Long.MIN_VALUE);
+        boolean castDebugThis = castDebug && (castDebugSeed == Long.MIN_VALUE || castDebugSeed == castSeed);
         ArrayList<Type> argType = new ArrayList<>(TypeList.getAll());
         PseudoRandom.shuffle(argType);
+        if (castDebugThis) {
+            System.err.printf("[JTDBG][Cast] seed=%d resultType=%s owner=%s argTypes=%d%n",
+                    castSeed, resultType.getName(), ownerClass.getName(), argType.size());
+            int show = Math.min(12, argType.size());
+            for (int i = 0; i < show; i++) {
+                System.err.printf("[JTDBG][Cast]   shuffled[%d]=%s%n", i, argType.get(i).getName());
+            }
+        }
+        int idx = 0;
         for (Type type : argType) {
+            int symbolCheckpoint = SymbolTable.checkpoint();
+            boolean merged = false;
             try {
                 Factory<IRNode> expressionFactory = new IRNodeBuilder()
                         .setComplexityLimit(complexityLimit - 1)
@@ -59,18 +77,32 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
                         .setResultType(type)
                         .getExpressionFactory();
                 SymbolTable.push();
+                if (castDebugThis && idx < 12) {
+                    boolean canCast = type.equals(resultType)
+                            || ((!exceptionSafe || exceptionSafe && !(type instanceof TypeKlass))
+                                && type.canExplicitlyCastTo(resultType));
+                    System.err.printf("[JTDBG][Cast]   candidate[%d]=%s canCast=%s%n",
+                            idx, type.getName(), canCast);
+                }
                 if (type.equals(resultType) ||
                         ((!exceptionSafe || exceptionSafe && !(type instanceof TypeKlass))
                             && type.canExplicitlyCastTo(resultType))) {
                     // In safe mode we cannot explicitly cast an object, because it may throw.
                     CastOperator castOperator = new CastOperator(resultType, expressionFactory.produce());
                     SymbolTable.merge();
+                    merged = true;
                     return castOperator;
                 }
-                SymbolTable.pop();
             } catch (ProductionFailedException e) {
-                SymbolTable.pop();
+                // Ignore and continue trying other source types.
+            } catch (RuntimeException e) {
+                throw e;
+            } finally {
+                if (!merged) {
+                    SymbolTable.rollbackToCheckpoint(symbolCheckpoint);
+                }
             }
+            idx++;
         }
         throw new ProductionFailedException();
     }
