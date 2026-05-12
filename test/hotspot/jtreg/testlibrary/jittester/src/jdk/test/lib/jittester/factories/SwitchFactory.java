@@ -32,12 +32,13 @@ import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.Nothing;
 import jdk.test.lib.jittester.ProductionFailedException;
+import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Switch;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
-import jdk.test.lib.jittester.utils.TypeUtil;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class SwitchFactory extends SafeFactory<Switch> {
@@ -85,18 +86,15 @@ class SwitchFactory extends SafeFactory<Switch> {
                     long currentComplexityLimit = 0L;
                     currentComplexityLimit = (long) (PseudoRandom.random()
                             * (complexityLimit - accumulatedComplexity));
+                    boolean noConstsForSwitchExpr = shouldDisallowConstsByDepth(level + 1);
                     IRNode switchExp = builder.setComplexityLimit(currentComplexityLimit)
                             .setResultType(type)
                             .setExceptionSafe(false)
-                            .setNoConsts(true)
+                            .setNoConsts(noConstsForSwitchExpr)
                             .getLimitedExpressionFactory()
                             .produce();
                     accumulatedComplexity += currentComplexityLimit;
-                    List<Type> caseTypes = new ArrayList<>();
-                    caseTypes.add(TypeList.BYTE);
-                    caseTypes.add(TypeList.CHAR);
-                    caseTypes = new ArrayList<>(TypeUtil.getLessCapaciousOrEqualThan(caseTypes,
-                            (BuiltInType) type));
+                    List<Type> caseTypes = buildCompatibleCaseTypes((BuiltInType) type);
                     if (PseudoRandom.randomBoolean()) { // "default"
                         currentStatementsLimit = (int) (PseudoRandom.random()
                                 * (statementLimit - accumulatedStatements));
@@ -182,5 +180,32 @@ class SwitchFactory extends SafeFactory<Switch> {
             }
         }
         throw new ProductionFailedException();
+    }
+
+    private static boolean shouldDisallowConstsByDepth(int depth) {
+        double base = Math.max(0.0, Math.min(1.0, ProductionParams.constBiasBasePercent.value() / 100.0));
+        int halfDepth = Math.max(1, ProductionParams.constBiasHalfDepth.value());
+        double noConstsProbability = DepthProbabilityTaper.decayingAsymptote(depth, base, halfDepth);
+        return PseudoRandom.randomBoolean(noConstsProbability);
+    }
+
+    private static List<Type> buildCompatibleCaseTypes(BuiltInType switchType) {
+        List<Type> caseTypes = new ArrayList<>();
+        if (switchType.equals(TypeList.CHAR)) {
+            caseTypes.add(TypeList.CHAR);
+        } else if (switchType.equals(TypeList.BYTE)) {
+            caseTypes.add(TypeList.BYTE);
+        } else if (switchType.equals(TypeList.SHORT)) {
+            caseTypes.add(TypeList.BYTE);
+            caseTypes.add(TypeList.SHORT);
+        } else if (switchType.equals(TypeList.INT)) {
+            caseTypes.add(TypeList.BYTE);
+            caseTypes.add(TypeList.SHORT);
+            caseTypes.add(TypeList.CHAR);
+            caseTypes.add(TypeList.INT);
+        } else {
+            throw new IllegalArgumentException("Unsupported switch type: " + switchType.getName());
+        }
+        return caseTypes;
     }
 }

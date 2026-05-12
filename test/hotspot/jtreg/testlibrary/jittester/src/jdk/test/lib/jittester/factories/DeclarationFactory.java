@@ -32,6 +32,8 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class DeclarationFactory extends Factory<Declaration> {
+    private static final double LOCAL_DECLARATION_ONLY_WEIGHT = 0.05;
+
     private final int operatorLimit;
     private final long complexityLimit;
     private final boolean isLocal;
@@ -60,20 +62,21 @@ class DeclarationFactory extends Factory<Declaration> {
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setResultType(TypeList.VOID)
                 .setIsLocal(isLocal)
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setIsLocal(isLocal)
                 .setExceptionSafe(exceptionSafe);
-        if (!isConstant) {
+        boolean valueClassInstanceField = FinalVariablePolicy.isValueClassInstanceField(ownerClass, isLocal, false);
+        if (!isConstant && !valueClassInstanceField) {
             rule.add("decl", builder
                     .setIsStatic(false)
-                    .getVariableDeclarationFactory());
+                    .getVariableDeclarationFactory(), declarationOnlyWeight());
             rule.add("decl_and_init", builder
                     .setIsConstant(false)
                     .setIsStatic(false)
                     .getVariableInitializationFactory());
         }
-        if (!ProductionParams.disableFinalVariables.value()) {
+        if (!ProductionParams.disableFinalVariables.value() || valueClassInstanceField) {
             rule.add("const_decl_and_init", builder
                     .setIsConstant(true)
                     .setIsStatic(false)
@@ -96,5 +99,9 @@ class DeclarationFactory extends Factory<Declaration> {
             }
         }
         return new Declaration(rule.produce());
+    }
+
+    private double declarationOnlyWeight() {
+        return isLocal ? LOCAL_DECLARATION_ONLY_WEIGHT : 1.0;
     }
 }

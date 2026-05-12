@@ -39,6 +39,7 @@ public class Symbol {
     public static final int STATIC = 0x10;
     public static final int FINAL = 0x20;
     public int flags = NONE;
+    private long magnetismGeneId = Long.MIN_VALUE;
 
     protected Symbol() {
     }
@@ -59,6 +60,7 @@ public class Symbol {
         this.owner = value.owner;
         this.type = value.type;
         this.flags = value.flags;
+        this.magnetismGeneId = value.magnetismGeneId;
     }
 
     @Override
@@ -114,5 +116,17 @@ public class Symbol {
 
     public TypeKlass getOwner() {
         return owner;
+    }
+
+    public boolean hasMagnetismGeneId() {
+        return magnetismGeneId != Long.MIN_VALUE;
+    }
+
+    public long getMagnetismGeneId() {
+        return magnetismGeneId;
+    }
+
+    public void setMagnetismGeneId(long magnetismGeneId) {
+        this.magnetismGeneId = magnetismGeneId;
     }
 }

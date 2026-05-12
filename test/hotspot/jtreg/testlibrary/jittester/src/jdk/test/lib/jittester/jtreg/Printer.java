@@ -23,9 +23,64 @@
 
 package jdk.test.lib.jittester.jtreg;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Stack;
 
 public class Printer {
+
+    public static void debugPrint(String gene, String value) {
+        System.err.println("[JTDBG] gene=" + gene + " value=" + value);
+    }
+
+    public static boolean debugBoolean(String gene, boolean value) {
+        debugPrint(gene, print(value));
+        return value;
+    }
+
+    public static byte debugByte(String gene, byte value) {
+        debugPrint(gene, print(value));
+        return value;
+    }
+
+    public static short debugShort(String gene, short value) {
+        debugPrint(gene, print(value));
+        return value;
+    }
+
+    public static char debugChar(String gene, char value) {
+        debugPrint(gene, print(value));
+        return value;
+    }
+
+    public static int debugInt(String gene, int value) {
+        debugPrint(gene, print(value));
+        return value;
+    }
+
+    public static long debugLong(String gene, long value) {
+        debugPrint(gene, print(value));
+        return value;
+    }
+
+    public static float debugFloat(String gene, float value) {
+        debugPrint(gene, print(value));
+        return value;
+    }
+
+    public static double debugDouble(String gene, double value) {
+        debugPrint(gene, print(value));
+        return value;
+    }
+
+    public static String debugString(String gene, String value) {
+        debugPrint(gene, value);
+        return value;
+    }
 
     public static String print(boolean arg) {
         return String.valueOf(arg);
@@ -60,7 +115,37 @@ public class Printer {
     }
 
     public static String print(Object arg) {
-        return print_r(new Stack<>(), arg);
+        if (arg == null) {
+            return "null";
+        }
+        if (isScalar(arg)) {
+            return printScalar(arg);
+        }
+        StringBuilder sb = new StringBuilder();
+        Stack<Object> visitedObjects = new Stack<>();
+        if (arg.getClass().isArray()) {
+            printArrayDot(sb, visitedObjects, "", arg, true);
+        } else {
+            printObjectDot(sb, visitedObjects, "", arg, true);
+        }
+        return sb.toString().trim();
+    }
+
+    public static String print(String rootPath, Object arg) {
+        if (arg == null) {
+            return rootPath + " = null";
+        }
+        if (isScalar(arg)) {
+            return rootPath + " = " + printScalar(arg);
+        }
+        StringBuilder sb = new StringBuilder();
+        Stack<Object> visitedObjects = new Stack<>();
+        if (arg.getClass().isArray()) {
+            printArrayDot(sb, visitedObjects, rootPath, arg, false);
+        } else {
+            printObjectDot(sb, visitedObjects, rootPath, arg, false);
+        }
+        return sb.toString().trim();
     }
 
     private static String print_r(Stack<Object> visitedObjects, Object arg) {
@@ -161,5 +246,179 @@ public class Printer {
         }
 
         return result;
+    }
+
+    private static boolean isScalar(Object value) {
+        return value instanceof Boolean
+                || value instanceof Byte
+                || value instanceof Short
+                || value instanceof Character
+                || value instanceof Integer
+                || value instanceof Long
+                || value instanceof Float
+                || value instanceof Double
+                || value instanceof String
+                || value instanceof Enum<?>;
+    }
+
+    private static String printScalar(Object value) {
+        if (value instanceof Boolean) {
+            return print((boolean) value);
+        }
+        if (value instanceof Byte) {
+            return print((byte) value);
+        }
+        if (value instanceof Short) {
+            return print((short) value);
+        }
+        if (value instanceof Character) {
+            return print((char) value);
+        }
+        if (value instanceof Integer) {
+            return print((int) value);
+        }
+        if (value instanceof Long) {
+            return print((long) value);
+        }
+        if (value instanceof Float) {
+            return print((float) value);
+        }
+        if (value instanceof Double) {
+            return print((double) value);
+        }
+        if (value instanceof String) {
+            return "\"" + escapeString((String) value) + "\"";
+        }
+        return String.valueOf(value);
+    }
+
+    private static String escapeString(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static void appendLine(StringBuilder sb, String text) {
+        sb.append(text).append("\n");
+    }
+
+    private static String simpleTypeName(Class<?> clazz) {
+        String simple = clazz.getSimpleName();
+        return simple.isEmpty() ? clazz.getName() : simple;
+    }
+
+    private static boolean alreadyVisited(Stack<Object> visitedObjects, Object candidate) {
+        for (int i = 0; i < visitedObjects.size(); i++) {
+            if (visitedObjects.elementAt(i) == candidate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static List<Field> collectFields(Class<?> clazz) {
+        List<Field> fields = new ArrayList<>();
+        Class<?> current = clazz;
+        while (current != null) {
+            Field[] declared = current.getDeclaredFields();
+            for (Field f : declared) {
+                if (f.isSynthetic()) {
+                    continue;
+                }
+                if (Modifier.isStatic(f.getModifiers())) {
+                    continue;
+                }
+                fields.add(f);
+            }
+            current = current.getSuperclass();
+        }
+        fields.sort(Comparator.comparing(Field::getName));
+        return fields;
+    }
+
+    private static void printObjectDot(StringBuilder sb,
+                                       Stack<Object> visitedObjects,
+                                       String path,
+                                       Object value,
+                                       boolean root) {
+        Class<?> type = value.getClass();
+        String effectivePath = root ? simpleTypeName(type) : path;
+        if (root) {
+            appendLine(sb, "(" + simpleTypeName(type) + ")");
+        } else {
+            appendLine(sb, path + " = (" + simpleTypeName(type) + ")");
+        }
+
+        if (alreadyVisited(visitedObjects, value)) {
+            appendLine(sb, (root ? "<root>" : path) + " = <recursive>");
+            return;
+        }
+        visitedObjects.push(value);
+        try {
+            List<Field> fields = collectFields(type);
+            for (Field f : fields) {
+                if (!f.trySetAccessible()) {
+                    continue;
+                }
+                Object fieldValue;
+                try {
+                    fieldValue = f.get(value);
+                } catch (IllegalAccessException e) {
+                    continue;
+                }
+                String fieldPath = effectivePath + "." + f.getName();
+                printValueDot(sb, visitedObjects, fieldPath, f.getType(), fieldValue);
+            }
+        } finally {
+            visitedObjects.pop();
+        }
+    }
+
+    private static void printArrayDot(StringBuilder sb,
+                                      Stack<Object> visitedObjects,
+                                      String path,
+                                      Object value,
+                                      boolean root) {
+        Class<?> arrayType = value.getClass();
+        String arrayTypeName = simpleTypeName(arrayType);
+        int length = Array.getLength(value);
+        if (root) {
+            appendLine(sb, "(" + arrayTypeName + ") [" + length + "]");
+        } else {
+            appendLine(sb, path + " = (" + arrayTypeName + ") [" + length + "]");
+        }
+        if (alreadyVisited(visitedObjects, value)) {
+            appendLine(sb, (root ? "<root>" : path) + " = <recursive>");
+            return;
+        }
+        visitedObjects.push(value);
+        try {
+            Class<?> componentType = arrayType.getComponentType();
+            for (int i = 0; i < length; i++) {
+                Object element = Array.get(value, i);
+                String itemPath = (root ? "" : path) + "[" + i + "]";
+                printValueDot(sb, visitedObjects, itemPath, componentType, element);
+            }
+        } finally {
+            visitedObjects.pop();
+        }
+    }
+
+    private static void printValueDot(StringBuilder sb,
+                                      Stack<Object> visitedObjects,
+                                      String path,
+                                      Class<?> declaredType,
+                                      Object value) {
+        if (value == null) {
+            appendLine(sb, path + " = (" + simpleTypeName(declaredType) + ") null");
+            return;
+        }
+        if (isScalar(value)) {
+            appendLine(sb, path + " = " + printScalar(value));
+            return;
+        }
+        if (value.getClass().isArray()) {
+            printArrayDot(sb, visitedObjects, path, value, false);
+            return;
+        }
+        printObjectDot(sb, visitedObjects, path, value, false);
     }
 }

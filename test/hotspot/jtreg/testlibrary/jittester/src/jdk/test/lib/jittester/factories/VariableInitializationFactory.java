@@ -23,7 +23,9 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
@@ -31,13 +33,17 @@ import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.BuiltInType;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.VariableInitialization;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.Genome;
+import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class VariableInitializationFactory extends SafeFactory<VariableInitialization> {
+    private static final double NUMERIC_INIT_TYPE_PREFERENCE = 0.85;
     private final int operatorLimit;
     private final long complexityLimit;
     private final boolean constant;
@@ -59,23 +65,17 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
 
     @Override
     protected VariableInitialization sproduce() throws ProductionFailedException {
-        LinkedList<Type> types = new LinkedList<>(TypeList.getAll());
-        PseudoRandom.shuffle(types);
-        if (types.isEmpty()) {
-            throw new ProductionFailedException();
-        }
-        Type resultType = types.getFirst();
-        IRNodeBuilder b = new IRNodeBuilder().setComplexityLimit(complexityLimit - 1)
-                .setOperatorLimit(operatorLimit - 1)
+        Type resultType = pickInitializationType();
+        int effectiveOperatorLimit = Math.max(1, operatorLimit);
+        long effectiveComplexityLimit = Math.max(1, complexityLimit);
+        int scopeDepth = Math.max(1, SymbolTable.getScopeDepth());
+        boolean noConstsForInitExpr = shouldDisallowConstsByDepth(scopeDepth);
+        IRNodeBuilder b = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
+                .setOperatorLimit(effectiveOperatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(false);
-        Rule<IRNode> rule = new Rule<>("initializer");
-        rule.add("literal_initializer", b.getLiteralFactory());
-        if (!ProductionParams.disableExprInInit.value()) {
-            rule.add("expression", b.getLimitedExpressionFactory());
-        }
         Symbol thisSymbol = null;
         if (isStatic) {
             thisSymbol = SymbolTable.get("this", VariableInfo.class);
@@ -83,7 +83,41 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         }
         IRNode init;
         try {
-            init = rule.produce();
+            if (!ProductionParams.disableExprInInit.value()) {
+                // Prefer non-literal initializer expressions; fall back to literal when expression fails.
+                try {
+                    IRNodeBuilder exprBuilder = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
+                            .setOperatorLimit(effectiveOperatorLimit)
+                            .setOwnerKlass(ownerClass)
+                            .setResultType(resultType)
+                            .setExceptionSafe(exceptionSafe)
+                            .setNoConsts(noConstsForInitExpr);
+                    if (isArithmeticFriendly(resultType)) {
+                        init = exprBuilder.getArithmeticOperatorFactory().produce();
+                    } else {
+                        init = exprBuilder.getLimitedExpressionFactory().produce();
+                    }
+                } catch (ProductionFailedException ignored) {
+                    try {
+                        init = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
+                                .setOperatorLimit(effectiveOperatorLimit)
+                                .setOwnerKlass(ownerClass)
+                                .setResultType(resultType)
+                                .setExceptionSafe(exceptionSafe)
+                                .setNoConsts(noConstsForInitExpr)
+                                .getLimitedExpressionFactory()
+                                .produce();
+                    } catch (ProductionFailedException ignoredAgain) {
+                        init = b.getLiteralFactory().produce();
+                    } catch (RuntimeException e) {
+                        throw e;
+                    }
+                } catch (RuntimeException e) {
+                    throw e;
+                }
+            } else {
+                init = b.getLiteralFactory().produce();
+            }
         } finally {
             if (isStatic) {
                 SymbolTable.add(thisSymbol);
@@ -103,5 +137,42 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         VariableInfo varInfo = new VariableInfo(resultName, ownerClass, resultType, flags);
         SymbolTable.add(varInfo);
         return new VariableInitialization(varInfo, init);
+    }
+
+    private static boolean isArithmeticFriendly(Type resultType) {
+        if (!TypeList.isBuiltIn(resultType)) {
+            return false;
+        }
+        BuiltInType bt = (BuiltInType) resultType;
+        return bt.equals(TypeList.INT) || bt.equals(TypeList.LONG)
+                || bt.equals(TypeList.FLOAT) || bt.equals(TypeList.DOUBLE)
+                || bt.equals(TypeList.SHORT) || bt.equals(TypeList.BYTE)
+                || bt.equals(TypeList.CHAR);
+    }
+
+    private static boolean shouldDisallowConstsByDepth(int depth) {
+        double base = Math.max(0.0, Math.min(1.0, ProductionParams.constBiasBasePercent.value() / 100.0));
+        int halfDepth = Math.max(1, ProductionParams.constBiasHalfDepth.value());
+        double noConstsProbability = DepthProbabilityTaper.decayingAsymptote(depth, base, halfDepth);
+        return PseudoRandom.randomBoolean(noConstsProbability);
+    }
+
+    private Type pickInitializationType() throws ProductionFailedException {
+        if (PseudoRandom.randomBoolean(NUMERIC_INIT_TYPE_PREFERENCE)) {
+            List<Type> numericPreferred = new ArrayList<>();
+            numericPreferred.add(TypeList.INT);
+            numericPreferred.add(TypeList.SHORT);
+            numericPreferred.add(TypeList.BYTE);
+            numericPreferred.add(TypeList.CHAR);
+            numericPreferred.add(TypeList.LONG);
+            numericPreferred.add(TypeList.FLOAT);
+            numericPreferred.add(TypeList.DOUBLE);
+            return PseudoRandom.randomElement(numericPreferred);
+        }
+        LinkedList<Type> types = new LinkedList<>(TypeList.getAll());
+        if (types.isEmpty()) {
+            throw new ProductionFailedException();
+        }
+        return TypeSelectionUtil.pickPreferredOrAnyType(ownerClass, types);
     }
 }

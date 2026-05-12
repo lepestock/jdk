@@ -137,6 +137,18 @@ public final class MethodTemplate {
         return true;
     }
 
+    public static boolean anyMatches(Collection<MethodTemplate> templates, Executable method) {
+        if (templates == null || templates.isEmpty()) {
+            return false;
+        }
+        for (MethodTemplate template : templates) {
+            if (template.matches(method)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Returns true if this MethodTemplate matches the given Executable.
      *

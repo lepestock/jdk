@@ -24,14 +24,13 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
-
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.functions.FunctionInfo;
-import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class KlassFactory extends AbstractKlassFactory<Klass> {
@@ -60,13 +59,13 @@ class KlassFactory extends AbstractKlassFactory<Klass> {
     @Override
     protected IRNode produceVariableDeclarations(IRNodeBuilder builder, long complexity)
             throws ProductionFailedException {
-        return builder.setComplexityLimit(complexity).getVariableDeclarationBlockFactory().produce();
+        return builder.withComplexityLimit(complexity).getVariableDeclarationBlockFactory().produce();
     }
 
     @Override
     protected IRNode produceFunctionDefinitions(IRNodeBuilder builder, long complexity, int memberLimit)
             throws ProductionFailedException {
-        return builder.setComplexityLimit(complexity)
+        return builder.withComplexityLimit(complexity)
                 .setMemberFunctionsLimit(memberLimit)
                 .setFlags(FunctionInfo.NONE)
                 .getFunctionDefinitionBlockFactory()

@@ -34,10 +34,11 @@ import jdk.test.lib.jittester.loops.DoWhile;
 import jdk.test.lib.jittester.loops.Loop;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.Logger;
+import jdk.test.lib.jittester.Formatter;
+import jdk.test.lib.jittester.loops.LoopingCondition;
 
-import java.util.LinkedList;
-
-class DoWhileFactory extends SafeFactory<DoWhile> {
+public class DoWhileFactory extends SafeFactory<DoWhile> {
     private final Loop loop;
     private final long complexityLimit;
     private final int statementLimit;
@@ -47,6 +48,7 @@ class DoWhileFactory extends SafeFactory<DoWhile> {
     private final int level;
     private final Type returnType;
     private long thisLoopIterLimit;
+    public static long SEED;
 
     DoWhileFactory(TypeKlass ownerClass, Type returnType, long complexityLimit, int statementLimit,
             int operatorLimit, int level, boolean canHaveReturn) {
@@ -63,7 +65,7 @@ class DoWhileFactory extends SafeFactory<DoWhile> {
 
     @Override
     protected DoWhile sproduce() throws ProductionFailedException {
-        Block emptyBlock = new Block(ownerClass, returnType, new LinkedList<>(), level - 1);
+        SEED = PseudoRandom.getCurrentSeed();
         if (statementLimit > 0 && complexityLimit > 0) {
             long complexity = complexityLimit;
             // Loop header parameters
@@ -102,15 +104,28 @@ class DoWhileFactory extends SafeFactory<DoWhile> {
                         .getBlockFactory()
                         .produce();
             } catch (ProductionFailedException e) {
-                header = emptyBlock;
+                header = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
             }
             // getChildren().set(DoWhile.DoWhilePart.HEADER.ordinal(), header);
             LocalVariable counter = new LocalVariable(loop.initialization.getVariableInfo());
             Literal limiter = new Literal((int) thisLoopIterLimit, TypeList.INT);
-            loop.condition = builder.setComplexityLimit(condComplLimit)
+            Factory<LoopingCondition> lcFactory = builder.setComplexityLimit(condComplLimit)
                     .setLocalVariable(counter)
-                    .getLoopingConditionFactory(limiter)
+                    .getLoopingConditionFactory(limiter);
+            if (false && SEED == 99649021304063L) {
+                Logger.enableTrace();
+                Logger.trace("DoWhileFactory.sproduce" +
+                        " :loop-initializer " + Formatter.format(loop.initialization) +
+                        " :parsed " + loop.initialization.getChild(0));
+                Literal init = (Literal)(loop.initialization.getChild(0));
+                Logger.trace("DoWhileFactory.sproduce" +
+                        " :loop-initializer-type " + init.value.getClass() +
+                        " :loop-initializer-value " + init.value);
+            }
+
+            loop.condition = lcFactory
                     .produce();
+                Logger.disableTrace();
             SymbolTable.push();
             Block body1;
             try {
@@ -124,10 +139,13 @@ class DoWhileFactory extends SafeFactory<DoWhile> {
                         .getBlockFactory()
                         .produce();
             } catch (ProductionFailedException e) {
-                body1 = emptyBlock;
+                body1 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
             }
             // getChildren().set(DoWhile.DoWhilePart.BODY1.ordinal(), body1);
-            loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
+            loop.manipulator = builder.setLocalVariable(counter)
+                                      .getCounterManipulatorFactory()
+                                      .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
+                                      .produce();
             Block body2;
             try {
                 body2 = builder.setComplexityLimit(body2ComplLimit)
@@ -140,7 +158,7 @@ class DoWhileFactory extends SafeFactory<DoWhile> {
                         .getBlockFactory()
                         .produce();
             } catch (ProductionFailedException e) {
-                body2 = emptyBlock;
+                body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
             }
             // getChildren().set(DoWhile.DoWhilePart.BODY2.ordinal(), body2);
             SymbolTable.pop();

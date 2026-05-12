@@ -23,12 +23,14 @@
 
 package jdk.test.lib.jittester.factories;
 
+import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 
 class VariableFactory extends Factory<VariableBase> {
     private final Rule<VariableBase> rule;
@@ -49,13 +51,40 @@ class VariableFactory extends Factory<VariableBase> {
                 .setOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe);
-        rule.add("non_static_member_variable", b.getNonStaticMemberVariableFactory());
-        rule.add("static_member_variable", b.getStaticMemberVariableFactory());
-        rule.add("local_variable", b.getLocalVariableFactory());
+        double nonStaticWeight = 1.0;
+        double staticWeight = 1.0;
+        double localWeight = 1.0;
+
+        int blockDepth = BlockFactory.currentStatementBlockDepth();
+        double progress = BlockFactory.currentStatementProgress();
+        double start = clamp01(ProductionParams.assignmentFieldBiasStartPercent.value() / 100.0);
+        if (blockDepth > 0 && progress > start) {
+            double lateProgress = clamp01((progress - start) / Math.max(1e-9, 1.0 - start));
+            double depthRatio = DepthProbabilityTaper.decayingAsymptote(
+                    blockDepth,
+                    1.0,
+                    Math.max(1, ProductionParams.assignmentFieldBiasHalfDepth.value()));
+            double boost = Math.max(0.0, ProductionParams.assignmentFieldBiasBoostPercent.value()) / 100.0;
+            double memberScale = 1.0 + boost * lateProgress * depthRatio;
+            double localMinWeight = clamp01(
+                    ProductionParams.assignmentLocalMinWeightPercent.value() / 100.0);
+            double localScale = Math.max(localMinWeight, 1.0 - lateProgress * depthRatio);
+            nonStaticWeight *= memberScale;
+            staticWeight *= memberScale;
+            localWeight *= localScale;
+        }
+
+        rule.add("non_static_member_variable", b.getNonStaticMemberVariableFactory(), nonStaticWeight);
+        rule.add("static_member_variable", b.getStaticMemberVariableFactory(), staticWeight);
+        rule.add("local_variable", b.getLocalVariableFactory(), localWeight);
     }
 
     @Override
     public VariableBase produce() throws ProductionFailedException {
         return rule.produce();
+    }
+
+    private static double clamp01(double value) {
+        return Math.max(0.0, Math.min(1.0, value));
     }
 }

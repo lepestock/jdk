@@ -26,6 +26,8 @@ package jdk.test.lib.jittester;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -59,13 +61,14 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     }
 
     protected void generateGoldenOut(String mainClassName) {
+        Path targetDir = getGeneratorDir(mainClassName);
         String classPath = tmpDir.path.toString() + File.pathSeparator
-                + generatorDir.toString();
+                + targetDir.toString();
         ProcessBuilder pb = new ProcessBuilder(JAVA, "-Xint", DISABLE_WARNINGS, "-Xverify",
                 "-cp", classPath, mainClassName);
         String goldFile = mainClassName + ".gold";
         try {
-            runProcess(pb, generatorDir.resolve(goldFile).toString());
+            runProcess(pb, targetDir.resolve(goldFile).toString());
         } catch (IOException | InterruptedException e)  {
             throw new Error("Can't run generated test ", e);
         }
@@ -90,16 +93,13 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     }
 
     protected void compilePrinter() {
+        if (ProductionParams.embedPrinterClass.value()) {
+            return;
+        }
         Path root = getRoot();
         ProcessBuilder pbPrinter = new ProcessBuilder(JAVAC,
                 "-d", tmpDir.path.toString(),
-                root.resolve("jdk")
-                    .resolve("test")
-                    .resolve("lib")
-                    .resolve("jittester")
-                    .resolve("jtreg")
-                    .resolve("Printer.java")
-                    .toString());
+                resolvePrinterSourcePath(root).toString());
         try {
             int exitCode = runProcess(pbPrinter, root.resolve("Printer").toString());
             if (exitCode != 0) {
@@ -121,14 +121,17 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     }
 
     protected String getJtregHeader(String mainClassName, long seed) {
-        String synopsis = "seed = '" + ProductionParams.seed.value() + "'"
-                + ", specificSeed = '" + seed + "'";
+        // Keep header replay-stable: root --seed is not always present on replay.
+        String synopsis = "specificSeed = '" + seed + "'";
         StringBuilder header = new StringBuilder();
         header.append("/*\n * @test\n * @summary ")
               .append(synopsis)
               .append(" \n * @library / ../\n");
-        header.append(" * @run build jdk.test.lib.jittester.jtreg.JitTesterDriver "
-                        + "jdk.test.lib.jittester.jtreg.Printer\n");
+        header.append(" * @run build jdk.test.lib.jittester.jtreg.JitTesterDriver");
+        if (!ProductionParams.embedPrinterClass.value()) {
+            header.append(" jdk.test.lib.jittester.jtreg.Printer");
+        }
+        header.append("\n");
         for (String action : preRunActions.apply(mainClassName)) {
             header.append(" * ")
                   .append(action)
@@ -149,8 +152,54 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         return header.toString();
     }
 
+    protected String loadEmbeddedPrinterSource() {
+        Path printerPath = resolvePrinterSourcePath(getRoot());
+        try {
+            String source = Files.readString(printerPath, StandardCharsets.UTF_8);
+            source = source.replaceFirst("(?m)^\\s*package\\s+[^;]+;\\s*$", "");
+            source = source.replaceFirst("(?m)^\\s*public\\s+class\\s+Printer\\b", "class Printer");
+            return source.trim() + "\n";
+        } catch (IOException e) {
+            throw new Error("Can't load embedded printer source: " + printerPath, e);
+        }
+    }
+
     protected static Path getRoot() {
         return Paths.get(ProductionParams.testbaseDir.value());
+    }
+
+    private static Path resolvePrinterSourcePath(Path root) {
+        Path fromTestbase = root.resolve("jdk/test/lib/jittester/jtreg/Printer.java");
+        if (Files.exists(fromTestbase)) {
+            return fromTestbase;
+        }
+        Path fromCwd = Paths.get("src/jdk/test/lib/jittester/jtreg/Printer.java");
+        if (Files.exists(fromCwd)) {
+            return fromCwd;
+        }
+        try {
+            Path classesDir = Paths.get(TestsGenerator.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            Path fromBuild = classesDir
+                    .resolve("../../../src/jdk/test/lib/jittester/jtreg/Printer.java")
+                    .normalize();
+            if (Files.exists(fromBuild)) {
+                return fromBuild;
+            }
+        } catch (URISyntaxException ignored) {
+            // Fall through to final deterministic path.
+        }
+        return fromTestbase;
+    }
+
+    protected Path getGeneratorDir(String mainClassName) {
+        if (ProductionParams.individualSandboxes.value()) {
+            Path targetDir = generatorDir.resolve(mainClassName);
+            ensureExisting(targetDir);
+            return targetDir;
+        }
+        ensureExisting(generatorDir);
+        return generatorDir;
     }
 
     protected static void writeFile(Path targetDir, String fileName, String content) {

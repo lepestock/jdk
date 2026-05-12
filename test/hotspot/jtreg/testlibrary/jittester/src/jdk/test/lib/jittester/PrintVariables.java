@@ -24,18 +24,64 @@
 package jdk.test.lib.jittester;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.visitors.Visitor;
 
 public class PrintVariables extends IRNode {
     private final ArrayList<Symbol> vars;
+    private final ArrayList<Symbol> finalVars;
 
     public PrintVariables(TypeKlass owner, int level) {
         super(TypeList.VOID);
         this.owner = owner;
-        this.vars = SymbolTable.getAllCombined(owner, VariableInfo.class);
+        Selection selection = selectVarsForPrinting(owner);
+        this.vars = selection.mutable;
+        this.finalVars = selection.finals;
         this.level = level;
+    }
+
+    private static final class Selection {
+        private final ArrayList<Symbol> mutable;
+        private final ArrayList<Symbol> finals;
+
+        private Selection(List<Symbol> mutable, List<Symbol> finals) {
+            this.mutable = new ArrayList<>(mutable);
+            this.finals = new ArrayList<>(finals);
+        }
+    }
+
+    private static Selection selectVarsForPrinting(TypeKlass owner) {
+        List<Symbol> allVars = SymbolTable.getAllCombined(VariableInfo.class);
+        String nestedPrefix = owner.getName() + "_";
+
+        List<Symbol> candidates = allVars.stream()
+                .filter(VariableInfo.class::isInstance)
+                .filter(symbol -> {
+                    if (owner.equals(symbol.owner)) {
+                        return true;
+                    }
+                    // Include related nested-class static fields because they are often mutated
+                    // during test() and make iteration-to-iteration state changes visible.
+                    return symbol.owner.getName().startsWith(nestedPrefix) && symbol.isStatic();
+                })
+                .filter(symbol -> !((VariableInfo) symbol).isLocal())
+                .filter(symbol -> !"this".equals(symbol.name))
+                .sorted(Comparator.comparing((Symbol s) -> s.owner.getName())
+                        .thenComparing(s -> s.name))
+                .collect(Collectors.toList());
+
+        List<Symbol> mutable = candidates.stream()
+                .filter(symbol -> !symbol.isFinal())
+                .collect(Collectors.toList());
+        List<Symbol> finals = candidates.stream()
+                .filter(Symbol::isFinal)
+                .collect(Collectors.toList());
+        // Keep iteration snapshots focused on mutable state only.
+        // Final fields are printed separately as one-time diagnostic snapshots.
+        return new Selection(mutable, finals);
     }
 
     @Override
@@ -45,5 +91,9 @@ public class PrintVariables extends IRNode {
 
     public List<Symbol> getVars() {
         return vars;
+    }
+
+    public List<Symbol> getFinalVars() {
+        return finalVars;
     }
 }

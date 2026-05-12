@@ -38,8 +38,8 @@ import jdk.test.lib.jittester.loops.For;
 import jdk.test.lib.jittester.loops.Loop;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
-
-import java.util.LinkedList;
+import jdk.test.lib.jittester.Formatter;
+import jdk.test.lib.jittester.Logger;
 
 class ForFactory extends SafeFactory<For> {
     private final Loop loop;
@@ -65,7 +65,6 @@ class ForFactory extends SafeFactory<For> {
 
     @Override
     protected For sproduce() throws ProductionFailedException {
-        Block emptyBlock = new Block(ownerClass, returnType, new LinkedList<>(), level - 1);
         if (statementLimit <= 0 || complexityLimit <= 0) {
             throw new ProductionFailedException();
         }
@@ -115,7 +114,7 @@ class ForFactory extends SafeFactory<For> {
                     .getBlockFactory()
                     .produce();
         } catch (ProductionFailedException e) {
-            header = emptyBlock;
+            header = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
         }
         SymbolTable.push();
         IRNode statement1;
@@ -134,16 +133,26 @@ class ForFactory extends SafeFactory<For> {
         }
         LocalVariable counter = new LocalVariable(loop.initialization.getVariableInfo());
         Literal limiter = new Literal((int) thisLoopIterLimit, TypeList.INT);
+        long SEED = PseudoRandom.getCurrentSeed();
+        if (SEED == 131299968015990L) Logger.enableTrace();
         loop.condition = builder.setComplexityLimit(condComplLimit)
                 .setLocalVariable(counter)
                 .getLoopingConditionFactory(limiter)
                 .produce();
+        if (SEED == 131299968015990L) Logger.disableTrace();
         IRNode statement2;
         try {
             statement2 = builder.setComplexityLimit(statement2ComplLimit)
                     .getAssignmentOperatorFactory().produce();
         } catch (ProductionFailedException e) {
             statement2 = new Nothing();
+        }
+        String formattedCondition = Formatter.format(loop.condition);
+        if (formattedCondition.contains("var_279")) {
+            System.out.println("ForFactory.sproduce :seed " + SEED +
+                    " :statement2 " + Formatter.format(statement2) +
+                    " :statement1 " + Formatter.format(statement1) +
+                    " :condition " + formattedCondition);
         }
         Block body1;
         try {
@@ -157,9 +166,13 @@ class ForFactory extends SafeFactory<For> {
                     .getBlockFactory()
                     .produce();
         } catch (ProductionFailedException e) {
-            body1 = emptyBlock;
+            body1 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
         }
-        loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
+//        loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
+        loop.manipulator = builder.setLocalVariable(counter)
+                                  .getCounterManipulatorFactory()
+                                  .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
+                                  .produce();
         Block body2;
         try {
             body2 = builder.setComplexityLimit(body2ComplLimit)
@@ -172,7 +185,7 @@ class ForFactory extends SafeFactory<For> {
                     .getBlockFactory()
                     .produce();
         } catch (ProductionFailedException e) {
-            body2 = emptyBlock;
+            body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
         }
         Block body3;
         try {
@@ -186,13 +199,15 @@ class ForFactory extends SafeFactory<For> {
                     .getBlockFactory()
                     .produce();
         } catch (ProductionFailedException e) {
-            body3 = emptyBlock;
+            body3 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
         }
         SymbolTable.pop();
-        return new For(level, loop, thisLoopIterLimit, header,
+        For result = new For(level, loop, thisLoopIterLimit, header,
                 new Statement(statement1, false),
                 new Statement(statement2, false),
                 body1,
                 body2, body3);
+        if (SEED == 131299968015990L) System.out.println("For.produce :result " + Formatter.format(result));
+        return result;
     }
 }

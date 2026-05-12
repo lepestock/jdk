@@ -32,9 +32,11 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class StaticMemberVariableFactory extends Factory<StaticMemberVariable> {
+    private static final String MAGNET_CHANNEL = "use.static.variable";
     private final Type type;
     private final int flags;
     private final Type ownerClass;
@@ -50,15 +52,30 @@ class StaticMemberVariableFactory extends Factory<StaticMemberVariable> {
         // Get the variables of the requested type from SymbolTable
         ArrayList<Symbol> variables = new ArrayList<>(SymbolTable.get(type, VariableInfo.class));
         if (!variables.isEmpty()) {
-            PseudoRandom.shuffle(variables);
+            ArrayList<Symbol> eligible = new ArrayList<>();
             for (Symbol symbol : variables) {
                 VariableInfo varInfo = (VariableInfo) symbol;
                 if ((varInfo.flags & VariableInfo.FINAL) == (flags & VariableInfo.FINAL)
                         && (varInfo.flags & VariableInfo.INITIALIZED) == (flags & VariableInfo.INITIALIZED)
                         && (varInfo.flags & VariableInfo.STATIC) > 0) {
-                    return new StaticMemberVariable((TypeKlass) ownerClass, varInfo);
+                    eligible.add(varInfo);
                 }
             }
+            if (eligible.isEmpty()) {
+                throw new ProductionFailedException();
+            }
+            VariableInfo selected;
+            if (Genome.isReplayActive()) {
+                long replayTargetGene = SymbolTable.consumeMagnetTargetGene(MAGNET_CHANNEL);
+                selected = (VariableInfo) SymbolTable.attractByMagnet(eligible, replayTargetGene, MAGNET_CHANNEL);
+            } else {
+                // Replay selects directly by recorded magnet target and does not consume shuffle RNG events.
+                // Keep this shuffle out of genome event stream.
+                PseudoRandom.shuffleSilent(eligible);
+                selected = (VariableInfo) eligible.get(0);
+                SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, selected.getMagnetismGeneId());
+            }
+            return new StaticMemberVariable((TypeKlass) ownerClass, selected);
         }
         throw new ProductionFailedException();
     }

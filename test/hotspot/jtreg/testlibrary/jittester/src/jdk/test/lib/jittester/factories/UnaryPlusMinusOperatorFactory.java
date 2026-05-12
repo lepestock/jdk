@@ -28,9 +28,9 @@ import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
-import jdk.test.lib.jittester.utils.TypeUtil;
 import jdk.test.lib.jittester.UnaryOperator;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class UnaryPlusMinusOperatorFactory extends UnaryOperatorFactory {
@@ -51,7 +51,7 @@ class UnaryPlusMinusOperatorFactory extends UnaryOperatorFactory {
     @Override
     protected Type generateType() {
         if (resultType.equals(TypeList.INT)) {
-            return PseudoRandom.randomElement(TypeUtil.getImplicitlyCastable(TypeList.getBuiltIn(), resultType));
+            return PseudoRandom.randomElement(TypeBoxingUtil.getArithmeticOperandTypesForResult(resultType));
         } else {
             return resultType;
         }

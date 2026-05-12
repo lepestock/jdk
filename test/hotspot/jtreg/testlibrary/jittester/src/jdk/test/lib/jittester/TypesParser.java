@@ -32,8 +32,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -50,6 +52,7 @@ import static java.util.function.Predicate.not;
 public class TypesParser {
 
     private List<MethodTemplate> methodsToExclude;
+    private List<MethodTemplate> methodsIntrinsic;
 
     private static final HashMap<Class<?>, Type> TYPE_CACHE = new HashMap<>();
 
@@ -57,6 +60,23 @@ public class TypesParser {
         int commentStart = source.indexOf('#');
         return commentStart == -1 ? source : source.substring(0, commentStart);
     }
+    private static String normalizeMethodTemplate(String source) {
+        int open = source.indexOf('(');
+        int close = source.lastIndexOf(')');
+        if (open >= 0 && close >= open && close + 1 < source.length()) {
+            return source.substring(0, close + 1);
+        }
+        return source;
+    }
+    private static MethodTemplate parseMethodTemplateOrNull(String source) {
+        try {
+            return MethodTemplate.parse(source);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+
 
     /**
      * Parses included classes file and excluded methods file to TypeList and SymbolTable.
@@ -71,6 +91,7 @@ public class TypesParser {
         Asserts.assertFalse(klassesFileName.isEmpty(), "Classes input file name is empty");
         TypesParser theParser = new TypesParser();
         theParser.initMethodsToExclude(exMethodsFileName);
+        theParser.initIntrinsicMethods(ProductionParams.intrinsicMethodsFile.value());
         parseKlasses(klassesFileName)
             .stream()
             .filter(klass -> !TypeList.isReferenceType(getTypeKlass(klass)))
@@ -78,11 +99,15 @@ public class TypesParser {
     }
 
     private void processKlass(Class<?> klass) {
+
         TypeKlass typeKlass = getTypeKlass(klass);
         TypeList.add(typeKlass);
         Stream.concat(Arrays.stream(klass.getMethods()), Arrays.stream(klass.getConstructors()))
             .filter(not(Executable::isSynthetic))
-            .filter(method -> MethodTemplate.noneMatches(methodsToExclude, method))
+            .filter(this::shouldIncludeMethod)
+            // Reflection order for methods/constructors is not guaranteed; keep symbol
+            // registration stable across JVM runs to preserve deterministic replay streams.
+            .sorted(Comparator.comparing(Executable::toGenericString))
             .forEach(method -> {
                 String name = method.getName();
                 boolean isConstructor = false;
@@ -107,8 +132,26 @@ public class TypesParser {
                     paramList.add(new VariableInfo("arg" + argNum, typeKlass, paramType,
                             VariableInfo.LOCAL | VariableInfo.INITIALIZED));
                 }
-                typeKlass.addSymbol(new FunctionInfo(name, typeKlass, returnType, 1, flags, paramList));
+                FunctionInfo info = new FunctionInfo(name, typeKlass, returnType, 1, flags, paramList);
+                info.intrinsic = MethodTemplate.anyMatches(methodsIntrinsic, method);
+                typeKlass.addSymbol(info);
             });
+    }
+
+    private boolean shouldIncludeMethod(Executable method) {
+        if (MethodTemplate.noneMatches(methodsToExclude, method)) {
+            return true;
+        }
+        return ProductionParams.nondeterminism.value() > 0 && isNondeterministicMethod(method);
+    }
+
+    private static boolean isNondeterministicMethod(Executable method) {
+        return method != null
+                && method.getDeclaringClass() == java.lang.System.class
+                && "nanoTime".equals(method.getName())
+                && method.getParameterCount() == 0
+                && (method instanceof Method)
+                && ((Method) method).getReturnType() == long.class;
     }
 
     private static Type getType(Class<?> klass) {
@@ -248,6 +291,7 @@ public class TypesParser {
                     .filter(not(String::isEmpty))
 
                     // Actual parsing
+                    .map(TypesParser::normalizeMethodTemplate)
                     .map(MethodTemplate::parse)
                     .collect(Collectors.toList());
             } catch (IOException ex) {
@@ -255,6 +299,31 @@ public class TypesParser {
             }
         } else {
             methodsToExclude = new ArrayList<>();
+        }
+    }
+
+    private void initIntrinsicMethods(String methodsFileName) {
+        if (methodsFileName != null && !methodsFileName.isEmpty()) {
+            Path methodsFilePath = Paths.get(methodsFileName);
+            if (!Files.exists(methodsFilePath)) {
+                methodsIntrinsic = new ArrayList<>();
+                return;
+            }
+            try {
+                methodsIntrinsic = Files.lines(methodsFilePath)
+                    .map(TypesParser::trimComment)
+                    .map(String::trim)
+                    .filter(not(String::isEmpty))
+                    .map(TypesParser::normalizeMethodTemplate)
+                    .map(TypesParser::parseMethodTemplateOrNull)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            } catch (IOException ex) {
+                throw new Error("Error reading intrinsic methods file", ex);
+            }
+        } else {
+            methodsIntrinsic = new ArrayList<>();
         }
     }
 }

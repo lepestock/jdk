@@ -57,44 +57,109 @@ public class PseudoRandom {
     }
 
     public static double random() {
+        applyReplayedRngGene("random");
+        recordRngGene("random");
         return random.nextDouble();
+    }
+
+    /**
+     * Consumes RNG state without recording/consuming a genome RNG event.
+     * Intended for internal selection logic where the final choice is recorded explicitly.
+     */
+    public static double randomSilent() {
+        return random.nextDouble();
+    }
+
+    public static long nextLong() {
+        applyReplayedRngGene("nextLong");
+        recordRngGene("nextLong");
+        return random.nextLong();
+    }
+
+    /**
+     * Consumes RNG state without recording/consuming a genome RNG event.
+     * Intended for cases where the decision is tracked via a dedicated non-N event category.
+     */
+    public static long nextLongSilent() {
+        return random.nextLong();
+    }
+
+    public static long nextLong(long lo, long hi) {
+        applyReplayedRngGene("nextLongRange");
+        recordRngGene("nextLongRange");
+        return random.nextLong(lo, hi);
+    }
+
+    public static int nextInt() {
+        applyReplayedRngGene("nextInt");
+        recordRngGene("nextInt");
+        return random.nextInt();
+    }
+
+    public static int nextInt(int lo, int hi) {
+        applyReplayedRngGene("nextIntRange");
+        recordRngGene("nextIntRange");
+        return random.nextInt(lo, hi);
     }
 
     // uniformly distributed boolean
     public static boolean randomBoolean() {
+        applyReplayedRngGene("randomBoolean");
+        recordRngGene("randomBoolean");
         return random.nextBoolean();
     }
 
     // non-uniformly distributed boolean. 0 probability - never true, 1 - always true
     public static boolean randomBoolean(double probability) {
+        applyReplayedRngGene("randomBooleanProb");
+        recordRngGene("randomBooleanProb");
         return random.nextDouble() < probability;
     }
 
     public static long randomNotZero(long limit) {
+        applyReplayedRngGene("randomNotZeroLong");
+        recordRngGene("randomNotZeroLong");
         long result = (long) (limit * random.nextDouble());
         return result > 0L ? result : 1L;
     }
 
     public static int randomNotZero(int limit) {
+        applyReplayedRngGene("randomNotZeroInt");
+        recordRngGene("randomNotZeroInt");
         int result = (int) (limit * random.nextDouble());
         return result > 0 ? result : 1;
     }
 
     public static void shuffle(List<?> list) {
+        applyReplayedRngGene("shuffle");
+        recordRngGene("shuffle");
+        Collections.shuffle(list, random);
+    }
+
+    /**
+     * Shuffle without replay/record event gene interaction.
+     * Uses current RNG state only.
+     */
+    public static void shuffleSilent(List<?> list) {
         Collections.shuffle(list, random);
     }
 
     public static int randomNotNegative(int limit) {
+        applyReplayedRngGene("randomNotNegative");
+        recordRngGene("randomNotNegative");
         int result = (int) (limit * random.nextDouble());
         return Math.abs(result);
     }
 
     public static <T> T randomElement(Collection<T> collection) {
-        if (collection.isEmpty())
+        if (collection.isEmpty()) {
             throw new NoSuchElementException("Empty, no element can be randomly selected");
-        if (collection instanceof List)
+        }
+        if (collection instanceof List) {
             return randomElement((List<T>) collection);
-        else {
+        } else {
+            applyReplayedRngGene("randomElementCollection");
+            recordRngGene("randomElementCollection");
             int ix = random.nextInt(collection.size());
             final Iterator<T> iterator = collection.iterator();
             while (ix > 0) {
@@ -106,20 +171,26 @@ public class PseudoRandom {
     }
 
     public static <T> T randomElement(List<T> list) {
-        if (list.isEmpty())
+        if (list.isEmpty()) {
             throw new NoSuchElementException("Empty, no element can be randomly selected");
+        }
+        applyReplayedRngGene("randomElementList");
+        recordRngGene("randomElementList");
         return list.get(random.nextInt(list.size()));
     }
 
     public static <T> T randomElement(T[] array) {
-        if (array.length == 0)
+        if (array.length == 0) {
             throw new NoSuchElementException("Empty, no element can be randomly selected");
+        }
+        applyReplayedRngGene("randomElementArray");
+        recordRngGene("randomElementArray");
         return array[random.nextInt(array.length)];
     }
 
     public static long getCurrentSeed() {
         try {
-            return ((AtomicLong)SEED_FIELD.get(random)).get();
+            return ((AtomicLong) SEED_FIELD.get(random)).get();
         } catch (ReflectiveOperationException roe) {
             throw new Error("Can't get seed: " + roe, roe);
         }
@@ -127,10 +198,27 @@ public class PseudoRandom {
 
     public static void setCurrentSeed(long seed) {
         try {
-            AtomicLong seedObject = (AtomicLong)SEED_FIELD.get(random);
+            AtomicLong seedObject = (AtomicLong) SEED_FIELD.get(random);
             seedObject.set(seed);
         } catch (ReflectiveOperationException roe) {
             throw new Error("Can't set seed: " + roe, roe);
+        }
+    }
+
+    private static void recordRngGene(String rngOpName) {
+        if (random == null || !Genome.isEventGeneRecordingEnabled()) {
+            return;
+        }
+        Genome.recordRngGene(rngOpName, getCurrentSeed());
+    }
+
+    private static void applyReplayedRngGene(String rngOpName) {
+        if (random == null) {
+            return;
+        }
+        Long replayGene = Genome.consumeRngGene(rngOpName, getCurrentSeed());
+        if (replayGene != null) {
+            setCurrentSeed(replayGene);
         }
     }
 }

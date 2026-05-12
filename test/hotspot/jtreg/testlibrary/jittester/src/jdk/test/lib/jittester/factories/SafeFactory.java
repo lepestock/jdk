@@ -32,13 +32,17 @@ public abstract class SafeFactory<T extends IRNode> extends Factory<T> {
 
     @Override
     public T produce() throws ProductionFailedException {
+        int symbolCheckpoint = SymbolTable.checkpoint();
         try {
             SymbolTable.push();
             T p = sproduce();
             SymbolTable.merge();
             return p;
         } catch (ProductionFailedException e) {
-            SymbolTable.pop();
+            SymbolTable.rollbackToCheckpoint(symbolCheckpoint);
+            throw e;
+        } catch (RuntimeException e) {
+            SymbolTable.rollbackToCheckpoint(symbolCheckpoint);
             throw e;
         }
     }

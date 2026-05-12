@@ -51,7 +51,10 @@ class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> 
     @Override
     public VariableDeclarationBlock produce() throws ProductionFailedException {
         ArrayList<Declaration> content = new ArrayList<>();
-        int limit = (int) Math.ceil(PseudoRandom.random() * ProductionParams.dataMemberLimit.value());
+        int configuredLimit = ProductionParams.dataMemberLimit.value();
+        int randomPart = (int) Math.ceil(PseudoRandom.random() * configuredLimit);
+        int floor = Math.max(1, configuredLimit / 2);
+        int limit = Math.max(floor, randomPart);
         Factory<Declaration> declFactory = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
                 .setComplexityLimit(complexityLimit)
