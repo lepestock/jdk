@@ -259,6 +259,9 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
             if ((varInfo.flags & VariableInfo.INITIALIZED) == 0) {
                 continue;
             }
+            if (ThisVariableControl.isThisForbidden() && "this".equals(varInfo.name)) {
+                continue;
+            }
             try {
                 if (!replayMode) {
                     Genome.beginSpeculativeRecord();

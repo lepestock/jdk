@@ -116,18 +116,28 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
                 }
             }
             long blockComplLimit = (long) (PseudoRandom.random() * complexityLimit);
-            body = builder.setOwnerKlass(ownerClass)
-                    .setResultType(resType)
-                    .setComplexityLimit(blockComplLimit)
-                    .setStatementLimit(statementLimit)
-                    .setOperatorLimit(operatorLimit)
-                    .setLevel(level)
-                    .setSubBlock(true)
-                    .setCanHaveBreaks(false)
-                    .setCanHaveContinues(false)
-                    .setCanHaveReturn(true)
-                    .getBlockFactory()
-                    .produce();
+            boolean staticMethod = (flags & FunctionInfo.STATIC) > 0;
+            if (staticMethod) {
+                ThisVariableControl.pushForbidThis();
+            }
+            try {
+                body = builder.setOwnerKlass(ownerClass)
+                        .setResultType(resType)
+                        .setComplexityLimit(blockComplLimit)
+                        .setStatementLimit(statementLimit)
+                        .setOperatorLimit(operatorLimit)
+                        .setLevel(level)
+                        .setSubBlock(true)
+                        .setCanHaveBreaks(false)
+                        .setCanHaveContinues(false)
+                        .setCanHaveReturn(true)
+                        .getBlockFactory()
+                        .produce();
+            } finally {
+                if (staticMethod) {
+                    ThisVariableControl.popForbidThis();
+                }
+            }
             if (!resType.equals(TypeList.VOID)) {
                 returnNode = builder.setComplexityLimit(complexityLimit - blockComplLimit)
                         .setExceptionSafe(false)
