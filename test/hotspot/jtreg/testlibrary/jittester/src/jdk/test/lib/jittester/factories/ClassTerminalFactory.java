@@ -104,7 +104,8 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
             try {
                 if (!replayMode) {
                     Genome.beginSpeculativeRecord();
-                    SymbolTable.recordMagnetTargetGene(CONSTRUCTOR_MAGNET_CHANNEL, constructor.getMagnetismGeneId());
+                    SymbolTable.recordMagnetTargetSelection(CONSTRUCTOR_MAGNET_CHANNEL,
+                            constructor.getMagnetismGeneId(), constructors, constructor);
                 }
                 Function produced = produceConstructorCall(constructor);
                 if (!replayMode) {
@@ -265,7 +266,8 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
             try {
                 if (!replayMode) {
                     Genome.beginSpeculativeRecord();
-                    SymbolTable.recordMagnetTargetGene(VARIABLE_MAGNET_CHANNEL, varInfo.getMagnetismGeneId());
+                    SymbolTable.recordMagnetTargetSelection(VARIABLE_MAGNET_CHANNEL,
+                            varInfo.getMagnetismGeneId(), vars, varInfo);
                 }
                 if ((varInfo.flags & VariableInfo.LOCAL) > 0) {
                     if (!replayMode) {

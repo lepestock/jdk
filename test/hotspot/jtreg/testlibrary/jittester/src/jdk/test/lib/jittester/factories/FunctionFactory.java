@@ -164,7 +164,8 @@ public class FunctionFactory extends SafeFactory<Function> {
                     try {
                         if (!replayMode) {
                             Genome.beginSpeculativeRecord();
-                            SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, functionInfo.getMagnetismGeneId());
+                            SymbolTable.recordMagnetTargetSelection(MAGNET_CHANNEL,
+                                    functionInfo.getMagnetismGeneId(), remainingFunctions, functionInfo);
                         }
                         List<IRNode> accum = new ArrayList<>();
                         if (!functionInfo.argTypes.isEmpty()) {

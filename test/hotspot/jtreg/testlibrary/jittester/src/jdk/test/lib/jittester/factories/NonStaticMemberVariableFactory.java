@@ -107,7 +107,8 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                         }
                         if (!replayMode) {
                             Genome.beginSpeculativeRecord();
-                            SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, varInfo.getMagnetismGeneId());
+                            SymbolTable.recordMagnetTargetSelection(MAGNET_CHANNEL, varInfo.getMagnetismGeneId(),
+                                    variables, varInfo);
                         }
                         Logger.log(SEED == 194820577109216L, ":expressionSeed " + PseudoRandom.getCurrentSeed());
                         IRNode object = builder.setResultType(varInfo.owner)

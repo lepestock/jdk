@@ -31,12 +31,14 @@ import java.util.Map;
 import java.util.Comparator;
 import java.util.Stack;
 import java.util.stream.Collectors;
+import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.Genome;
 
 
 public class SymbolTable {
     private static final String MAGNET_DECL_CHANNEL = "symbol.decl";
+    private static final String MAGNET_PICK_CHANNEL_PREFIX = "magnet.pick.";
     private static final boolean DEBUG_DEPTH = Boolean.getBoolean("jittester.debug.symbol.depth");
     private static int maxObservedDepth = 1;
 
@@ -422,16 +424,121 @@ public class SymbolTable {
         Genome.recordMagnetTargetGene("magnet.use." + channel, magnetGeneId);
     }
 
+    public static void recordMagnetTargetSelection(String channel, long magnetGeneId,
+            List<? extends Symbol> candidates, Symbol selected) {
+        recordMagnetTargetGene(channel, magnetGeneId);
+        if (channel == null || channel.isBlank() || selected == null || candidates == null || candidates.isEmpty()) {
+            return;
+        }
+        List<Symbol> exactMatches = collectExactMagnetMatches(candidates, magnetGeneId);
+        if (exactMatches.size() <= 1) {
+            return;
+        }
+        exactMatches.sort(MAGNET_MATCH_ORDER);
+        int selectedIndex = indexOfSelection(exactMatches, selected);
+        if (selectedIndex < 0) {
+            throw new RuntimeException("Could not resolve magnet tie-break selection for channel '" + channel
+                    + "', magnet=" + magnetGeneId);
+        }
+        Genome.recordChoiceGene(MAGNET_PICK_CHANNEL_PREFIX + channel, selectedIndex);
+    }
+
     public static <T extends Symbol> T attractByMagnet(List<T> candidates, long magnetId, String channel) {
+        List<T> exactMatches = new ArrayList<>();
         if (candidates != null) {
             for (T candidate : candidates) {
                 if (candidate.hasMagnetismGeneId() && candidate.getMagnetismGeneId() == magnetId) {
-                    return candidate;
+                    exactMatches.add(candidate);
                 }
             }
         }
-        throw new RuntimeException("Genome broken around magnet gene " + magnetId
-                + " for channel '" + channel + "'");
+        if (exactMatches.isEmpty()) {
+            throw new RuntimeException("Genome broken around magnet gene " + magnetId
+                    + " for channel '" + channel + "'");
+        }
+        if (exactMatches.size() == 1) {
+            return exactMatches.get(0);
+        }
+        exactMatches.sort(MAGNET_MATCH_ORDER);
+        Long replayPick = Genome.consumeChoiceGene(MAGNET_PICK_CHANNEL_PREFIX + channel, -1L);
+        if (replayPick == null) {
+            throw new RuntimeException("Genome broken around magnet gene " + magnetId
+                    + " for channel '" + channel + "': missing tie-break choice");
+        }
+        if (replayPick < 0 || replayPick >= exactMatches.size()) {
+            throw new RuntimeException("Genome broken around magnet gene " + magnetId
+                    + " for channel '" + channel + "': invalid tie-break choice " + replayPick
+                    + " for " + exactMatches.size() + " candidates");
+        }
+        return exactMatches.get(replayPick.intValue());
+    }
+
+    private static final Comparator<Symbol> MAGNET_MATCH_ORDER = Comparator
+            .comparing((Symbol s) -> s.getClass().getName())
+            .thenComparing(s -> s.owner == null ? "" : s.owner.getName())
+            .thenComparing(s -> s.name == null ? "" : s.name)
+            .thenComparing(s -> s.type == null ? "" : s.type.getName())
+            .thenComparingInt(s -> s.flags)
+            .thenComparing(SymbolTable::symbolExtraOrderingKey);
+
+    private static String symbolExtraOrderingKey(Symbol symbol) {
+        if (symbol instanceof FunctionInfo functionInfo) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(functionInfo.isConstructor()).append('#');
+            if (functionInfo.argTypes != null) {
+                for (VariableInfo arg : functionInfo.argTypes) {
+                    sb.append(arg == null || arg.type == null ? "<null>" : arg.type.getName()).append(';');
+                }
+            }
+            return sb.toString();
+        }
+        return "";
+    }
+
+    private static List<Symbol> collectExactMagnetMatches(List<? extends Symbol> candidates, long magnetGeneId) {
+        ArrayList<Symbol> matches = new ArrayList<>();
+        for (Symbol candidate : candidates) {
+            if (candidate.hasMagnetismGeneId() && candidate.getMagnetismGeneId() == magnetGeneId) {
+                matches.add(candidate);
+            }
+        }
+        return matches;
+    }
+
+    private static int indexOfSelection(List<Symbol> exactMatches, Symbol selected) {
+        for (int i = 0; i < exactMatches.size(); i++) {
+            if (sameSelectionTarget(exactMatches.get(i), selected)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean sameSelectionTarget(Symbol a, Symbol b) {
+        if (a == b) {
+            return true;
+        }
+        if (a == null || b == null) {
+            return false;
+        }
+        if (!String.valueOf(a.getClass().getName()).equals(String.valueOf(b.getClass().getName()))) {
+            return false;
+        }
+        if (!String.valueOf(a.owner == null ? "" : a.owner.getName())
+                .equals(String.valueOf(b.owner == null ? "" : b.owner.getName()))) {
+            return false;
+        }
+        if (!String.valueOf(a.name).equals(String.valueOf(b.name))) {
+            return false;
+        }
+        if (!String.valueOf(a.type == null ? "" : a.type.getName())
+                .equals(String.valueOf(b.type == null ? "" : b.type.getName()))) {
+            return false;
+        }
+        if (a.flags != b.flags) {
+            return false;
+        }
+        return symbolExtraOrderingKey(a).equals(symbolExtraOrderingKey(b));
     }
 
     private static void assignMagnetismGeneIfNeeded(Symbol symbol) {

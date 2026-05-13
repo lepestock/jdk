@@ -76,7 +76,8 @@ class LocalVariableFactory extends Factory<LocalVariable> {
                 // Keep this shuffle out of genome event stream.
                 PseudoRandom.shuffleSilent(eligible);
                 selected = (VariableInfo) eligible.get(0);
-                SymbolTable.recordMagnetTargetGene(MAGNET_CHANNEL, selected.getMagnetismGeneId());
+                SymbolTable.recordMagnetTargetSelection(MAGNET_CHANNEL, selected.getMagnetismGeneId(),
+                        eligible, selected);
             }
             return new LocalVariable(selected);
         }
