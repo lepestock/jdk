@@ -24,7 +24,7 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Set;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Symbol;
@@ -89,7 +89,7 @@ class ValueKlassFactory extends AbstractKlassFactory<ValueKlass> {
     }
 
     @Override
-    protected ArrayList<Symbol> getShuffledOverrideCandidates(HashSet<Symbol> nonAbstractSet) {
+    protected ArrayList<Symbol> getShuffledOverrideCandidates(Set<Symbol> nonAbstractSet) {
         nonAbstractSet.removeIf(symbol -> (((FunctionInfo) symbol).flags & FunctionInfo.FINAL) > 0);
         return super.getShuffledOverrideCandidates(nonAbstractSet);
     }

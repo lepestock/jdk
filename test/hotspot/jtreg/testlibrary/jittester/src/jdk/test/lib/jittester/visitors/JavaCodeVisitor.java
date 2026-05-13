@@ -24,9 +24,12 @@
 package jdk.test.lib.jittester.visitors;
 
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.Block;
@@ -91,9 +94,11 @@ import jdk.test.lib.jittester.loops.While;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PrintingUtils;
 
 public class JavaCodeVisitor implements Visitor<String> {
+    private Set<String> debugWrapGeneFilter = null;
 
     public static String funcAttributes(FunctionInfo fi) {
         String attrs = attributes(fi);
@@ -311,11 +316,9 @@ public class JavaCodeVisitor implements Visitor<String> {
             if (!s.isEmpty()) {
                 int level = node.getLevel();
                 if (i instanceof Block) {
-                    code.append(PrintingUtils.align(level + 1))
-                        .append("{\n")
+                    code.append(openBraceWithGene(level + 1, i))
                         .append(s)
-                        .append(PrintingUtils.align(level + 1))
-                        .append("}");
+                        .append(closeBraceWithGene(level + 1, i));
                 } else {
                     code.append(PrintingUtils.align(level + 1))
                         .append(s);
@@ -325,6 +328,34 @@ public class JavaCodeVisitor implements Visitor<String> {
             }
         }
         return code.toString();
+    }
+
+    private static String geneComment(IRNode node) {
+        if (Genome.isSourceDebugEnabled()
+                && node instanceof Block
+                && ((Block) node).hasBlockRngSeed()) {
+            String token = Genome.formatBlockDebugToken((Block) node);
+            if (!token.isEmpty()) {
+                return "  // gene: " + token;
+            }
+        }
+        return "";
+    }
+
+    private static String openBraceWithGene(int level, IRNode body) {
+        return PrintingUtils.align(level) + "{" + geneComment(body) + "\n";
+    }
+
+    private static String closeBraceWithGene(int level, IRNode body) {
+        return PrintingUtils.align(level) + "}" + geneComment(body);
+    }
+
+    private static String openBraceSuffixWithGene(IRNode body) {
+        return "{" + geneComment(body) + "\n";
+    }
+
+    private static String closeBraceSuffixWithGene(IRNode body) {
+        return "}" + geneComment(body);
     }
 
     private String addComplexityInfo(IRNode node) {
@@ -371,11 +402,9 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append("(")
             .append(args)
             .append(")\n")
-            .append(PrintingUtils.align(node.getLevel() + 1))
-            .append("{\n")
+            .append(openBraceWithGene(node.getLevel() + 1, body))
             .append(body != null ? body.accept(this) : "")
-            .append(PrintingUtils.align(node.getLevel() + 1))
-            .append("}");
+            .append(closeBraceWithGene(node.getLevel() + 1, body));
         return code.toString();
     }
 
@@ -426,15 +455,14 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append(header.accept(this))
             .append(PrintingUtils.align(level))
             .append("do\n")
-            .append(PrintingUtils.align(level))
-            .append("{\n")
+            .append(openBraceWithGene(level, body1))
             .append(body1.accept(this))
             .append(PrintingUtils.align(level + 1))
             .append(loop.manipulator.accept(this))
             .append(";\n")
             .append(body2.accept(this))
-            .append(PrintingUtils.align(level))
-            .append("} while (")
+            .append(closeBraceWithGene(level, body1))
+            .append(" while (")
             .append(loop.condition.accept(this))
             .append(");");
         return code.toString();
@@ -462,28 +490,26 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append("; ")
             .append(statement2.accept(this))
             .append(")\n")
-            .append(PrintingUtils.align(level))
-            .append("{\n")
+            .append(openBraceWithGene(level, body1))
             .append(body1.accept(this))
             .append(PrintingUtils.align(level + 1))
             .append(loop.manipulator.accept(this))
             .append(";\n")
             .append(body2.accept(this))
             .append(body3.accept(this))
-            .append(PrintingUtils.align(level))
-            .append("}");
+            .append(closeBraceWithGene(level, body1));
         return code.toString();
     }
 
     @Override
     public String visit(Function node) {
         FunctionInfo value = node.getValue();
-        String nameAndArgs = value.name + "("
-                + node.getChildren().stream()
-                    .skip(value.isStatic() || value.isConstructor() ? 0 : 1)
-                    .map(c -> c.accept(this))
-                    .collect(Collectors.joining(", "))
-                + ")";
+        List<String> args = node.getChildren().stream()
+                .skip(value.isStatic() || value.isConstructor() ? 0 : 1)
+                .map(c -> c.accept(this))
+                .collect(Collectors.toCollection(ArrayList::new));
+        maybeWrapDebugMethodCallArg(node, value, args);
+        String nameAndArgs = value.name + "(" + String.join(", ", args) + ")";
         String prefix = "";
         if (value.isStatic()) {
             if(!node.getOwner().equals(value.owner)) {
@@ -504,6 +530,131 @@ public class JavaCodeVisitor implements Visitor<String> {
             }
         }
         return prefix + nameAndArgs;
+    }
+
+    private void maybeWrapDebugMethodCallArg(Function node, FunctionInfo value, List<String> args) {
+        if (!ProductionParams.debugMethodCallWrapEnabled.value()) {
+            return;
+        }
+        String expressionGene = node.getExpressionGeneToken();
+        if (!isDebugWrapGeneSelected(expressionGene)) {
+            return;
+        }
+        if (!value.isStatic() || value.isConstructor() || args.isEmpty()) {
+            return;
+        }
+        String target = ProductionParams.debugMethodCallWrapTarget.value();
+        if (target == null || target.isBlank()) {
+            return;
+        }
+        String ownerName = value.owner == null ? "" : value.owner.getName();
+        String fullName = ownerName + "." + value.name;
+        if (!target.equals(fullName)) {
+            return;
+        }
+        int callArgStart = value.isStatic() || value.isConstructor() ? 0 : 1;
+        int wrappedArgPos = args.size() >= 2 ? 1 : 0;
+        int wrappedChildIndex = callArgStart + wrappedArgPos;
+        if (wrappedChildIndex >= node.getChildren().size()) {
+            return;
+        }
+        IRNode wrappedArgNode = node.getChild(wrappedChildIndex);
+        if (!isAllowedWrappedArgKind(wrappedArgNode)) {
+            return;
+        }
+        String debugMethod = args.size() >= 2 ? "debugLong" : "debugString";
+        String wrapped = "jdk.test.lib.jittester.jtreg.Printer." + debugMethod + "(\""
+                + escapeJavaString(expressionGene) + "\", " + args.get(wrappedArgPos) + ")";
+        args.set(wrappedArgPos, wrapped);
+    }
+
+    private boolean isDebugWrapGeneSelected(String expressionGene) {
+        if (expressionGene == null || expressionGene.isBlank()) {
+            return false;
+        }
+        if (debugWrapGeneFilter == null) {
+            debugWrapGeneFilter = parseDebugWrapGenes();
+        }
+        if (debugWrapGeneFilter.isEmpty()) {
+            return false;
+        }
+        return debugWrapGeneFilter.contains(expressionGene);
+    }
+
+    private static Set<String> parseDebugWrapGenes() {
+        Set<String> result = new HashSet<>();
+        String raw = ProductionParams.debugMethodCallWrapGenes.value();
+        if (raw == null || raw.isBlank()) {
+            return result;
+        }
+        int limit = Math.max(1, ProductionParams.debugMethodCallWrapGenesMax.value());
+        String[] tokens = raw.split(",");
+        for (String token : tokens) {
+            if (result.size() >= limit) {
+                break;
+            }
+            String t = token == null ? "" : token.trim();
+            if (t.isEmpty()) {
+                continue;
+            }
+            if (t.charAt(0) != 'E') {
+                t = "E" + t;
+            }
+            result.add(t);
+        }
+        return result;
+    }
+
+    private boolean isAllowedWrappedArgKind(IRNode wrappedArgNode) {
+        String kinds = ProductionParams.debugMethodCallWrapArgKinds.value();
+        if (kinds == null || kinds.isBlank()) {
+            return true;
+        }
+        String normalized = kinds.toLowerCase();
+        if (normalized.contains("all")) {
+            return true;
+        }
+        if (wrappedArgNode instanceof Literal && normalized.contains("literal")) {
+            return true;
+        }
+        if (wrappedArgNode instanceof Operator && normalized.contains("operator")) {
+            return true;
+        }
+        if (wrappedArgNode instanceof Function && normalized.contains("function")) {
+            return true;
+        }
+        return wrappedArgNode instanceof VariableBase && normalized.contains("variable");
+    }
+
+    private static String escapeJavaString(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        StringBuilder escaped = new StringBuilder(raw.length() + 8);
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            switch (c) {
+                case '\\':
+                    escaped.append("\\\\");
+                    break;
+                case '"':
+                    escaped.append("\\\"");
+                    break;
+                case '\n':
+                    escaped.append("\\n");
+                    break;
+                case '\r':
+                    escaped.append("\\r");
+                    break;
+                case '\t':
+                    escaped.append("\\t");
+                    break;
+                default:
+                    escaped.append(c);
+                    break;
+            }
+        }
+        return escaped.toString();
     }
 
     @Override
@@ -540,10 +691,10 @@ public class JavaCodeVisitor implements Visitor<String> {
         IRNode ret = node.getChild(1);
         FunctionInfo functionInfo = node.getFunctionInfo();
         return funcAttributes(functionInfo) + functionInfo.type.accept(this) + " " + functionInfo.name + "(" + args + ")" + "\n"
-                + PrintingUtils.align(node.getLevel() + 1) + "{\n"
+                + openBraceWithGene(node.getLevel() + 1, body)
                 + body.accept(this)
                 + (ret != null ? PrintingUtils.align(node.getLevel() + 2) + ret.accept(this) + "\n" : "")
-                + PrintingUtils.align(node.getLevel() + 1) + "}\n";
+                + closeBraceWithGene(node.getLevel() + 1, body) + "\n";
     }
 
     @Override
@@ -571,10 +722,10 @@ public class JavaCodeVisitor implements Visitor<String> {
         int level = node.getLevel();
         FunctionInfo functionInfo = node.getFunctionInfo();
         return funcAttributes(functionInfo) + functionInfo.type.accept(this) + " " + functionInfo.name + "(" + args + ")" + "\n"
-                + PrintingUtils.align(level + 1) + "{\n"
+                + openBraceWithGene(level + 1, body)
                 + body.accept(this)
                 + (ret != null ? PrintingUtils.align(level + 2) + ret.accept(this) + "\n" : "")
-                + PrintingUtils.align(level + 1) + "}";
+                + closeBraceWithGene(level + 1, body);
     }
 
     @Override
@@ -593,15 +744,17 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(If node) {
         int level = node.getLevel();
-        String thenBlockString = PrintingUtils.align(level) + "{\n"
-                                 + node.getChild(If.IfPart.THEN.ordinal()).accept(this)
-                                 + PrintingUtils.align(level) + "}";
+        IRNode thenBody = node.getChild(If.IfPart.THEN.ordinal());
+        String thenBlockString = openBraceWithGene(level, thenBody)
+                                 + thenBody.accept(this)
+                                 + closeBraceWithGene(level, thenBody);
 
         String elseBlockString = null;
-        if (node.getChild(If.IfPart.ELSE.ordinal()) != null) {
-            elseBlockString = PrintingUtils.align(level) + "{\n"
-                              + node.getChild(If.IfPart.ELSE.ordinal()).accept(this)
-                              + PrintingUtils.align(level) + "}";
+        IRNode elseBody = node.getChild(If.IfPart.ELSE.ordinal());
+        if (elseBody != null) {
+            elseBlockString = openBraceWithGene(level, elseBody)
+                              + elseBody.accept(this)
+                              + closeBraceWithGene(level, elseBody);
         }
 
         return "if (" + node.getChild(If.IfPart.CONDITION.ordinal()).accept(this)+ ")\n"
@@ -690,38 +843,128 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(Literal node) {
         Type resultType = node.getResultType();
+        String typeName = resultType.getName();
         Object value = node.getValue();
-        if (resultType.equals(TypeList.LONG)) {
-            return value.toString() + "L";
+        boolean boxedLong = "java.lang.Long".equals(typeName);
+        if (resultType.equals(TypeList.LONG) || boxedLong) {
+            String lit = value.toString() + "L";
+            return boxedLong ? "java.lang.Long.valueOf(" + lit + ")" : lit;
         }
-        if (resultType.equals(TypeList.FLOAT)) {
-            return String.format((Locale) null,
-                "%EF",
-                Double.parseDouble(value.toString()));
+        boolean boxedFloat = "java.lang.Float".equals(typeName);
+        if (resultType.equals(TypeList.FLOAT) || boxedFloat) {
+            String lit = formatFloatLiteral(value);
+            return boxedFloat ? "java.lang.Float.valueOf(" + lit + ")" : lit;
         }
-        if (resultType.equals(TypeList.DOUBLE)) {
-            return String.format((Locale) null,
-                "%E",
-                Double.parseDouble(value.toString()));
+        boolean boxedDouble = "java.lang.Double".equals(typeName);
+        if (resultType.equals(TypeList.DOUBLE) || boxedDouble) {
+            String lit = formatDoubleLiteral(value);
+            return boxedDouble ? "java.lang.Double.valueOf(" + lit + ")" : lit;
         }
-        if (resultType.equals(TypeList.CHAR)) {
-            if ((Character) value == '\\') {
-                return "\'" + "\\\\" + "\'";
-            } else {
-                return "\'" + value.toString() + "\'";
-            }
+        boolean boxedChar = "java.lang.Character".equals(typeName);
+        if (resultType.equals(TypeList.CHAR) || boxedChar) {
+            String lit = "'" + escapeCharLiteral((Character) value) + "'";
+            return boxedChar ? "java.lang.Character.valueOf(" + lit + ")" : lit;
         }
-        if (resultType.equals(TypeList.SHORT)) {
-            return "(short) " + value.toString();
+        boolean boxedShort = "java.lang.Short".equals(typeName);
+        if (resultType.equals(TypeList.SHORT) || boxedShort) {
+            String lit = "(short) " + value.toString();
+            return boxedShort ? "java.lang.Short.valueOf(" + lit + ")" : lit;
         }
-        if (resultType.equals(TypeList.BYTE)) {
-            return "(byte) " + value.toString();
+        boolean boxedByte = "java.lang.Byte".equals(typeName);
+        if (resultType.equals(TypeList.BYTE) || boxedByte) {
+            String lit = "(byte) " + value.toString();
+            return boxedByte ? "java.lang.Byte.valueOf(" + lit + ")" : lit;
         }
-        if (resultType.equals(TypeList.STRING)) {
-            // TOOD handle other non-printable
-            return "\"" + value.toString().replace("\n", "\\n") + "\"";
+        if ("java.lang.Integer".equals(typeName)) {
+            return "java.lang.Integer.valueOf(" + value.toString() + ")";
+        }
+        if ("java.lang.Boolean".equals(typeName)) {
+            return "java.lang.Boolean.valueOf(" + value.toString() + ")";
+        }
+        if (isType(resultType, TypeList.STRING, "java.lang.String")) {
+            return "\"" + escapeStringLiteral(value.toString()) + "\"";
         }
         return value.toString();
+    }
+
+    private static boolean isType(Type actualType, Type primitiveType, String boxedTypeName) {
+        return actualType.equals(primitiveType) || boxedTypeName.equals(actualType.getName());
+    }
+
+    private static String formatFloatLiteral(Object value) {
+        float f = ((Number) value).floatValue();
+        if (Float.isFinite(f)) {
+            // Use Java parser-friendly decimal float literals for finite values.
+            return Float.toString(f) + "F";
+        }
+        // Preserve NaN payload/sign and Infinity sign exactly (no canonicalization).
+        int rawBits = Float.floatToRawIntBits(f);
+        return String.format((Locale) null, "java.lang.Float.intBitsToFloat(0x%08X)", rawBits);
+    }
+
+    private static String formatDoubleLiteral(Object value) {
+        double d = ((Number) value).doubleValue();
+        if (Double.isNaN(d)) {
+            // Preserve NaN payload/sign bit exactly.
+            return "java.lang.Double.longBitsToDouble(0x"
+                    + Long.toHexString(Double.doubleToRawLongBits(d)).toUpperCase()
+                    + "L)";
+        }
+        if (d == Double.POSITIVE_INFINITY) {
+            return "java.lang.Double.POSITIVE_INFINITY";
+        }
+        if (d == Double.NEGATIVE_INFINITY) {
+            return "java.lang.Double.NEGATIVE_INFINITY";
+        }
+        if (Double.doubleToRawLongBits(d) == Double.doubleToRawLongBits(-0.0d)) {
+            return "-0.0";
+        }
+        return Double.toString(d);
+    }
+
+    private static String escapeCharLiteral(char c) {
+        return switch (c) {
+            case '\\' -> "\\\\";
+            case '\'' -> "\\'";
+            case '\n' -> "\\n";
+            case '\r' -> "\\r";
+            case '\t' -> "\\t";
+            case '\b' -> "\\b";
+            case '\f' -> "\\f";
+            default -> isPrintableAscii(c) ? String.valueOf(c) : unicodeEscape(c);
+        };
+    }
+
+    private static String escapeStringLiteral(String s) {
+        StringBuilder sb = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\' -> sb.append("\\\\");
+                case '"' -> sb.append("\\\"");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                default -> {
+                    if (isPrintableAscii(c)) {
+                        sb.append(c);
+                    } else {
+                        sb.append(unicodeEscape(c));
+                    }
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    private static boolean isPrintableAscii(char c) {
+        return c >= 0x20 && c <= 0x7E;
+    }
+
+    private static String unicodeEscape(char c) {
+        return String.format((Locale) null, "\\u%04X", (int) c);
     }
 
     @Override
@@ -777,7 +1020,9 @@ public class JavaCodeVisitor implements Visitor<String> {
 
     @Override
     public String visit(PrintVariables node) {
-        return FixedTrees.printVariablesAsFunction(node).accept(this);
+        return FixedTrees.printVariablesAsFunction(node).accept(this)
+                + "\n"
+                + FixedTrees.printFinalVariablesAsFunction(node).accept(this);
     }
 
     @Override
@@ -830,9 +1075,9 @@ public class JavaCodeVisitor implements Visitor<String> {
             cases += node.getChild(i + caseBlockIdx).accept(this)+ "\n";
         }
         return "switch (" + node.getChild(0).accept(this)+ ")\n"
-               + PrintingUtils.align(level) + "{\n"
+               + openBraceWithGene(level, node.getChild(caseBlockIdx))
                + cases
-               + PrintingUtils.align(level) + "}";
+               + closeBraceWithGene(level, node.getChild(caseBlockIdx));
     }
 
     @Override
@@ -866,8 +1111,13 @@ public class JavaCodeVisitor implements Visitor<String> {
     public String visit(UnaryOperator node) {
         IRNode exp = node.getChild(0);
         if (node.isPrefix()) {
-            return operatorToJaveCode(node.getOperationKind())
-                    + (exp instanceof Operator ? " " : "")
+            String op = operatorToJaveCode(node.getOperationKind());
+            // Keep unary +/- separated from signed numeric literals to avoid lexical ambiguity:
+            // without a gap, "- -10" can be emitted as "--10", which javac parses as pre-decrement.
+            boolean needsUnaryGap = node.getOperationKind() == OperatorKind.UNARY_MINUS
+                    || node.getOperationKind() == OperatorKind.UNARY_PLUS;
+            return op
+                    + (needsUnaryGap || exp instanceof Operator ? " " : "")
                     + expressionToJavaCode(node, exp, Operator.Order.LEFT);
         } else {
             return expressionToJavaCode(node, exp, Operator.Order.RIGHT)
@@ -905,12 +1155,12 @@ public class JavaCodeVisitor implements Visitor<String> {
         return loop.initialization.accept(this)+ "\n"
                 + header.accept(this)
                 + PrintingUtils.align(level) + "while (" + loop.condition.accept(this)+ ")\n"
-                + PrintingUtils.align(level) + "{\n"
+                + openBraceWithGene(level, body1)
                 + body1.accept(this)
                 + PrintingUtils.align(level + 1) + loop.manipulator.accept(this)+ ";\n"
                 + body2.accept(this)
                 + body3.accept(this)
-                + PrintingUtils.align(level) + "}";
+                + closeBraceWithGene(level, body1);
     }
 
     @Override
@@ -922,9 +1172,9 @@ public class JavaCodeVisitor implements Visitor<String> {
         for (int i = 1; i < node.throwables.size(); i++) {
             result.append(" | ").append(node.throwables.get(i).accept(this));
         }
-        result.append(" ex) {\n");
+        result.append(" ex) ").append(openBraceSuffixWithGene(node.getChild(0)));
         result.append(node.getChild(0).accept(this));
-        result.append(PrintingUtils.align(level)).append("}\n");
+        result.append(PrintingUtils.align(level)).append(closeBraceSuffixWithGene(node.getChild(0))).append("\n");
         return result.toString();
     }
 
@@ -935,19 +1185,19 @@ public class JavaCodeVisitor implements Visitor<String> {
         IRNode body = childs.get(0);
         IRNode finallyBody = childs.get(1);
         int level = node.getLevel();
-        result.append("try {\n")
+        result.append("try ").append(openBraceSuffixWithGene(body))
                 .append(body.accept(this)).append("\n")
                 .append(PrintingUtils.align(level))
-                .append("}\n");
+                .append(closeBraceSuffixWithGene(body)).append("\n");
         for (int i = 2; i < childs.size(); i++) {
             result.append(childs.get(i).accept(this));
         }
         if (finallyBody != null) {
             String finallyContent = finallyBody.accept(this);
-            if (!finallyContent.isEmpty()) {
-                result.append(PrintingUtils.align(level)).append("finally {\n")
+                if (!finallyContent.isEmpty()) {
+                result.append(PrintingUtils.align(level)).append("finally ").append(openBraceSuffixWithGene(finallyBody))
                         .append(finallyContent).append("\n")
-                        .append(PrintingUtils.align(level)).append("}\n");
+                        .append(PrintingUtils.align(level)).append(closeBraceSuffixWithGene(finallyBody)).append("\n");
             }
         }
         return result.toString();
