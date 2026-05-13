@@ -471,7 +471,7 @@ public class IRNodeBuilder {
 
     public Factory<VariableDeclarationBlock> getVariableDeclarationBlockFactory() {
         return new VariableDeclarationBlockFactory(getOwnerClass(), getComplexityLimit(),
-                getOperatorLimit(), getLevel(), getExceptionSafe());
+                getOperatorLimit(), getLevel(), getExceptionSafe(), false);
     }
 
     /**
@@ -481,7 +481,7 @@ public class IRNodeBuilder {
      */
     public Factory<VariableDeclarationBlock> getConstantVariableDeclarationBlockFactory() {
         return new VariableDeclarationBlockFactory(getOwnerClass(), getComplexityLimit(),
-                getOperatorLimit(), getLevel(), getExceptionSafe());
+                getOperatorLimit(), getLevel(), getExceptionSafe(), true);
     }
 
     public Factory<VariableDeclaration> getVariableDeclarationFactory() {

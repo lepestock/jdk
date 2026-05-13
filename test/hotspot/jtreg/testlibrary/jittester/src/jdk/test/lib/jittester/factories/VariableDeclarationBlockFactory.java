@@ -36,16 +36,23 @@ class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> 
     private final long complexityLimit;
     private final int operatorLimit;
     private final boolean exceptionSafe;
+    private final boolean constantsOnly;
     private final int level;
     private final TypeKlass ownerClass;
 
     VariableDeclarationBlockFactory(TypeKlass ownerClass, long complexityLimit,
             int operatorLimit, int level, boolean exceptionSafe) {
+        this(ownerClass, complexityLimit, operatorLimit, level, exceptionSafe, false);
+    }
+
+    VariableDeclarationBlockFactory(TypeKlass ownerClass, long complexityLimit,
+            int operatorLimit, int level, boolean exceptionSafe, boolean constantsOnly) {
         this.ownerClass = ownerClass;
         this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
         this.exceptionSafe = exceptionSafe;
+        this.constantsOnly = constantsOnly;
     }
 
     @Override
@@ -55,13 +62,15 @@ class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> 
         int randomPart = (int) Math.ceil(PseudoRandom.random() * configuredLimit);
         int floor = Math.max(1, configuredLimit / 2);
         int limit = Math.max(floor, randomPart);
-        Factory<Declaration> declFactory = new IRNodeBuilder()
+        IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
                 .setComplexityLimit(complexityLimit)
                 .setOperatorLimit(operatorLimit)
                 .setIsLocal(false)
-                .setExceptionSafe(exceptionSafe)
-                .getConstantDeclarationFactory();
+                .setExceptionSafe(exceptionSafe);
+        Factory<Declaration> declFactory = constantsOnly
+                ? builder.getConstantDeclarationFactory()
+                : builder.getDeclarationFactory();
         for (int i = 0; i < limit; i++) {
             try {
                 content.add(declFactory.produce());

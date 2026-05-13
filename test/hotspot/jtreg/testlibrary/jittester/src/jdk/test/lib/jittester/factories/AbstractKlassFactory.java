@@ -24,10 +24,12 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.Set;
 import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Symbol;
@@ -71,130 +73,140 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
 
     @Override
     public final T produce() throws ProductionFailedException {
-        HashSet<Symbol> abstractSet = new HashSet<>();
-        HashSet<Symbol> overrideSet = new HashSet<>();
-        thisKlass = createThisKlass(name);
+        GenerationState.Checkpoint classStateCheckpoint = GenerationState.checkpoint();
+        try {
+            LinkedHashSet<Symbol> abstractSet = new LinkedHashSet<>();
+            LinkedHashSet<Symbol> overrideSet = new LinkedHashSet<>();
+            thisKlass = createThisKlass(name);
 
-        // Do we want to inherit something?
-        if (!ProductionParams.disableInheritance.value()) {
-            inheritClass();
-            inheritInterfaces();
-            // Now, we should carefully construct a set of all methods with are still abstract.
-            // In order to do that, we will make two sets of methods: abstract and non-abstract.
-            // Then by substracting non-abstract from abstract we'll get what we want.
-            HashSet<Symbol> nonAbstractSet = new HashSet<>();
-            for (Symbol symbol : SymbolTable.getAllCombined(thisKlass, FunctionInfo.class)) {
-                FunctionInfo functionInfo = (FunctionInfo) symbol;
-                // There could be multiple definitions or declarations encountered,
-                // but all we interested in are signatures.
-                if ((functionInfo.flags & FunctionInfo.ABSTRACT) > 0) {
-                    abstractSet.add(functionInfo);
-                } else {
-                    nonAbstractSet.add(functionInfo);
-                }
-            }
-            abstractSet.removeAll(nonAbstractSet);
-
-            if (PseudoRandom.randomBoolean(abstractProbabilityAdjustment)
-               && (abstractSet.removeIf((_unused) -> PseudoRandom.randomBoolean(0.2)))) {
-                    thisKlass.setAbstract();
-            }
-
-            if (PseudoRandom.randomBoolean(0.2)) {
-                int redefineLimit = (int) (memberFunctionsLimit * PseudoRandom.random());
-                if (redefineLimit > 0) {
-                    // We may also select some functions from the hierarchy that we want
-                    // to redefine..
-                    int i = 0;
-                    for (Symbol symbol : getShuffledOverrideCandidates(nonAbstractSet)) {
-                        if (++i > redefineLimit) {
-                            break;
-                        }
-                        FunctionInfo functionInfo = (FunctionInfo) symbol;
-                        if ((functionInfo.flags & FunctionInfo.FINAL) > 0) {
-                            continue;
-                        }
-                        overrideSet.add(functionInfo);
+            // Do we want to inherit something?
+            if (!ProductionParams.disableInheritance.value()) {
+                inheritClass();
+                inheritInterfaces();
+                // Now, we should carefully construct a set of all methods with are still abstract.
+                // In order to do that, we will make two sets of methods: abstract and non-abstract.
+                // Then by substracting non-abstract from abstract we'll get what we want.
+                LinkedHashSet<Symbol> nonAbstractSet = new LinkedHashSet<>();
+                ArrayList<Symbol> combinedMethods = SymbolTable.getAllCombined(thisKlass, FunctionInfo.class);
+                combinedMethods.sort(AbstractKlassFactory::compareSymbolsDeterministically);
+                for (Symbol symbol : combinedMethods) {
+                    FunctionInfo functionInfo = (FunctionInfo) symbol;
+                    // There could be multiple definitions or declarations encountered,
+                    // but all we interested in are signatures.
+                    if ((functionInfo.flags & FunctionInfo.ABSTRACT) > 0) {
+                        abstractSet.add(functionInfo);
+                    } else {
+                        nonAbstractSet.add(functionInfo);
                     }
                 }
-            }
-            memberFunctionsLimit -= abstractSet.size() + overrideSet.size();
-            // Ok, remove the symbols from the table which are going to be overrided.
-            // Because the redefiner would probably modify them and put them back into table.
-            for (Symbol symbol : abstractSet) {
-                SymbolTable.remove(symbol);
-            }
-            for (Symbol symbol : overrideSet) {
-                SymbolTable.remove(symbol);
-            }
-        } else {
-            parent = TypeList.OBJECT;
-            thisKlass.addParent(parent.getName());
-            thisKlass.setParent(parent);
-            parent.addChild(name);
-        }
-        VariableInfo thizzVariable = new VariableInfo("this", thisKlass, thisKlass,
-                VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED);
-        SymbolTable.add(thizzVariable);
+                abstractSet.removeAll(nonAbstractSet);
 
-        IRNode variableDeclarations = null;
-        IRNode constructorDefinitions = null;
-        IRNode functionDefinitions = null;
-        IRNode functionDeclarations = null;
-        IRNode abstractFunctionsRedefinitions = null;
-        IRNode overridenFunctionsRedefinitions = null;
-        IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(thisKlass)
-                .setExceptionSafe(true);
-        try {
-            builder.setLevel(level + 1)
-                    .setOperatorLimit(operatorLimit)
-                    .setStatementLimit(statementsInFunctionLimit)
-                    .setMemberFunctionsArgLimit(memberFunctionsArgLimit);
-            variableDeclarations = produceVariableDeclarations(builder,
-                    (long) (complexityLimit * 0.001 * PseudoRandom.random()));
-
-            if (!ProductionParams.disableFunctions.value()) {
-                abstractFunctionsRedefinitions = builder
-                        .setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
-                        .setLevel(level + 1)
-                        .getFunctionRedefinitionBlockFactory(abstractSet)
-                        .produce();
-                overridenFunctionsRedefinitions = builder
-                        .setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
-                        .getFunctionRedefinitionBlockFactory(overrideSet)
-                        .produce();
+                if (PseudoRandom.randomBoolean(abstractProbabilityAdjustment)
+                        && (abstractSet.removeIf((_unused) -> PseudoRandom.randomBoolean(0.2)))) {
+                        thisKlass.setAbstract();
+                }
 
                 if (PseudoRandom.randomBoolean(0.2)) {
-                    functionDeclarations = builder
-                            .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2 * PseudoRandom.random()))
-                            .getFunctionDeclarationBlockFactory()
-                            .produce();
-                    if (((FunctionDeclarationBlock) functionDeclarations).size() > 0) {
-                        thisKlass.setAbstract();
+                    int redefineLimit = (int) (memberFunctionsLimit * PseudoRandom.random());
+                    if (redefineLimit > 0) {
+                        // We may also select some functions from the hierarchy that we want
+                        // to redefine..
+                        int i = 0;
+                        for (Symbol symbol : getShuffledOverrideCandidates(nonAbstractSet)) {
+                            if (++i > redefineLimit) {
+                                break;
+                            }
+                            FunctionInfo functionInfo = (FunctionInfo) symbol;
+                            if ((functionInfo.flags & FunctionInfo.FINAL) > 0) {
+                                continue;
+                            }
+                            overrideSet.add(functionInfo);
+                        }
                     }
                 }
-
-                functionDefinitions = produceFunctionDefinitions(builder,
-                        (long) (complexityLimit * 0.5 * PseudoRandom.random()),
-                        (int) (memberFunctionsLimit * 0.6 * PseudoRandom.random()));
-
-                constructorDefinitions = produceConstructorDefinitions(builder, thizzVariable);
+                memberFunctionsLimit -= abstractSet.size() + overrideSet.size();
+                // Ok, remove the symbols from the table which are going to be overrided.
+                // Because the redefiner would probably modify them and put them back into table.
+                for (Symbol symbol : abstractSet) {
+                    SymbolTable.remove(symbol);
+                }
+                for (Symbol symbol : overrideSet) {
+                    SymbolTable.remove(symbol);
+                }
+            } else {
+                parent = TypeList.OBJECT;
+                thisKlass.addParent(parent.getName());
+                thisKlass.setParent(parent);
+                parent.addChild(name);
             }
-        } catch (ProductionFailedException e) {
-            System.out.println("Exception during klass production process:");
-            e.printStackTrace(System.out);
-            throw e;
-        } finally {
-            SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
-        }
+            VariableInfo thizzVariable = new VariableInfo("this", thisKlass, thisKlass,
+                    VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+            SymbolTable.add(thizzVariable);
 
-        finalizeClassFlags(thisKlass);
-        TypeList.add(thisKlass);
-        IRNode printVariables = builder.setLevel(2).getPrintVariablesFactory().produce();
-        return createKlassNode(thisKlass, parent, interfaces, name, level,
-                variableDeclarations, constructorDefinitions, functionDefinitions,
-                abstractFunctionsRedefinitions, overridenFunctionsRedefinitions,
-                functionDeclarations, printVariables);
+            IRNode variableDeclarations = null;
+            IRNode constructorDefinitions = null;
+            IRNode functionDefinitions = null;
+            IRNode functionDeclarations = null;
+            IRNode abstractFunctionsRedefinitions = null;
+            IRNode overridenFunctionsRedefinitions = null;
+            IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(thisKlass)
+                    .setExceptionSafe(true);
+            try {
+                builder.setLevel(level + 1)
+                        .setOperatorLimit(operatorLimit)
+                        .setStatementLimit(statementsInFunctionLimit)
+                        .setMemberFunctionsArgLimit(memberFunctionsArgLimit);
+                variableDeclarations = produceVariableDeclarations(builder,
+                        (long) (complexityLimit * 0.001 * PseudoRandom.random()));
+
+                if (!ProductionParams.disableFunctions.value()) {
+                    abstractFunctionsRedefinitions = builder
+                            .setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
+                            .setLevel(level + 1)
+                            .getFunctionRedefinitionBlockFactory(abstractSet)
+                            .produce();
+                    overridenFunctionsRedefinitions = builder
+                            .setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
+                            .getFunctionRedefinitionBlockFactory(overrideSet)
+                            .produce();
+
+                    if (PseudoRandom.randomBoolean(0.2)) {
+                        functionDeclarations = builder
+                                .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2 * PseudoRandom.random()))
+                                .getFunctionDeclarationBlockFactory()
+                                .produce();
+                        if (((FunctionDeclarationBlock) functionDeclarations).size() > 0) {
+                            thisKlass.setAbstract();
+                        }
+                    }
+
+                    functionDefinitions = produceFunctionDefinitions(builder,
+                            (long) (complexityLimit * 0.5 * PseudoRandom.random()),
+                            (int) (memberFunctionsLimit * 0.6 * PseudoRandom.random()));
+
+                    constructorDefinitions = produceConstructorDefinitions(builder, thizzVariable);
+                }
+            } catch (ProductionFailedException e) {
+                System.out.println("Exception during klass production process:");
+                e.printStackTrace(System.out);
+                throw e;
+            } finally {
+                SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
+            }
+            finalizeClassFlags(thisKlass);
+            TypeList.add(thisKlass);
+            IRNode printVariables = builder.setLevel(2).getPrintVariablesFactory().produce();
+            return createKlassNode(thisKlass, parent, interfaces, name, level,
+                    variableDeclarations, constructorDefinitions, functionDefinitions,
+                    abstractFunctionsRedefinitions, overridenFunctionsRedefinitions,
+                    functionDeclarations, printVariables);
+        } catch (ProductionFailedException e) {
+            GenerationState.rollbackTo(classStateCheckpoint);
+            throw e;
+        } catch (RuntimeException e) {
+            GenerationState.rollbackTo(classStateCheckpoint);
+            throw e;
+        }
     }
 
     protected abstract TypeKlass createThisKlass(String name);
@@ -225,10 +237,29 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                 .produce();
     }
 
-    protected ArrayList<Symbol> getShuffledOverrideCandidates(HashSet<Symbol> nonAbstractSet) {
+    protected ArrayList<Symbol> getShuffledOverrideCandidates(Set<Symbol> nonAbstractSet) {
         ArrayList<Symbol> candidates = new ArrayList<>(nonAbstractSet);
+        candidates.sort(AbstractKlassFactory::compareSymbolsDeterministically);
         PseudoRandom.shuffle(candidates);
         return candidates;
+    }
+
+    private static int compareSymbolsDeterministically(Symbol a, Symbol b) {
+        int byName = String.valueOf(a.name).compareTo(String.valueOf(b.name));
+        if (byName != 0) {
+            return byName;
+        }
+        int byOwner = String.valueOf(a.owner == null ? "" : a.owner.getName())
+                .compareTo(String.valueOf(b.owner == null ? "" : b.owner.getName()));
+        if (byOwner != 0) {
+            return byOwner;
+        }
+        int byType = String.valueOf(a.type == null ? "" : a.type.getName())
+                .compareTo(String.valueOf(b.type == null ? "" : b.type.getName()));
+        if (byType != 0) {
+            return byType;
+        }
+        return Integer.compare(a.flags, b.flags);
     }
 
     protected abstract void finalizeClassFlags(TypeKlass thisKlass);
