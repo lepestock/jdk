@@ -59,4 +59,28 @@ public final class ScopeGuards {
         Object key = Objects.requireNonNull(guard);
         return depths.getOrDefault(key, 0) > 0;
     }
+
+    public static Checkpoint checkpoint() {
+        return new Checkpoint(new HashMap<>(depths));
+    }
+
+    public static void rollbackToCheckpoint(Checkpoint checkpoint) {
+        if (checkpoint == null) {
+            throw new IllegalArgumentException("ScopeGuards checkpoint must not be null");
+        }
+        depths.clear();
+        depths.putAll(checkpoint.depthsSnapshot());
+    }
+
+    public static final class Checkpoint {
+        private final Map<Object, Integer> depthsSnapshot;
+
+        private Checkpoint(Map<Object, Integer> depthsSnapshot) {
+            this.depthsSnapshot = depthsSnapshot;
+        }
+
+        private Map<Object, Integer> depthsSnapshot() {
+            return depthsSnapshot;
+        }
+    }
 }
