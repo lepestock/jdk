@@ -77,46 +77,56 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(false);
         Symbol thisSymbol = null;
+        boolean forbidThisScope = !isLocal;
         if (isStatic) {
             thisSymbol = SymbolTable.get("this", VariableInfo.class);
             SymbolTable.remove(thisSymbol);
         }
         IRNode init;
         try {
-            if (!ProductionParams.disableExprInInit.value()) {
-                // Prefer non-literal initializer expressions; fall back to literal when expression fails.
-                try {
-                    IRNodeBuilder exprBuilder = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
-                            .setOperatorLimit(effectiveOperatorLimit)
-                            .setOwnerKlass(ownerClass)
-                            .setResultType(resultType)
-                            .setExceptionSafe(exceptionSafe)
-                            .setNoConsts(noConstsForInitExpr);
-                    if (isArithmeticFriendly(resultType)) {
-                        init = exprBuilder.getArithmeticOperatorFactory().produce();
-                    } else {
-                        init = exprBuilder.getLimitedExpressionFactory().produce();
-                    }
-                } catch (ProductionFailedException ignored) {
+            if (forbidThisScope) {
+                ThisVariableControl.pushForbidThis();
+            }
+            try {
+                if (!ProductionParams.disableExprInInit.value()) {
+                    // Prefer non-literal initializer expressions; fall back to literal when expression fails.
                     try {
-                        init = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
+                        IRNodeBuilder exprBuilder = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
                                 .setOperatorLimit(effectiveOperatorLimit)
                                 .setOwnerKlass(ownerClass)
                                 .setResultType(resultType)
                                 .setExceptionSafe(exceptionSafe)
-                                .setNoConsts(noConstsForInitExpr)
-                                .getLimitedExpressionFactory()
-                                .produce();
-                    } catch (ProductionFailedException ignoredAgain) {
-                        init = b.getLiteralFactory().produce();
+                                .setNoConsts(noConstsForInitExpr);
+                        if (isArithmeticFriendly(resultType)) {
+                            init = exprBuilder.getArithmeticOperatorFactory().produce();
+                        } else {
+                            init = exprBuilder.getLimitedExpressionFactory().produce();
+                        }
+                    } catch (ProductionFailedException ignored) {
+                        try {
+                            init = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
+                                    .setOperatorLimit(effectiveOperatorLimit)
+                                    .setOwnerKlass(ownerClass)
+                                    .setResultType(resultType)
+                                    .setExceptionSafe(exceptionSafe)
+                                    .setNoConsts(noConstsForInitExpr)
+                                    .getLimitedExpressionFactory()
+                                    .produce();
+                        } catch (ProductionFailedException ignoredAgain) {
+                            init = b.getLiteralFactory().produce();
+                        } catch (RuntimeException e) {
+                            throw e;
+                        }
                     } catch (RuntimeException e) {
                         throw e;
                     }
-                } catch (RuntimeException e) {
-                    throw e;
+                } else {
+                    init = b.getLiteralFactory().produce();
                 }
-            } else {
-                init = b.getLiteralFactory().produce();
+            } finally {
+                if (forbidThisScope) {
+                    ThisVariableControl.popForbidThis();
+                }
             }
         } finally {
             if (isStatic) {

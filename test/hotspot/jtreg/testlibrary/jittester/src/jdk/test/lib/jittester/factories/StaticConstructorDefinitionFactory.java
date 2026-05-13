@@ -55,19 +55,24 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
         try {
             SymbolTable.remove(SymbolTable.get("this", VariableInfo.class));
             long complLimit = (long) (PseudoRandom.random() * complexityLimit);
-            body = new IRNodeBuilder()
-                    .setOwnerKlass(ownerClass)
-                    .setResultType(TypeList.VOID)
-                    .setComplexityLimit(complLimit)
-                    .setStatementLimit(statementLimit)
-                    .setOperatorLimit(operatorLimit)
-                    .setLevel(level)
-                    .setSubBlock(true)
-                    .setCanHaveBreaks(false)
-                    .setCanHaveContinues(false)
-                    .setCanHaveReturn(false)
-                    .getBlockFactory()
-                    .produce();
+            ThisVariableControl.pushForbidThis();
+            try {
+                body = new IRNodeBuilder()
+                        .setOwnerKlass(ownerClass)
+                        .setResultType(TypeList.VOID)
+                        .setComplexityLimit(complLimit)
+                        .setStatementLimit(statementLimit)
+                        .setOperatorLimit(operatorLimit)
+                        .setLevel(level)
+                        .setSubBlock(true)
+                        .setCanHaveBreaks(false)
+                        .setCanHaveContinues(false)
+                        .setCanHaveReturn(false)
+                        .getBlockFactory()
+                        .produce();
+            } finally {
+                ThisVariableControl.popForbidThis();
+            }
         } finally {
             SymbolTable.pop();
         }
