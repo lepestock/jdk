@@ -70,8 +70,16 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         try {
             runProcess(pb, targetDir.resolve(goldFile).toString());
         } catch (IOException | InterruptedException e)  {
-            throw new Error("Can't run generated test ", e);
+            throw generationFailure("Can't run generated test", e);
         }
+    }
+
+    protected static GenerationFailureException generationFailure(String message) {
+        return new GenerationFailureException(message);
+    }
+
+    protected static GenerationFailureException generationFailure(String message, Throwable cause) {
+        return new GenerationFailureException(message, cause);
     }
 
     protected static int runProcess(ProcessBuilder pb, String name)
@@ -103,10 +111,10 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         try {
             int exitCode = runProcess(pbPrinter, root.resolve("Printer").toString());
             if (exitCode != 0) {
-                throw new Error("Printer compilation returned exit code " + exitCode);
+                throw generationFailure("Printer compilation returned exit code " + exitCode);
             }
         } catch (IOException | InterruptedException e) {
-            throw new Error("Can't compile printer", e);
+            throw generationFailure("Can't compile printer", e);
         }
     }
 
@@ -115,7 +123,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
             try {
                 Files.createDirectories(path);
             } catch (IOException ex) {
-                ex.printStackTrace();
+                throw generationFailure("Can't create directory " + path, ex);
             }
         }
     }
@@ -160,7 +168,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
             source = source.replaceFirst("(?m)^\\s*public\\s+class\\s+Printer\\b", "class Printer");
             return source.trim() + "\n";
         } catch (IOException e) {
-            throw new Error("Can't load embedded printer source: " + printerPath, e);
+            throw generationFailure("Can't load embedded printer source: " + printerPath, e);
         }
     }
 
@@ -206,7 +214,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         try (FileWriter file = new FileWriter(targetDir.resolve(fileName).toFile())) {
             file.write(content);
         } catch (IOException e) {
-            throw new Error("Can't write generated file: " + targetDir.resolve(fileName), e);
+            throw generationFailure("Can't write generated file: " + targetDir.resolve(fileName), e);
         }
     }
 

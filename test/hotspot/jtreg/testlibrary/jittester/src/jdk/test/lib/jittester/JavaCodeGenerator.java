@@ -104,10 +104,10 @@ public class JavaCodeGenerator extends TestsGenerator {
         try {
             int r = runProcess(pb, tmpDir.path.resolve(mainClassName + ".javac").toString());
             if (r != 0) {
-                throw new Error("Can't compile sources, exit code = " + r);
+                throw generationFailure("Can't compile sources, exit code = " + r);
             }
         } catch (IOException | InterruptedException e) {
-            throw new Error("Can't compile sources ", e);
+            throw generationFailure("Can't compile sources", e);
         }
     }
 
