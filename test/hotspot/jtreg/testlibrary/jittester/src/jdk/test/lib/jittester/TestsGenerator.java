@@ -206,7 +206,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         try (FileWriter file = new FileWriter(targetDir.resolve(fileName).toFile())) {
             file.write(content);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new Error("Can't write generated file: " + targetDir.resolve(fileName), e);
         }
     }
 
