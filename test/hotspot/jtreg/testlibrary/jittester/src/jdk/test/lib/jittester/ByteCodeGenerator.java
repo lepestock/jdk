@@ -83,9 +83,9 @@ class ByteCodeGenerator extends TestsGenerator {
                 t.printStackTrace(pw);
             } catch (IOException e) {
                 t.printStackTrace();
-                throw new Error("can't write error to error file " + errFile, e);
+                throw generationFailure("can't write error to error file " + errFile, e);
             }
-            throw new Error("Can't generate bytecode test: " + mainClassName, t);
+            throw generationFailure("Can't generate bytecode test: " + mainClassName, t);
         }
     }
 
@@ -93,7 +93,7 @@ class ByteCodeGenerator extends TestsGenerator {
         try {
             Files.write(generatorDir.resolve(fileName), bytecode);
         } catch (IOException ex) {
-            throw new Error("Can't write generated file: " + generatorDir.resolve(fileName), ex);
+            throw generationFailure("Can't write generated file: " + generatorDir.resolve(fileName), ex);
         }
     }
 
