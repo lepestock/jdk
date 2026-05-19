@@ -39,6 +39,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
+import jdk.test.lib.jittester.utils.GenomeChoice;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class SwitchFactory extends SafeFactory<Switch> {
@@ -186,7 +187,8 @@ class SwitchFactory extends SafeFactory<Switch> {
         double base = Math.max(0.0, Math.min(1.0, ProductionParams.constBiasBasePercent.value() / 100.0));
         int halfDepth = Math.max(1, ProductionParams.constBiasHalfDepth.value());
         double noConstsProbability = DepthProbabilityTaper.decayingAsymptote(depth, base, halfDepth);
-        return PseudoRandom.randomBoolean(noConstsProbability);
+        boolean noConstsLive = PseudoRandom.randomSilent() < noConstsProbability;
+        return GenomeChoice.bool(noConstsLive);
     }
 
     private static List<Type> buildCompatibleCaseTypes(BuiltInType switchType) {

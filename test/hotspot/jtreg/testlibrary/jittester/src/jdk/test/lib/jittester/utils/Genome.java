@@ -153,6 +153,38 @@ public final class Genome {
         return genocode.consumeChoiceGene(ruleName, liveGeneValue);
     }
 
+    /**
+     * Records a boolean choice as a C-event: false -> C0, true -> C1.
+     */
+    public static synchronized void recordBooleanChoiceGene(String choiceName, boolean value) {
+        recordChoiceGene(choiceName, value ? 1L : 0L);
+    }
+
+    /**
+     * Consumes a replayed boolean C-event in replay mode, or records the live value in record mode.
+     * In replay mode only C0/C1 are accepted.
+     */
+    public static synchronized boolean createOrConsumeBooleanChoiceGene(String choiceName,
+            boolean liveValue) {
+        if (genocode.isReplayActive()) {
+            Long replayChoice = consumeChoiceGene(choiceName, liveValue ? 1L : 0L);
+            if (replayChoice == null) {
+                throw new RuntimeException("Genome replay desync: missing boolean choice event for '"
+                        + choiceName + "'");
+            }
+            if (replayChoice == 0L) {
+                return false;
+            }
+            if (replayChoice == 1L) {
+                return true;
+            }
+            throw new RuntimeException("Genome replay desync: boolean choice '" + choiceName
+                    + "' must be 0/1, got " + replayChoice);
+        }
+        recordBooleanChoiceGene(choiceName, liveValue);
+        return liveValue;
+    }
+
     public static Long consumeRngGene(String rngOpName, long liveGeneValue) {
         return genocode.consumeRngGene(rngOpName, liveGeneValue);
     }

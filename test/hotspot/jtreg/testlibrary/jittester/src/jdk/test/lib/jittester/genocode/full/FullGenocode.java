@@ -27,6 +27,7 @@ import jdk.test.lib.jittester.CheckpointArrayList;
 import jdk.test.lib.jittester.Gene;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.LongSmallSet;
+import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.genocode.GenomeBackend;
@@ -274,7 +275,12 @@ public final class FullGenocode implements GenomeBackend {
                     "selectedSeed=" + selectedSeed + ", mutable=" + mutable);
         }
 
-        replayStack.push(new ReplayFrame(replayNode, mutable, scopeType, selectedSeed));
+        ProductionParams.State previousParamsState = null;
+        if (mutable) {
+            previousParamsState = ProductionParams.beginMutationOverrideScope();
+        }
+        replayStack.push(new ReplayFrame(replayNode, mutable, scopeType, selectedSeed,
+                previousParamsState));
         return selectedSeed;
     }
 
@@ -619,36 +625,37 @@ public final class FullGenocode implements GenomeBackend {
         if (frame == null) {
             throw new RuntimeException("Scope replay/record stack underflow");
         }
-        if (frame.scopeType != scopeType) {
-            throw new RuntimeException("Scope replay/record mismatch on end: expected "
-                    + frame.scopeType + ", got " + scopeType);
-        }
-
-        if (recordWriter == null) {
-            return;
-        }
-        if (!frame.recorded) {
-            throw new RuntimeException("Block gene was not recorded before endBlock");
-        }
-        String scopeToken = Character.toString(frame.scopeType) + frame.selectedSeed;
-        maybeSnapshot(scopeToken, "endScope",
-                "scopeType=" + frame.scopeType
-                        + ", selectedSeed=" + frame.selectedSeed
-                        + ", mutable=" + frame.mutable
-                        + ", replayNode=" + (frame.node != null));
-        if (frame.node != null && !frame.mutable
-                && frame.nextEventIndex != frame.node.events.size()) {
-            if (replayStrict) {
-                String firstUnconsumed = "<none>";
-                if (frame.nextEventIndex < frame.node.events.size()) {
-                    ReplayEvent nextEvent = frame.node.events.get(frame.nextEventIndex);
-                    firstUnconsumed = "" + nextEvent.type + nextEvent.value;
-                }
-                throw new RuntimeException("Genome replay desync: unconsumed event genes in scope "
-                        + frame.scopeType + frame.node.seed + " (consumed " + frame.nextEventIndex + " of "
-                        + frame.node.events.size() + "), first_unconsumed=" + firstUnconsumed);
+        try {
+            if (frame.scopeType != scopeType) {
+                throw new RuntimeException("Scope replay/record mismatch on end: expected "
+                        + frame.scopeType + ", got " + scopeType);
             }
-        }
+
+            if (recordWriter == null) {
+                return;
+            }
+            if (!frame.recorded) {
+                throw new RuntimeException("Block gene was not recorded before endBlock");
+            }
+            String scopeToken = Character.toString(frame.scopeType) + frame.selectedSeed;
+            maybeSnapshot(scopeToken, "endScope",
+                    "scopeType=" + frame.scopeType
+                            + ", selectedSeed=" + frame.selectedSeed
+                            + ", mutable=" + frame.mutable
+                            + ", replayNode=" + (frame.node != null));
+            if (frame.node != null && !frame.mutable
+                    && frame.nextEventIndex != frame.node.events.size()) {
+                if (replayStrict) {
+                    String firstUnconsumed = "<none>";
+                    if (frame.nextEventIndex < frame.node.events.size()) {
+                        ReplayEvent nextEvent = frame.node.events.get(frame.nextEventIndex);
+                        firstUnconsumed = "" + nextEvent.type + nextEvent.value;
+                    }
+                    throw new RuntimeException("Genome replay desync: unconsumed event genes in scope "
+                            + frame.scopeType + frame.node.seed + " (consumed " + frame.nextEventIndex + " of "
+                            + frame.node.events.size() + "), first_unconsumed=" + firstUnconsumed);
+                }
+            }
             if (recordDepth > 0) {
                 recordDepth--;
             }
@@ -670,7 +677,12 @@ public final class FullGenocode implements GenomeBackend {
             } catch (IOException e) {
                 throw new RuntimeException("Failed to record block end", e);
             }
+        } finally {
+            if (frame.overrideBackupState != null) {
+                ProductionParams.endMutationOverrideScope(frame.overrideBackupState);
+            }
         }
+    }
 
     private ReplayNode nextReplayNode() {
         if (replayRoots.isEmpty()) {
@@ -1140,19 +1152,22 @@ public final class FullGenocode implements GenomeBackend {
         final boolean mutable;
         final char scopeType;
         final long selectedSeed;
+        final ProductionParams.State overrideBackupState;
         boolean recorded = false;
         int nextEventIndex = 0;
         int nextChildIndex = 0;
 
-        ReplayFrame(ReplayNode node, boolean mutable, char scopeType, long selectedSeed) {
+        ReplayFrame(ReplayNode node, boolean mutable, char scopeType, long selectedSeed,
+                ProductionParams.State overrideBackupState) {
             this.node = node;
             this.mutable = mutable;
             this.scopeType = scopeType;
             this.selectedSeed = selectedSeed;
+            this.overrideBackupState = overrideBackupState;
         }
 
         static ReplayFrame mutableFrame(char scopeType, long selectedSeed) {
-            return new ReplayFrame(null, true, scopeType, selectedSeed);
+            return new ReplayFrame(null, true, scopeType, selectedSeed, null);
         }
     }
 

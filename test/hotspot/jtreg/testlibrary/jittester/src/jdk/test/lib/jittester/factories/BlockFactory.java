@@ -97,13 +97,15 @@ class BlockFactory extends Factory<Block> {
             long blockRngInSeed = Genome.startBlock(PseudoRandom.getCurrentSeed());
             PseudoRandom.setCurrentSeed(blockRngInSeed);
             try {
+                int effectiveStatementLimit = resolveStatementLimit();
+                int effectiveOperatorLimit = resolveOperatorLimit();
                 List<IRNode> content = new ArrayList<>();
                 int attemptedStatements = 0;
                 int successfulStatements = 0;
                 int failedStatements = 0;
                 int plannedStatementAttempts = decideStatementAttemptCount(
-                        blockRngInSeed, statementLimit, blockDepth);
-                int attemptsSafetyCap = Math.max(1, statementLimit * 12);
+                        blockRngInSeed, effectiveStatementLimit, blockDepth);
+                int attemptsSafetyCap = Math.max(1, effectiveStatementLimit * 12);
                 List<Long> statementDecisionSeeds = prepareStatementDecisionSeeds(
                         blockRngInSeed, plannedStatementAttempts);
                 LongSmallSet replayStatementSeedSpan = Genome.getCurrentStatementSeedOverrides();
@@ -125,14 +127,15 @@ class BlockFactory extends Factory<Block> {
                             blockRngInSeed, plannedStatementAttempts);
                 }
                 if (ProductionParams.blockDebug.value()) {
-                    System.out.printf("BLOCK_PLAN depth=%d seedIn=%d replay=%s replayChildCount=%d plannedAttempts=%d%n",
+                    System.out.printf("BLOCK_PLAN depth=%d seedIn=%d replay=%s replayChildCount=%d plannedAttempts=%d statementLimit=%d operatorLimit=%d%n",
                             blockDepth, blockRngInSeed, Genome.isReplayActive(),
-                            replayChildCount, plannedStatementAttempts);
+                            replayChildCount, plannedStatementAttempts,
+                            effectiveStatementLimit, effectiveOperatorLimit);
                 }
                 Gene blockGene = decideBlockGene(blockRngInSeed, statementDecisionSeeds);
                 Genome.recordCurrentBlockGene(blockGene);
                 IRNodeBuilder builder = new IRNodeBuilder()
-                        .setOperatorLimit(operatorLimit)
+                        .setOperatorLimit(effectiveOperatorLimit)
                         .setOwnerKlass(ownerClass)
                         .setResultType(returnType)
                         .setCanHaveReturn(canHaveReturn)
@@ -163,9 +166,9 @@ class BlockFactory extends Factory<Block> {
                                     blockDepth, attemptedStatements);
                             rule.add("decl", builder.setIsLocal(true).getDeclarationFactory(), localDeclWeight);
                         }
-                        if (statementLimit > 1 && allowNestedControlFlow) {
+                        if (effectiveStatementLimit > 1 && allowNestedControlFlow) {
                             int childStatementLimit = Math.max(1,
-                                    (int) Math.ceil(statementLimit * CHILD_STATEMENT_LIMIT_FACTOR));
+                                    (int) Math.ceil(effectiveStatementLimit * CHILD_STATEMENT_LIMIT_FACTOR));
                             builder.setStatementLimit(childStatementLimit).setLevel(level + 1);
                             if (!ProductionParams.disableNestedBlocks.value()) {
                                 rule.add("block", builder.setCanHaveReturn(false)
@@ -256,7 +259,7 @@ class BlockFactory extends Factory<Block> {
                         }
                         rule.add("throw", builder.setResultType(rtException)
                                 .setComplexityLimit(Math.max(LOCAL_COMPLEXITY_LIMIT, 5))
-                                .setOperatorLimit(Math.max(operatorLimit, 5))
+                                .setOperatorLimit(Math.max(effectiveOperatorLimit, 5))
                                 .getThrowFactory());
 
                                 // Throws leave huge chunks of code unexecuted, hence the 30% adjustment.
@@ -319,6 +322,20 @@ class BlockFactory extends Factory<Block> {
         double depthRatio = DepthProbabilityTaper.decayingAsymptote(blockDepth, 1.0, halfDepth);
         int adjusted = (int) Math.ceil(fromSeed * (1.0 + boost * depthRatio));
         return Math.max(1, Math.min(statementLimit, adjusted));
+    }
+
+    private int resolveStatementLimit() {
+        if (Genome.isCurrentMutationRootBlock()) {
+            return Math.max(1, ProductionParams.statementLimit.value());
+        }
+        return statementLimit;
+    }
+
+    private int resolveOperatorLimit() {
+        if (Genome.isCurrentMutationRootBlock()) {
+            return Math.max(1, ProductionParams.operatorLimit.value());
+        }
+        return operatorLimit;
     }
 
     private static double computeLocalDeclarationWeight(int blockDepth, int statementIndex) {
