@@ -39,8 +39,6 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 public class ProductionParams {
 
     public static Option<List<String>> mainClassNames = null;
-    public static Option<Integer> productionLimit = null;
-    public static Option<Integer> productionLimitSeconds = null;
     public static Option<Integer> dataMemberLimit = null;
     public static Option<Integer> statementLimit = null;
     public static Option<Integer> testStatementLimit = null;
@@ -121,7 +119,6 @@ public class ProductionParams {
     public static Option<Integer> expressionMaxDepth = null;
     public static Option<Integer> mainLoopIterations = null;
     public static Option<Integer> mainLoopJitter = null;
-    public static Option<Boolean> abortOnHardLimit = null;
     public static Option<Boolean> expressionDebug = null;
     public static Option<Integer> expressionDebugDepthWarn = null;
     public static Option<Integer> expressionDebugDepthHardLimit = null;
@@ -168,8 +165,6 @@ public class ProductionParams {
 
     public static void register(OptionResolver optionResolver) {
         mainClassNames = optionResolver.addRepeatingOption('k', "main-class", "", "Main class name");
-        productionLimit = optionResolver.addIntegerOption('l', "production-limit", 300, "Limit on steps in the production of an expression");
-        productionLimitSeconds = optionResolver.addIntegerOption("production-limit-seconds", 600, "Limit the time a test generation may take");
         dataMemberLimit = optionResolver.addIntegerOption('v', "data-member-limit", 10, "Upper limit on data members");
         statementLimit = optionResolver.addIntegerOption('s', "statement-limit", 30, "Upper limit on statements in function");
         testStatementLimit = optionResolver.addIntegerOption('e', "test-statement-limit", 300, "Upper limit on statements in test() function");
@@ -283,8 +278,6 @@ public class ProductionParams {
                 "Target iteration count for generated main() loop");
         mainLoopJitter = optionResolver.addIntegerOption("main-loop-jitter", 2,
                 "Absolute random jitter added/subtracted from main-loop-iterations");
-        abortOnHardLimit = optionResolver.addBooleanOption(null, "abort-on-hard-limit", true,
-                "Abort whole generation on hard production limit overflow instead of local fallback");
         expressionDebug = optionResolver.addBooleanOption(null, "expression-debug", false,
                 "Enable expression-recursion debug probes");
         expressionDebugDepthWarn = optionResolver.addIntegerOption("expression-debug-depth-warn", 120,
