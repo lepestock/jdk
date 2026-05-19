@@ -346,6 +346,8 @@ public class ProductionParams {
         mutationOverrides = Collections.unmodifiableMap(overrideParseResult.overrides);
         validateMutationOverrides();
 
+        FlowParams.initializeFromProductionParams();
+
         String genocodeName = firstNonBlank(
                 valueIfSet(genocode),
                 genocode.value());

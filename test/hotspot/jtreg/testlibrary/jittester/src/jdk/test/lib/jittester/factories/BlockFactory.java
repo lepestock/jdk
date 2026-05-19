@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.factories;
 
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.Gene;
+import jdk.test.lib.jittester.FlowParams;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.If;
 import jdk.test.lib.jittester.LongSmallSet;
@@ -326,14 +327,14 @@ class BlockFactory extends Factory<Block> {
 
     private int resolveStatementLimit() {
         if (Genome.isCurrentMutationRootBlock()) {
-            return Math.max(1, ProductionParams.statementLimit.value());
+            return FlowParams.statementLimit();
         }
         return statementLimit;
     }
 
     private int resolveOperatorLimit() {
         if (Genome.isCurrentMutationRootBlock()) {
-            return Math.max(1, ProductionParams.operatorLimit.value());
+            return FlowParams.operatorLimit();
         }
         return operatorLimit;
     }

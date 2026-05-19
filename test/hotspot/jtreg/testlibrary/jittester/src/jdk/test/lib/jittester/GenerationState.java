@@ -27,7 +27,7 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 /**
  * Aggregates mutable generation state carriers and provides atomic checkpoint/rollback.
- * Current scope: {@link SymbolTable}, {@link TypeList}, and {@link ScopeGuards}.
+ * Current scope: {@link SymbolTable}, {@link TypeList}, {@link ScopeGuards}, and {@link FlowParams}.
  */
 public final class GenerationState {
     private GenerationState() {
@@ -37,7 +37,8 @@ public final class GenerationState {
         return new Checkpoint(
                 SymbolTable.checkpoint(),
                 TypeList.checkpoint(),
-                ScopeGuards.checkpoint());
+                ScopeGuards.checkpoint(),
+                FlowParams.checkpoint());
     }
 
     public static void rollbackTo(Checkpoint checkpoint) {
@@ -47,6 +48,7 @@ public final class GenerationState {
         SymbolTable.rollbackToCheckpoint(checkpoint.symbolCheckpoint());
         TypeList.rollbackToCheckpoint(checkpoint.typeCheckpoint());
         ScopeGuards.rollbackToCheckpoint(checkpoint.scopeGuardsCheckpoint);
+        FlowParams.rollbackTo(checkpoint.flowParamsCheckpoint);
     }
 
     public static String dumpSnapshot() {
@@ -60,6 +62,8 @@ public final class GenerationState {
                 .append(", rngSeed=")
                 .append(PseudoRandom.getCurrentSeed())
                 .append("}\n");
+        sb.append("--- FlowParams ---\n");
+        sb.append(FlowParams.dumpSnapshot()).append('\n');
         sb.append("--- SymbolTable ---\n");
         sb.append(SymbolTable.dumpSnapshot(Integer.MAX_VALUE, Integer.MAX_VALUE));
         sb.append("--- TypeList ---\n");
@@ -71,13 +75,16 @@ public final class GenerationState {
         private final int symbolCheckpoint;
         private final int typeCheckpoint;
         private final ScopeGuards.Checkpoint scopeGuardsCheckpoint;
+        private final FlowParams.Checkpoint flowParamsCheckpoint;
 
         private Checkpoint(int symbolCheckpoint,
                            int typeCheckpoint,
-                           ScopeGuards.Checkpoint scopeGuardsCheckpoint) {
+                           ScopeGuards.Checkpoint scopeGuardsCheckpoint,
+                           FlowParams.Checkpoint flowParamsCheckpoint) {
             this.symbolCheckpoint = symbolCheckpoint;
             this.typeCheckpoint = typeCheckpoint;
             this.scopeGuardsCheckpoint = scopeGuardsCheckpoint;
+            this.flowParamsCheckpoint = flowParamsCheckpoint;
         }
 
         public int symbolCheckpoint() {
