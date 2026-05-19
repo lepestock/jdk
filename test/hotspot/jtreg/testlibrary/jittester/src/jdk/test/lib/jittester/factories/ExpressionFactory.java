@@ -38,6 +38,7 @@ import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.utils.Genome;
+import jdk.test.lib.jittester.utils.GenomeChoice;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -116,8 +117,9 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         }
         double operatorEnableProbability = Math.max(0.0,
                 (1.0 - ProductionParams.expressionStopPercent.value() / 100.0) * 0.6);
-        boolean operatorsEnabled = operatorLimit > 0 && complexityLimit > 0
-                && PseudoRandom.randomBoolean(operatorEnableProbability);
+        boolean operatorsEnabledLive = operatorLimit > 0 && complexityLimit > 0
+                && PseudoRandom.randomSilent() < operatorEnableProbability;
+        boolean operatorsEnabled = GenomeChoice.bool(operatorsEnabledLive);
         if (expressionDebugEnabled) {
             System.out.printf("EXPR_DEBUG init seed=%d terminalWeight=%.3f operatorEnableP=%.3f operatorEnabled=%s baseStopP=%.3f maxStopP=%.3f halfDepth=%d%n",
                     SEED, terminalWeight, operatorEnableProbability, operatorsEnabled,
@@ -224,14 +226,23 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         DebugStats stats = DEBUG_STATS.get();
         stats.stopChecks++;
         double dynamicStopProbability = computeStopProbability(depth);
-        double draw = PseudoRandom.random();
-        boolean shouldStop = draw < dynamicStopProbability;
+        double draw = Double.NaN;
+        if (!Genome.isReplayActive()) {
+            // Keep stop decision RNG local: choice is tracked by C-event, so N-event must remain unchanged.
+            draw = PseudoRandom.randomSilent();
+        }
+        boolean shouldStop = GenomeChoice.bool(!Double.isNaN(draw) && draw < dynamicStopProbability);
         if (shouldStop) {
             stats.stopHits++;
         }
         if (expressionDebugEnabled) {
-            System.out.printf("EXPR_DEBUG stop_decision depth=%d seed=%d stopP=%.3f draw=%.6f stop=%s%n",
-                    depth, PseudoRandom.getCurrentSeed(), dynamicStopProbability, draw, shouldStop);
+            if (Double.isNaN(draw)) {
+                System.out.printf("EXPR_DEBUG stop_decision depth=%d seed=%d stopP=%.3f draw=<replay> stop=%s%n",
+                        depth, PseudoRandom.getCurrentSeed(), dynamicStopProbability, shouldStop);
+            } else {
+                System.out.printf("EXPR_DEBUG stop_decision depth=%d seed=%d stopP=%.3f draw=%.6f stop=%s%n",
+                        depth, PseudoRandom.getCurrentSeed(), dynamicStopProbability, draw, shouldStop);
+            }
         }
         return shouldStop;
     }

@@ -287,4 +287,40 @@ public class OptionResolver {
     public Collection<Option<?>> getRegisteredOptions() {
         return Collections.unmodifiableSet(new LinkedHashSet<>(options.values()));
     }
+
+    public Option<?> findOptionByLongName(String longName) {
+        if (longName == null) {
+            return null;
+        }
+        return options.get("--" + longName);
+    }
+
+    @SuppressWarnings("unchecked")
+    public void overrideOption(Option<?> option, String rawValue) {
+        if (option == null) {
+            throw new IllegalArgumentException("Option must not be null");
+        }
+        Object parsedValue = ((Option<Object>) option).parseFromString(rawValue);
+        values.put(option, parsedValue);
+    }
+
+    public void overrideOptionByLongName(String longName, String rawValue) {
+        Option<?> option = findOptionByLongName(longName);
+        if (option == null) {
+            throw new IllegalArgumentException("Unknown option --" + longName);
+        }
+        overrideOption(option, rawValue);
+    }
+
+    public Map<Option<?>, Object> snapshotValues() {
+        return new HashMap<>(values);
+    }
+
+    public void restoreValues(Map<Option<?>, Object> snapshot) {
+        if (snapshot == null) {
+            values = new HashMap<>();
+            return;
+        }
+        values = new HashMap<>(snapshot);
+    }
 }

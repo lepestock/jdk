@@ -23,7 +23,12 @@
 
 package jdk.test.lib.jittester;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.OptionResolver;
@@ -131,6 +136,35 @@ public class ProductionParams {
     public static Option<String> debugMethodCallWrapGenes = null;
     public static Option<Integer> debugMethodCallWrapGenesMax = null;
     private static boolean genomeRecordEnabled = false;
+    private static OptionResolver activeOptionResolver = null;
+    private static Map<String, String> mutationOverrides = Collections.emptyMap();
+    private static final Set<String> FORBIDDEN_MUTATION_OVERRIDE_PARAMS = Set.of(
+            "main-class",
+            "property-file",
+            "number-of-tests",
+            "seed",
+            "specificSeed",
+            "classes-file",
+            "exclude-methods-file",
+            "intrinsic-methods-file",
+            "testbase-dir",
+            "temp-dir",
+            "individual-sandboxes",
+            "generators",
+            "generatorsFactories",
+            "genome-replay",
+            "genome-record",
+            "genome-mutation-seed",
+            "genome-mutation-target",
+            "genocode");
+
+    public static final class State {
+        private final Map<Option<?>, Object> values;
+
+        private State(Map<Option<?>, Object> values) {
+            this.values = values;
+        }
+    }
 
     public static void register(OptionResolver optionResolver) {
         mainClassNames = optionResolver.addRepeatingOption('k', "main-class", "", "Main class name");
@@ -302,11 +336,15 @@ public class ProductionParams {
      * @param args command-line arguments to use for initialization
      */
     public static void initializeFromCmdline(String[] args) {
+        OverrideParseResult overrideParseResult = parseOverrideArgs(args);
         OptionResolver parser = new OptionResolver();
         Option<String> propertyFileOpt = parser.addStringOption('p', "property-file",
                 "conf/default.properties", "File to read properties from");
         ProductionParams.register(parser);
-        parser.parse(args, propertyFileOpt);
+        parser.parse(overrideParseResult.argsWithoutOverrides, propertyFileOpt);
+        activeOptionResolver = parser;
+        mutationOverrides = Collections.unmodifiableMap(overrideParseResult.overrides);
+        validateMutationOverrides();
 
         String genocodeName = firstNonBlank(
                 valueIfSet(genocode),
@@ -348,6 +386,27 @@ public class ProductionParams {
 
     public static boolean isGenomeRecordEnabled() {
         return genomeRecordEnabled;
+    }
+
+    public static boolean hasMutationOverrides() {
+        return !mutationOverrides.isEmpty();
+    }
+
+    public static State beginMutationOverrideScope() {
+        if (!hasMutationOverrides()) {
+            return null;
+        }
+        ensureResolverInitialized();
+        State previousState = captureState();
+        applyMutationOverrides();
+        return previousState;
+    }
+
+    public static void endMutationOverrideScope(State previousState) {
+        if (previousState == null) {
+            return;
+        }
+        restoreState(previousState);
     }
 
     private static String firstNonBlank(String... values) {
@@ -393,5 +452,129 @@ public class ProductionParams {
     public static String printerClassName() {
         return embedPrinterClass.value() ? "Printer" : "jdk.test.lib.jittester.jtreg.Printer";
     }
+
+    private static State captureState() {
+        ensureResolverInitialized();
+        return new State(activeOptionResolver.snapshotValues());
+    }
+
+    private static void restoreState(State state) {
+        ensureResolverInitialized();
+        activeOptionResolver.restoreValues(state.values);
+    }
+
+    private static void ensureResolverInitialized() {
+        if (activeOptionResolver == null) {
+            throw new IllegalStateException("ProductionParams options are not initialized");
+        }
+    }
+
+    private static void applyMutationOverrides() {
+        for (Map.Entry<String, String> entry : mutationOverrides.entrySet()) {
+            Option<?> option = resolveOption(entry.getKey());
+            activeOptionResolver.overrideOption(option, entry.getValue());
+        }
+    }
+
+    private static void validateMutationOverrides() {
+        if (mutationOverrides.isEmpty()) {
+            return;
+        }
+        State originalState = captureState();
+        for (Map.Entry<String, String> entry : mutationOverrides.entrySet()) {
+            String requestedName = entry.getKey();
+            String canonicalName = resolveOptionName(requestedName);
+            if (FORBIDDEN_MUTATION_OVERRIDE_PARAMS.contains(canonicalName)) {
+                throw new IllegalArgumentException("Mutation override is not allowed for --"
+                        + canonicalName);
+            }
+            Option<?> option = resolveOption(canonicalName);
+            if (option.getDefaultValue() instanceof List) {
+                throw new IllegalArgumentException("Mutation override is not supported for repeating option --"
+                        + canonicalName);
+            }
+            activeOptionResolver.overrideOption(option, entry.getValue());
+        }
+        // Restore original CLI values after validation parse.
+        // Validation above intentionally checks parse compatibility for each override.
+        restoreState(originalState);
+    }
+
+    private static Option<?> resolveOption(String requestedName) {
+        String canonicalName = resolveOptionName(requestedName);
+        Option<?> option = activeOptionResolver.findOptionByLongName(canonicalName);
+        if (option == null) {
+            throw new IllegalArgumentException("Unknown override parameter: " + requestedName);
+        }
+        return option;
+    }
+
+    private static String resolveOptionName(String requestedName) {
+        ensureResolverInitialized();
+        if (requestedName == null || requestedName.isBlank()) {
+            throw new IllegalArgumentException("Override parameter name must not be empty");
+        }
+        String trimmed = requestedName.trim();
+        while (trimmed.startsWith("-")) {
+            trimmed = trimmed.substring(1);
+        }
+        Option<?> exact = activeOptionResolver.findOptionByLongName(trimmed);
+        if (exact != null) {
+            return exact.getLongName();
+        }
+        String normalizedInput = normalizeOptionKey(trimmed);
+        Option<?> normalizedMatch = null;
+        for (Option<?> option : activeOptionResolver.getRegisteredOptions()) {
+            if (normalizeOptionKey(option.getLongName()).equals(normalizedInput)) {
+                if (normalizedMatch != null) {
+                    throw new IllegalArgumentException("Ambiguous override parameter: "
+                            + requestedName);
+                }
+                normalizedMatch = option;
+            }
+        }
+        if (normalizedMatch == null) {
+            throw new IllegalArgumentException("Unknown override parameter: " + requestedName);
+        }
+        return normalizedMatch.getLongName();
+    }
+
+    private static String normalizeOptionKey(String raw) {
+        StringBuilder sb = new StringBuilder(raw.length());
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (Character.isLetterOrDigit(c)) {
+                sb.append(Character.toLowerCase(c));
+            }
+        }
+        return sb.toString();
+    }
+
+    private static OverrideParseResult parseOverrideArgs(String[] args) {
+        List<String> passthrough = new ArrayList<>();
+        LinkedHashMap<String, String> overrides = new LinkedHashMap<>();
+        int i = 0;
+        while (i < args.length) {
+            String arg = args[i];
+            if ("--override".equals(arg)) {
+                if (i + 2 >= args.length) {
+                    throw new IllegalArgumentException(
+                            "--override requires two arguments: <param> <value>");
+                }
+                String key = args[i + 1];
+                String value = args[i + 2];
+                overrides.put(key, value);
+                i += 3;
+                continue;
+            }
+            passthrough.add(arg);
+            i++;
+        }
+        return new OverrideParseResult(
+                passthrough.toArray(new String[0]),
+                overrides);
+    }
+
+    private record OverrideParseResult(String[] argsWithoutOverrides, Map<String, String> overrides) { }
 
 }

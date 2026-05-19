@@ -38,8 +38,8 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.VariableInitialization;
 import jdk.test.lib.jittester.types.TypeKlass;
-import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
+import jdk.test.lib.jittester.utils.GenomeChoice;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class VariableInitializationFactory extends SafeFactory<VariableInitialization> {
@@ -164,7 +164,8 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         double base = Math.max(0.0, Math.min(1.0, ProductionParams.constBiasBasePercent.value() / 100.0));
         int halfDepth = Math.max(1, ProductionParams.constBiasHalfDepth.value());
         double noConstsProbability = DepthProbabilityTaper.decayingAsymptote(depth, base, halfDepth);
-        return PseudoRandom.randomBoolean(noConstsProbability);
+        boolean noConstsLive = PseudoRandom.randomSilent() < noConstsProbability;
+        return GenomeChoice.bool(noConstsLive);
     }
 
     private Type pickInitializationType() throws ProductionFailedException {
