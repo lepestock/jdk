@@ -26,7 +26,6 @@ package jdk.test.lib.jittester.factories;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
-import jdk.test.lib.jittester.ProductionLimiter;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
@@ -174,7 +173,6 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         stats.maxDepth = Math.max(stats.maxDepth, depth);
         Throwable inFlight = null;
         try {
-            ProductionLimiter.limitProduction();
             Logger.trace(":expression-seed " + PseudoRandom.getCurrentSeed());
             if (expressionDebugEnabled && depth >= expressionDepthWarn) {
                 System.out.printf("EXPR_DEBUG depth_warn depth=%d seed=%d stopP=%.3f%n",

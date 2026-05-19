@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
-import jdk.test.lib.jittester.ProductionLimiter;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Statement;
@@ -35,19 +34,16 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
-import jdk.test.lib.jittester.Logger;
 
 class StatementFactory extends Factory<Statement> {
     private static final double NUMERIC_RESULT_TYPE_PREFERENCE = 0.90;
     private final Rule<IRNode> rule;
     private final boolean needSemicolon;
-    private final TypeKlass ownerClass;
 
     StatementFactory(long complexityLimit, int operatorLimit,
             TypeKlass ownerClass, boolean exceptionSafe,
             boolean noconsts, boolean needSemicolon ){
         this.needSemicolon = needSemicolon;
-        this.ownerClass = ownerClass;   // FIXME JNP Remove
         rule = new Rule<>("statement");
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setComplexityLimit(complexityLimit)
@@ -77,13 +73,6 @@ class StatementFactory extends Factory<Statement> {
 
     @Override
     public Statement produce() throws ProductionFailedException {
-        ProductionLimiter.setLimit();
-        try {
-            Statement result = new Statement(rule.produce(), needSemicolon);
-            Logger.log(ownerClass, "(StatementFactory :point1 :rule" + rule + ")", result);
-            return result;
-        } finally {
-            ProductionLimiter.setUnlimited();
-        }
+        return new Statement(rule.produce(), needSemicolon);
     }
 }

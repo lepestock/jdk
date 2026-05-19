@@ -406,7 +406,7 @@ public class IRNodeBuilder {
     }
 
     public Factory<IRNode> getLimitedExpressionFactory() throws ProductionFailedException {
-        return new LimitedExpressionFactory(getComplexityLimit(), getOperatorLimit(),
+        return new ExpressionFactory(getComplexityLimit(), getOperatorLimit(),
                 getOwnerClass(), getResultType(), getExceptionSafe(), getNoConsts());
     }
 

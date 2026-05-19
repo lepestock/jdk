@@ -46,7 +46,6 @@ public class IRTreeGenerator {
      */
     public static Test generateIRTree(String name) {
         long seed = PseudoRandom.getCurrentSeed();
-        ProductionLimiter.resetTimer();
         //NB: SymbolTable is a widely-used singleton, hence all the locking.
         SymbolTable.removeAll();
         TypeList.removeAll();
