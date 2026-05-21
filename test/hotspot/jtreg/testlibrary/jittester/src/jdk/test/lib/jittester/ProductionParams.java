@@ -339,7 +339,7 @@ public class ProductionParams {
         mutationOverrides = Collections.unmodifiableMap(overrideParseResult.overrides);
         validateMutationOverrides();
 
-        FlowParams.initializeFromProductionParams();
+        GenerationState.initializeFlowParamsFromProductionParams();
 
         String genocodeName = firstNonBlank(
                 valueIfSet(genocode),

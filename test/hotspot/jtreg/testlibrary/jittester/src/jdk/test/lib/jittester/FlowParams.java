@@ -30,65 +30,57 @@ package jdk.test.lib.jittester;
  * so values can be migrated from {@link ProductionParams} gradually.</p>
  */
 public final class FlowParams {
-    private static Frame head;
+    private final FlowParams prev;
+    private final int statementLimit;
+    private final int operatorLimit;
 
-    private FlowParams() {
+    private FlowParams(FlowParams prev, int statementLimit, int operatorLimit) {
+        this.prev = prev;
+        this.statementLimit = statementLimit;
+        this.operatorLimit = operatorLimit;
     }
 
-    public static void initializeFromProductionParams() {
-        head = new Frame(null,
+    public static FlowParams fromProductionParams() {
+        return new FlowParams(null,
                 normalizeLimit(ProductionParams.statementLimit.value()),
                 normalizeLimit(ProductionParams.operatorLimit.value()));
     }
 
-    public static int statementLimit() {
-        return current().statementLimit;
+    public int statementLimit() {
+        return statementLimit;
     }
 
-    public static int operatorLimit() {
-        return current().operatorLimit;
+    public int operatorLimit() {
+        return operatorLimit;
     }
 
-    public static Scope pushFromProductionParams() {
-        Frame current = current();
-        head = new Frame(current,
-                normalizeLimit(ProductionParams.statementLimit.value()),
-                normalizeLimit(ProductionParams.operatorLimit.value()));
-        return new Scope(current);
+    public Builder withStatementLimit(int value) {
+        return new Builder(this).withStatementLimit(value);
     }
 
-    public static Checkpoint checkpoint() {
-        return new Checkpoint(current());
+    public Builder withOperatorLimit(int value) {
+        return new Builder(this).withOperatorLimit(value);
     }
 
-    public static void rollbackTo(Checkpoint checkpoint) {
-        if (checkpoint == null) {
-            throw new IllegalArgumentException("FlowParams checkpoint must not be null");
-        }
-        head = checkpoint.head;
+    public Builder withProductionParamsLimits() {
+        return new Builder(this)
+                .withStatementLimit(ProductionParams.statementLimit.value())
+                .withOperatorLimit(ProductionParams.operatorLimit.value());
     }
 
-    public static String dumpSnapshot() {
-        Frame frame = current();
-        return "FlowParams{statementLimit=" + frame.statementLimit
-                + ", operatorLimit=" + frame.operatorLimit
-                + ", depth=" + depth(frame)
+    public String dumpSnapshot() {
+        return "FlowParams{statementLimit=" + statementLimit
+                + ", operatorLimit=" + operatorLimit
+                + ", depth=" + depth(this)
                 + "}";
     }
 
-    private static Frame current() {
-        if (head == null) {
-            initializeFromProductionParams();
-        }
-        return head;
-    }
-
-    private static int depth(Frame frame) {
+    private static int depth(FlowParams frame) {
         int depth = 0;
-        Frame current = frame;
+        FlowParams current = frame;
         while (current != null) {
             depth++;
-            current = current.parent;
+            current = current.prev;
         }
         return depth;
     }
@@ -97,40 +89,32 @@ public final class FlowParams {
         return Math.max(1, value);
     }
 
-    public static final class Scope implements AutoCloseable {
-        private Frame previous;
+    public static final class Builder {
+        private final FlowParams base;
+        private int statementLimit;
+        private int operatorLimit;
 
-        private Scope(Frame previous) {
-            this.previous = previous;
-        }
-
-        @Override
-        public void close() {
-            if (previous == null) {
-                return;
+        private Builder(FlowParams base) {
+            if (base == null) {
+                throw new IllegalArgumentException("FlowParams builder base must not be null");
             }
-            head = previous;
-            previous = null;
+            this.base = base;
+            this.statementLimit = base.statementLimit;
+            this.operatorLimit = base.operatorLimit;
         }
-    }
 
-    public static final class Checkpoint {
-        private final Frame head;
-
-        private Checkpoint(Frame head) {
-            this.head = head;
+        public Builder withStatementLimit(int value) {
+            this.statementLimit = normalizeLimit(value);
+            return this;
         }
-    }
 
-    private static final class Frame {
-        private final Frame parent;
-        private final int statementLimit;
-        private final int operatorLimit;
+        public Builder withOperatorLimit(int value) {
+            this.operatorLimit = normalizeLimit(value);
+            return this;
+        }
 
-        private Frame(Frame parent, int statementLimit, int operatorLimit) {
-            this.parent = parent;
-            this.statementLimit = statementLimit;
-            this.operatorLimit = operatorLimit;
+        public FlowParams advance() {
+            return new FlowParams(base, statementLimit, operatorLimit);
         }
     }
 }

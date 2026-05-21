@@ -30,7 +30,27 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
  * Current scope: {@link SymbolTable}, {@link TypeList}, {@link ScopeGuards}, and {@link FlowParams}.
  */
 public final class GenerationState {
+    private static FlowParams currentFlowParams;
+
     private GenerationState() {
+    }
+
+    public static void initializeFlowParamsFromProductionParams() {
+        currentFlowParams = FlowParams.fromProductionParams();
+    }
+
+    public static FlowParams currentFlowParams() {
+        if (currentFlowParams == null) {
+            initializeFlowParamsFromProductionParams();
+        }
+        return currentFlowParams;
+    }
+
+    public static void setCurrentFlowParams(FlowParams flowParams) {
+        if (flowParams == null) {
+            throw new IllegalArgumentException("GenerationState flow params must not be null");
+        }
+        currentFlowParams = flowParams;
     }
 
     public static Checkpoint checkpoint() {
@@ -38,7 +58,7 @@ public final class GenerationState {
                 SymbolTable.checkpoint(),
                 TypeList.checkpoint(),
                 ScopeGuards.checkpoint(),
-                FlowParams.checkpoint());
+                currentFlowParams());
     }
 
     public static void rollbackTo(Checkpoint checkpoint) {
@@ -48,7 +68,7 @@ public final class GenerationState {
         SymbolTable.rollbackToCheckpoint(checkpoint.symbolCheckpoint());
         TypeList.rollbackToCheckpoint(checkpoint.typeCheckpoint());
         ScopeGuards.rollbackToCheckpoint(checkpoint.scopeGuardsCheckpoint);
-        FlowParams.rollbackTo(checkpoint.flowParamsCheckpoint);
+        currentFlowParams = checkpoint.flowParamsCheckpoint;
     }
 
     public static String dumpSnapshot() {
@@ -63,7 +83,7 @@ public final class GenerationState {
                 .append(PseudoRandom.getCurrentSeed())
                 .append("}\n");
         sb.append("--- FlowParams ---\n");
-        sb.append(FlowParams.dumpSnapshot()).append('\n');
+        sb.append(currentFlowParams().dumpSnapshot()).append('\n');
         sb.append("--- SymbolTable ---\n");
         sb.append(SymbolTable.dumpSnapshot(Integer.MAX_VALUE, Integer.MAX_VALUE));
         sb.append("--- TypeList ---\n");
@@ -75,12 +95,12 @@ public final class GenerationState {
         private final int symbolCheckpoint;
         private final int typeCheckpoint;
         private final ScopeGuards.Checkpoint scopeGuardsCheckpoint;
-        private final FlowParams.Checkpoint flowParamsCheckpoint;
+        private final FlowParams flowParamsCheckpoint;
 
         private Checkpoint(int symbolCheckpoint,
                            int typeCheckpoint,
                            ScopeGuards.Checkpoint scopeGuardsCheckpoint,
-                           FlowParams.Checkpoint flowParamsCheckpoint) {
+                           FlowParams flowParamsCheckpoint) {
             this.symbolCheckpoint = symbolCheckpoint;
             this.typeCheckpoint = typeCheckpoint;
             this.scopeGuardsCheckpoint = scopeGuardsCheckpoint;
