@@ -276,13 +276,16 @@ public final class FullGenocode implements GenomeBackend {
                     "selectedSeed=" + selectedSeed + ", mutable=" + mutable);
         }
         ProductionParams.State previousParamsState = null;
-        FlowParams.Scope flowParamsScope = null;
+        FlowParams previousFlowParams = null;
         if (mutable) {
             previousParamsState = ProductionParams.beginMutationOverrideScope();
-            flowParamsScope = FlowParams.pushFromProductionParams();
+            previousFlowParams = GenerationState.currentFlowParams();
+            GenerationState.setCurrentFlowParams(previousFlowParams
+                    .withProductionParamsLimits()
+                    .advance());
         }
         replayStack.push(new ReplayFrame(replayNode, mutable, scopeType, selectedSeed,
-                previousParamsState, flowParamsScope));
+                previousParamsState, previousFlowParams));
         return selectedSeed;
     }
 
@@ -680,8 +683,8 @@ public final class FullGenocode implements GenomeBackend {
                 throw new RuntimeException("Failed to record block end", e);
             }
         } finally {
-            if (frame.flowParamsScope != null) {
-                frame.flowParamsScope.close();
+            if (frame.previousFlowParams != null) {
+                GenerationState.setCurrentFlowParams(frame.previousFlowParams);
             }
             if (frame.overrideBackupState != null) {
                 ProductionParams.endMutationOverrideScope(frame.overrideBackupState);
@@ -1158,19 +1161,19 @@ public final class FullGenocode implements GenomeBackend {
         final char scopeType;
         final long selectedSeed;
         final ProductionParams.State overrideBackupState;
-        final FlowParams.Scope flowParamsScope;
+        final FlowParams previousFlowParams;
         boolean recorded = false;
         int nextEventIndex = 0;
         int nextChildIndex = 0;
 
         ReplayFrame(ReplayNode node, boolean mutable, char scopeType, long selectedSeed,
-                ProductionParams.State overrideBackupState, FlowParams.Scope flowParamsScope) {
+                ProductionParams.State overrideBackupState, FlowParams previousFlowParams) {
             this.node = node;
             this.mutable = mutable;
             this.scopeType = scopeType;
             this.selectedSeed = selectedSeed;
             this.overrideBackupState = overrideBackupState;
-            this.flowParamsScope = flowParamsScope;
+            this.previousFlowParams = previousFlowParams;
         }
 
         static ReplayFrame mutableFrame(char scopeType, long selectedSeed) {
