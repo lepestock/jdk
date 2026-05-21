@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.factories;
 
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.Gene;
+import jdk.test.lib.jittester.FlowParams;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.If;
@@ -95,11 +96,15 @@ class BlockFactory extends Factory<Block> {
     public Block produce() throws ProductionFailedException {
         int blockDepth = enterBlockDepth();
         if (statementLimit > 0) {
-            long blockRngInSeed = Genome.startBlock(PseudoRandom.getCurrentSeed());
+            FlowParams nextFlowParams = GenerationState.currentFlowParams()
+                    .withStatementLimit(statementLimit)
+                    .withOperatorLimit(operatorLimit)
+                    .advance();
+            long blockRngInSeed = Genome.startBlock(PseudoRandom.getCurrentSeed(), nextFlowParams);
             PseudoRandom.setCurrentSeed(blockRngInSeed);
             try {
-                int effectiveStatementLimit = resolveStatementLimit();
-                int effectiveOperatorLimit = resolveOperatorLimit();
+                int effectiveStatementLimit = GenerationState.currentFlowParams().statementLimit();
+                int effectiveOperatorLimit = GenerationState.currentFlowParams().operatorLimit();
                 List<IRNode> content = new ArrayList<>();
                 int attemptedStatements = 0;
                 int successfulStatements = 0;
@@ -323,20 +328,6 @@ class BlockFactory extends Factory<Block> {
         double depthRatio = DepthProbabilityTaper.decayingAsymptote(blockDepth, 1.0, halfDepth);
         int adjusted = (int) Math.ceil(fromSeed * (1.0 + boost * depthRatio));
         return Math.max(1, Math.min(statementLimit, adjusted));
-    }
-
-    private int resolveStatementLimit() {
-        if (Genome.isCurrentMutationRootBlock()) {
-            return GenerationState.currentFlowParams().statementLimit();
-        }
-        return statementLimit;
-    }
-
-    private int resolveOperatorLimit() {
-        if (Genome.isCurrentMutationRootBlock()) {
-            return GenerationState.currentFlowParams().operatorLimit();
-        }
-        return operatorLimit;
     }
 
     private static double computeLocalDeclarationWeight(int blockDepth, int statementIndex) {
