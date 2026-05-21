@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.genocode;
 
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.Gene;
+import jdk.test.lib.jittester.FlowParams;
 import jdk.test.lib.jittester.LongSmallSet;
 
 /**
@@ -34,7 +35,11 @@ import jdk.test.lib.jittester.LongSmallSet;
 public interface GenomeBackend {
     void initialize(String replayFile, String recordFile, Long mutationSeed, String mutationTarget);
 
-    long startBlock(long liveSeed);
+    default long startBlock(long liveSeed) {
+        return startBlock(liveSeed, null);
+    }
+
+    long startBlock(long liveSeed, FlowParams flowParamsAdvance);
 
     void recordCurrentBlockGene(Gene gene);
 

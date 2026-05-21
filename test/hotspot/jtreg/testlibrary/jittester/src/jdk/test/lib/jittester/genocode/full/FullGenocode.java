@@ -48,6 +48,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
@@ -197,8 +198,8 @@ public final class FullGenocode implements GenomeBackend {
     }
 
     @Override
-    public synchronized long startBlock(long liveSeed) {
-        return startScope('B', liveSeed);
+    public synchronized long startBlock(long liveSeed, FlowParams flowParamsAdvance) {
+        return startScopeInternal('B', liveSeed, Optional.ofNullable(flowParamsAdvance));
     }
 
     @Override
@@ -220,9 +221,19 @@ public final class FullGenocode implements GenomeBackend {
 
     @Override
     public synchronized long startScope(char scopeType, long liveSeed) {
+        return startScopeInternal(scopeType, liveSeed, Optional.empty());
+    }
+
+    private long startScopeInternal(char scopeType, long liveSeed,
+            Optional<FlowParams> flowParamsAdvance) {
         boolean mutableByParent = !replayStack.isEmpty() && replayStack.peek().mutable;
         if (mutableByParent) {
-            replayStack.push(ReplayFrame.mutableFrame(scopeType, liveSeed));
+            Optional<FlowParams> previousFlowParams = Optional.empty();
+            if (flowParamsAdvance.isPresent()) {
+                previousFlowParams = Optional.of(GenerationState.currentFlowParams());
+                GenerationState.setCurrentFlowParams(flowParamsAdvance.get());
+            }
+            replayStack.push(ReplayFrame.mutableFrame(scopeType, liveSeed, previousFlowParams));
             return liveSeed;
         }
 
@@ -276,11 +287,17 @@ public final class FullGenocode implements GenomeBackend {
                     "selectedSeed=" + selectedSeed + ", mutable=" + mutable);
         }
         ProductionParams.State previousParamsState = null;
-        FlowParams previousFlowParams = null;
+        Optional<FlowParams> previousFlowParams = Optional.empty();
+        if (flowParamsAdvance.isPresent()) {
+            previousFlowParams = Optional.of(GenerationState.currentFlowParams());
+            GenerationState.setCurrentFlowParams(flowParamsAdvance.get());
+        }
         if (mutable) {
             previousParamsState = ProductionParams.beginMutationOverrideScope();
-            previousFlowParams = GenerationState.currentFlowParams();
-            GenerationState.setCurrentFlowParams(previousFlowParams
+            if (previousFlowParams.isEmpty()) {
+                previousFlowParams = Optional.of(GenerationState.currentFlowParams());
+            }
+            GenerationState.setCurrentFlowParams(GenerationState.currentFlowParams()
                     .withProductionParamsLimits()
                     .advance());
         }
@@ -683,9 +700,7 @@ public final class FullGenocode implements GenomeBackend {
                 throw new RuntimeException("Failed to record block end", e);
             }
         } finally {
-            if (frame.previousFlowParams != null) {
-                GenerationState.setCurrentFlowParams(frame.previousFlowParams);
-            }
+            frame.previousFlowParams.ifPresent(GenerationState::setCurrentFlowParams);
             if (frame.overrideBackupState != null) {
                 ProductionParams.endMutationOverrideScope(frame.overrideBackupState);
             }
@@ -1161,13 +1176,14 @@ public final class FullGenocode implements GenomeBackend {
         final char scopeType;
         final long selectedSeed;
         final ProductionParams.State overrideBackupState;
-        final FlowParams previousFlowParams;
+        final Optional<FlowParams> previousFlowParams;
         boolean recorded = false;
         int nextEventIndex = 0;
         int nextChildIndex = 0;
 
         ReplayFrame(ReplayNode node, boolean mutable, char scopeType, long selectedSeed,
-                ProductionParams.State overrideBackupState, FlowParams previousFlowParams) {
+                ProductionParams.State overrideBackupState,
+                Optional<FlowParams> previousFlowParams) {
             this.node = node;
             this.mutable = mutable;
             this.scopeType = scopeType;
@@ -1176,8 +1192,9 @@ public final class FullGenocode implements GenomeBackend {
             this.previousFlowParams = previousFlowParams;
         }
 
-        static ReplayFrame mutableFrame(char scopeType, long selectedSeed) {
-            return new ReplayFrame(null, true, scopeType, selectedSeed, null, null);
+        static ReplayFrame mutableFrame(char scopeType, long selectedSeed,
+                Optional<FlowParams> previousFlowParams) {
+            return new ReplayFrame(null, true, scopeType, selectedSeed, null, previousFlowParams);
         }
     }
 

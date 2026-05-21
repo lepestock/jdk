@@ -27,6 +27,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.Gene;
+import jdk.test.lib.jittester.FlowParams;
 import jdk.test.lib.jittester.LongSmallSet;
 import jdk.test.lib.jittester.genocode.GenomeBackend;
 import jdk.test.lib.jittester.genocode.full.FullGenocode;
@@ -61,6 +62,10 @@ public final class Genome {
 
     public static synchronized long startBlock(long liveSeed) {
         return genocode.startBlock(liveSeed);
+    }
+
+    public static synchronized long startBlock(long liveSeed, FlowParams flowParamsAdvance) {
+        return genocode.startBlock(liveSeed, flowParamsAdvance);
     }
 
     public static synchronized void recordCurrentBlockGene(Gene gene) {
