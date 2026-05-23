@@ -84,3 +84,12 @@ java/lang/Character::toString(I)
 java/lang/Math::clamp(DDD)
 
 java/lang/System::setSecurityManager(Ljava/lang/SecurityManager;)
+
+# Property-dependent nullable/static getters (can cause nondeterministic null-unboxing paths)
+java/lang/Integer::getInteger(Ljava/lang/String;)
+java/lang/Integer::getInteger(Ljava/lang/String;I)
+java/lang/Integer::getInteger(Ljava/lang/String;Ljava/lang/Integer;)
+java/lang/Long::getLong(Ljava/lang/String;)
+java/lang/Long::getLong(Ljava/lang/String;J)
+java/lang/Long::getLong(Ljava/lang/String;Ljava/lang/Long;)
+java/lang/Boolean::getBoolean(Ljava/lang/String;)

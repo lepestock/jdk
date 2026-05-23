@@ -35,6 +35,7 @@ import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.arrays.ArrayExtraction;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class ArrayElementFactory extends SafeFactory<ArrayElement> {
@@ -99,6 +100,11 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
                 perDimensionExpressions.add(new Literal((byte)PseudoRandom.randomNotNegative(dimLimit), TypeList.BYTE));
             }
         }
-        return new ArrayElement(arrayReturningExpression, perDimensionExpressions);
+        ArrayElement produced = new ArrayElement(arrayReturningExpression, perDimensionExpressions);
+        Long expressionScopeSeed = Genome.getCurrentExpressionScopeSeed();
+        if (expressionScopeSeed != null) {
+            produced.setExpressionGeneSeed(expressionScopeSeed);
+        }
+        return produced;
     }
 }

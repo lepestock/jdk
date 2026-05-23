@@ -263,19 +263,39 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(ArrayElement node) {
         IRNode array = node.getChild(0);
-        StringBuilder code = new StringBuilder();
+        StringBuilder arrayExpr = new StringBuilder();
         if (array instanceof VariableBase || array instanceof Function) {
-            code.append(array.accept(this));
+            arrayExpr.append(array.accept(this));
         } else {
-            code.append("(")
+            arrayExpr.append("(")
                 .append(array.accept(this))
                 .append(")");
         }
-        code.append(node.getChildren().stream()
+        String indices = node.getChildren().stream()
                 .skip(1)
                 .map(c -> c.accept(this))
-                .collect(Collectors.joining("][", "[", "]")));
-        return code.toString();
+                .collect(Collectors.joining("][", "[", "]"));
+        if (!ProductionParams.pulsemap.value()
+                || node.getChildren().size() < 2
+                || !(array.getResultType() instanceof TypeArray)) {
+            return arrayExpr + indices;
+        }
+        String method = pulseArrayReadMethodName((TypeArray) array.getResultType());
+        if (method == null) {
+            return arrayExpr + indices;
+        }
+        String genePayload = "";
+        if (node.hasExpressionGeneSeed()) {
+            genePayload = ":gene " + node.getExpressionGeneToken();
+        }
+        String indexExpr = node.getChild(1).accept(this);
+        String suffix = node.getChildren().stream()
+                .skip(2)
+                .map(c -> c.accept(this))
+                .collect(Collectors.joining("][", "[", "]"));
+        return "jdk.test.lib.jittester.pulse.Pulse." + method
+                + "(" + arrayExpr + ", " + indexExpr + ", \"" + genePayload + "\")"
+                + suffix;
     }
 
     @Override
@@ -407,6 +427,35 @@ public class JavaCodeVisitor implements Visitor<String> {
             return false;
         }
         return !blockGeneToken(body).isEmpty();
+    }
+
+    private static String pulseArrayReadMethodName(TypeArray arrayType) {
+        Type elementType = arrayType.type;
+        if (elementType.equals(TypeList.BYTE)) {
+            return "byteArrayRead";
+        }
+        if (elementType.equals(TypeList.SHORT)) {
+            return "shortArrayRead";
+        }
+        if (elementType.equals(TypeList.INT)) {
+            return "intArrayRead";
+        }
+        if (elementType.equals(TypeList.LONG)) {
+            return "longArrayRead";
+        }
+        if (elementType.equals(TypeList.FLOAT)) {
+            return "floatArrayRead";
+        }
+        if (elementType.equals(TypeList.DOUBLE)) {
+            return "doubleArrayRead";
+        }
+        if (elementType.equals(TypeList.CHAR)) {
+            return "charArrayRead";
+        }
+        if (elementType.equals(TypeList.BOOLEAN)) {
+            return "booleanArrayRead";
+        }
+        return "objectArrayRead";
     }
 
     private static String loopCounterName(Loop loop) {

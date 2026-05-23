@@ -152,4 +152,161 @@ public final class Pulse {
             writer.write(INDENT);
         }
     }
+
+    public static byte byteArrayRead(byte[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    public static short shortArrayRead(short[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    public static int intArrayRead(int[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    public static long longArrayRead(long[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    public static float floatArrayRead(float[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    public static double doubleArrayRead(double[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    public static char charArrayRead(char[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    public static boolean booleanArrayRead(boolean[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    public static <T> T objectArrayRead(T[] array, int index, String payload) {
+        return logArrayReadAndGet(array, index, payload);
+    }
+
+    private static byte logArrayReadAndGet(byte[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            byte value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, Byte.toString(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static short logArrayReadAndGet(short[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            short value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, Short.toString(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static int logArrayReadAndGet(int[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            int value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, Integer.toString(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static long logArrayReadAndGet(long[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            long value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, Long.toString(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static float logArrayReadAndGet(float[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            float value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, Float.toString(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static double logArrayReadAndGet(double[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            double value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, Double.toString(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static char logArrayReadAndGet(char[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            char value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, Character.toString(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static boolean logArrayReadAndGet(boolean[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            boolean value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, Boolean.toString(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static <T> T logArrayReadAndGet(T[] array, int index, String payload) {
+        int length = array == null ? -1 : array.length;
+        boolean inBounds = array != null && index >= 0 && index < length;
+        if (inBounds) {
+            T value = array[index];
+            beat("array-read", appendArrayReadPayload(payload, index, length, true, String.valueOf(value)));
+            return value;
+        }
+        beat("array-read", appendArrayReadPayload(payload, index, length, false, "n/a"));
+        return array[index];
+    }
+
+    private static String appendArrayReadPayload(String payload, int index, int length,
+            boolean inBounds, String valueString) {
+        String base = payload == null ? "" : payload.trim();
+        if (!base.isEmpty()) {
+            base += " ";
+        }
+        return base
+                + ":index " + index
+                + " :length " + length
+                + " :inBounds " + inBounds
+                + " :value " + valueString;
+    }
 }
