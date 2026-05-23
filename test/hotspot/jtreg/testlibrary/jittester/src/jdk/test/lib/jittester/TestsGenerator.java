@@ -118,6 +118,24 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         }
     }
 
+    protected void compilePulse() {
+        if (!ProductionParams.pulsemap.value()) {
+            return;
+        }
+        Path root = getRoot();
+        ProcessBuilder pbPulse = new ProcessBuilder(JAVAC,
+                "-d", tmpDir.path.toString(),
+                resolvePulseSourcePath(root).toString());
+        try {
+            int exitCode = runProcess(pbPulse, root.resolve("Pulse").toString());
+            if (exitCode != 0) {
+                throw generationFailure("Pulse compilation returned exit code " + exitCode);
+            }
+        } catch (IOException | InterruptedException e) {
+            throw generationFailure("Can't compile pulse", e);
+        }
+    }
+
     protected static void ensureExisting(Path path) {
         if (Files.notExists(path)) {
             try {
@@ -138,6 +156,9 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         header.append(" * @run build jdk.test.lib.jittester.jtreg.JitTesterDriver");
         if (!ProductionParams.embedPrinterClass.value()) {
             header.append(" jdk.test.lib.jittester.jtreg.Printer");
+        }
+        if (ProductionParams.pulsemap.value()) {
+            header.append(" jdk.test.lib.jittester.pulse.Pulse");
         }
         header.append("\n");
         for (String action : preRunActions.apply(mainClassName)) {
@@ -190,6 +211,30 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
                     .getCodeSource().getLocation().toURI());
             Path fromBuild = classesDir
                     .resolve("../../../src/jdk/test/lib/jittester/jtreg/Printer.java")
+                    .normalize();
+            if (Files.exists(fromBuild)) {
+                return fromBuild;
+            }
+        } catch (URISyntaxException ignored) {
+            // Fall through to final deterministic path.
+        }
+        return fromTestbase;
+    }
+
+    private static Path resolvePulseSourcePath(Path root) {
+        Path fromTestbase = root.resolve("jdk/test/lib/jittester/pulse/Pulse.java");
+        if (Files.exists(fromTestbase)) {
+            return fromTestbase;
+        }
+        Path fromCwd = Paths.get("src/jdk/test/lib/jittester/pulse/Pulse.java");
+        if (Files.exists(fromCwd)) {
+            return fromCwd;
+        }
+        try {
+            Path classesDir = Paths.get(TestsGenerator.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            Path fromBuild = classesDir
+                    .resolve("../../../src/jdk/test/lib/jittester/pulse/Pulse.java")
                     .normalize();
             if (Files.exists(fromBuild)) {
                 return fromBuild;
