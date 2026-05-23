@@ -49,6 +49,7 @@ public class JavaCodeGenerator extends TestsGenerator {
         String mainClassName = mainClass.getName();
         generateSources(test.seed(), mainClass, test.privateClasses());
         compilePrinter();
+        compilePulse();
         compileJavaFile(mainClassName);
         generateGoldenOut(mainClassName);
     }

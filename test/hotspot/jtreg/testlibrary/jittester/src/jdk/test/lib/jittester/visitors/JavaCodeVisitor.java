@@ -331,22 +331,66 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     private static String geneComment(IRNode node) {
+        String token = blockGeneToken(node);
+        if (token.isEmpty()) {
+            return "";
+        }
         if (Genome.isSourceDebugEnabled()
                 && node instanceof Block
                 && ((Block) node).hasBlockRngSeed()) {
-            String token = Genome.formatBlockDebugToken((Block) node);
-            if (!token.isEmpty()) {
-                return "  // gene: " + token;
-            }
+            return "  // gene: " + token;
         }
         return "";
     }
 
+    private static String blockGeneToken(IRNode node) {
+        if (node instanceof Block && ((Block) node).hasBlockRngSeed()) {
+            String token = Genome.formatBlockDebugToken((Block) node);
+            return token == null ? "" : token;
+        }
+        return "";
+    }
+
+    private static String blockPulseStartScope(int level, IRNode body) {
+        if (!ProductionParams.pulsemap.value()) {
+            return "";
+        }
+        String token = blockGeneToken(body);
+        if (token.isEmpty()) {
+            return "";
+        }
+        return PrintingUtils.align(level + 1)
+                + "jdk.test.lib.jittester.pulse.Pulse.startScope(\"block\", \":gene " + token + "\");\n";
+    }
+
+    private static String blockPulseEndScope(int level, IRNode body) {
+        if (!ProductionParams.pulsemap.value()) {
+            return "";
+        }
+        String token = blockGeneToken(body);
+        if (token.isEmpty()) {
+            return "";
+        }
+        return PrintingUtils.align(level + 1)
+                + "jdk.test.lib.jittester.pulse.Pulse.endScope();\n";
+    }
+
     private static String openBraceWithGene(int level, IRNode body) {
+        if (hasBlockPulseScope(body)) {
+            return PrintingUtils.align(level) + "{" + geneComment(body) + "\n"
+                    + blockPulseStartScope(level, body)
+                    + PrintingUtils.align(level + 1) + "try {\n";
+        }
         return PrintingUtils.align(level) + "{" + geneComment(body) + "\n";
     }
 
     private static String closeBraceWithGene(int level, IRNode body) {
+        if (hasBlockPulseScope(body)) {
+            return PrintingUtils.align(level + 1) + "} finally {\n"
+                    + blockPulseEndScope(level + 1, body)
+                    + PrintingUtils.align(level + 1) + "}\n"
+                    + PrintingUtils.align(level) + "}" + geneComment(body);
+        }
         return PrintingUtils.align(level) + "}" + geneComment(body);
     }
 
@@ -356,6 +400,13 @@ public class JavaCodeVisitor implements Visitor<String> {
 
     private static String closeBraceSuffixWithGene(IRNode body) {
         return "}" + geneComment(body);
+    }
+
+    private static boolean hasBlockPulseScope(IRNode body) {
+        if (!ProductionParams.pulsemap.value()) {
+            return false;
+        }
+        return !blockGeneToken(body).isEmpty();
     }
 
     private String addComplexityInfo(IRNode node) {
@@ -1075,9 +1126,9 @@ public class JavaCodeVisitor implements Visitor<String> {
             cases += node.getChild(i + caseBlockIdx).accept(this)+ "\n";
         }
         return "switch (" + node.getChild(0).accept(this)+ ")\n"
-               + openBraceWithGene(level, node.getChild(caseBlockIdx))
+               + PrintingUtils.align(level) + openBraceSuffixWithGene(node.getChild(caseBlockIdx))
                + cases
-               + closeBraceWithGene(level, node.getChild(caseBlockIdx));
+               + PrintingUtils.align(level) + closeBraceSuffixWithGene(node.getChild(caseBlockIdx));
     }
 
     @Override

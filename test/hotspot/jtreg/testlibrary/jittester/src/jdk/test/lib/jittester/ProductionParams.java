@@ -97,6 +97,7 @@ public class ProductionParams {
     public static Option<Integer> magnetismLevel = null;
     public static Option<Integer> arrayProductionWeightBonus = null;
     public static Option<Boolean> embedPrinterClass = null;
+    public static Option<Boolean> pulsemap = null;
     public static Option<String> generators = null;
     public static Option<String> generatorsFactories = null;
     public static Option<String> genomeReplayFile = null;
@@ -233,6 +234,8 @@ public class ProductionParams {
                 "Additional selection weight percent for array productions (0 keeps default)");
         embedPrinterClass = optionResolver.addBooleanOption(null, "embed-printer-class", false,
                 "Embed Printer helper class into each generated Java test source");
+        pulsemap = optionResolver.addBooleanOption(null, "pulsemap", false,
+                "Enable pulsemap prototype instrumentation with block-level runtime beats");
         generators = optionResolver.addStringOption("generators", "", "Comma-separated list of generator names");
         generatorsFactories = optionResolver.addStringOption("generatorsFactories", "", "Comma-separated list of generators factories class names");
         genomeReplayFile = optionResolver.addStringOption("genome-replay", "",
