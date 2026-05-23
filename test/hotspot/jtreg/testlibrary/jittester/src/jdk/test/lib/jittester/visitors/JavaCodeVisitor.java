@@ -409,6 +409,64 @@ public class JavaCodeVisitor implements Visitor<String> {
         return !blockGeneToken(body).isEmpty();
     }
 
+    private static String loopCounterName(Loop loop) {
+        if (loop == null || loop.initialization == null || loop.initialization.getVariableInfo() == null) {
+            return "";
+        }
+        String name = loop.initialization.getVariableInfo().name;
+        return name == null ? "" : name;
+    }
+
+    private static String loopPulseStartScope(int level, String loopKind, Loop loop, IRNode body) {
+        if (!ProductionParams.pulsemap.value()) {
+            return "";
+        }
+        String token = blockGeneToken(body);
+        if (token.isEmpty()) {
+            return "";
+        }
+        String counter = loopCounterName(loop);
+        if (counter.isEmpty()) {
+            return PrintingUtils.align(level)
+                    + "jdk.test.lib.jittester.pulse.Pulse.startScope(\"loop-" + loopKind
+                    + "\", \":gene " + token + "\");\n";
+        }
+        return PrintingUtils.align(level)
+                + "jdk.test.lib.jittester.pulse.Pulse.startScope(\"loop-" + loopKind
+                + "\", \":gene " + token + " :var " + counter + " :init \" + " + counter + ");\n";
+    }
+
+    private static String loopPulseIterationBeat(int level, String loopKind, Loop loop, IRNode body) {
+        if (!ProductionParams.pulsemap.value()) {
+            return "";
+        }
+        String token = blockGeneToken(body);
+        if (token.isEmpty()) {
+            return "";
+        }
+        String counter = loopCounterName(loop);
+        if (counter.isEmpty()) {
+            return PrintingUtils.align(level + 1)
+                    + "jdk.test.lib.jittester.pulse.Pulse.beat(\"loop-" + loopKind + "-iter\", \":gene "
+                    + token + "\");\n";
+        }
+        return PrintingUtils.align(level + 1)
+                + "jdk.test.lib.jittester.pulse.Pulse.beat(\"loop-" + loopKind + "-iter\", \":gene "
+                + token + " :var " + counter + " :value \" + " + counter + ");\n";
+    }
+
+    private static String loopPulseEndScope(int level, Loop loop, IRNode body) {
+        if (!ProductionParams.pulsemap.value()) {
+            return "";
+        }
+        String token = blockGeneToken(body);
+        if (token.isEmpty()) {
+            return "";
+        }
+        return PrintingUtils.align(level)
+                + "jdk.test.lib.jittester.pulse.Pulse.endScope();\n";
+    }
+
     private String addComplexityInfo(IRNode node) {
         if (ProductionParams.printComplexity.value()) {
             return " /* " + node.complexity() + " */";
@@ -504,9 +562,11 @@ public class JavaCodeVisitor implements Visitor<String> {
         code.append(loop.initialization.accept(this))
             .append("\n")
             .append(header.accept(this))
+            .append(loopPulseStartScope(level, "do-while", loop, body1))
             .append(PrintingUtils.align(level))
             .append("do\n")
             .append(openBraceWithGene(level, body1))
+            .append(loopPulseIterationBeat(level, "do-while", loop, body1))
             .append(body1.accept(this))
             .append(PrintingUtils.align(level + 1))
             .append(loop.manipulator.accept(this))
@@ -515,7 +575,8 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append(closeBraceWithGene(level, body1))
             .append(" while (")
             .append(loop.condition.accept(this))
-            .append(");");
+            .append(");\n")
+            .append(loopPulseEndScope(level, loop, body1));
         return code.toString();
     }
 
@@ -533,6 +594,7 @@ public class JavaCodeVisitor implements Visitor<String> {
         code.append(loop.initialization.accept(this))
             .append("\n")
             .append(header.accept(this))
+            .append(loopPulseStartScope(level, "for", loop, body1))
             .append(PrintingUtils.align(level))
             .append("for (")
             .append(statement1.accept(this))
@@ -542,13 +604,16 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append(statement2.accept(this))
             .append(")\n")
             .append(openBraceWithGene(level, body1))
+            .append(loopPulseIterationBeat(level, "for", loop, body1))
             .append(body1.accept(this))
             .append(PrintingUtils.align(level + 1))
             .append(loop.manipulator.accept(this))
             .append(";\n")
             .append(body2.accept(this))
             .append(body3.accept(this))
-            .append(closeBraceWithGene(level, body1));
+            .append(closeBraceWithGene(level, body1))
+            .append("\n")
+            .append(loopPulseEndScope(level, loop, body1));
         return code.toString();
     }
 
@@ -1205,13 +1270,16 @@ public class JavaCodeVisitor implements Visitor<String> {
         Loop loop = node.getLoop();
         return loop.initialization.accept(this)+ "\n"
                 + header.accept(this)
+                + loopPulseStartScope(level, "while", loop, body1)
                 + PrintingUtils.align(level) + "while (" + loop.condition.accept(this)+ ")\n"
                 + openBraceWithGene(level, body1)
+                + loopPulseIterationBeat(level, "while", loop, body1)
                 + body1.accept(this)
                 + PrintingUtils.align(level + 1) + loop.manipulator.accept(this)+ ";\n"
                 + body2.accept(this)
                 + body3.accept(this)
-                + closeBraceWithGene(level, body1);
+                + closeBraceWithGene(level, body1) + "\n"
+                + loopPulseEndScope(level, loop, body1);
     }
 
     @Override

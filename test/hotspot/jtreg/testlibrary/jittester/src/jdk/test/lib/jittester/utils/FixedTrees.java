@@ -31,6 +31,7 @@ import java.util.List;
 import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.CatchBlock;
+import jdk.test.lib.jittester.Gene;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.LocalVariable;
@@ -125,7 +126,7 @@ public class FixedTrees {
                 new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar, new Literal("]\n", TypeList.STRING)),
                 true));
 
-        Block block = new Block(owner, TypeList.STRING, nodes, 1);
+        Block block = blockWithAnchor(owner, TypeList.STRING, nodes, 1, "print-function:" + functionName);
         FunctionInfo printInfo = new FunctionInfo(functionName, owner, TypeList.STRING, 0L, FunctionInfo.PUBLIC, thisInfo);
         return new FunctionDefinition(printInfo, new ArrayList<>(), block, new Return(resultVar));
     }
@@ -140,7 +141,7 @@ public class FixedTrees {
         testCallNode.addChild(tVar);
         testCallNodeContent.add(new Statement(testCallNode, true));
         // { t.test(); } or { t.test(); System.out.print(t); }
-        Block testCallNodeBlock = new Block(owner, TypeList.VOID, testCallNodeContent, 4);
+        Block testCallNodeBlock = blockWithAnchor(owner, TypeList.VOID, testCallNodeContent, 4, "test-call");
 
         FunctionInfo printInfo = buildPrintFunctionInfo(owner);
         Function printFinalState = new Function(owner, new FunctionInfo("printFinalState", owner, TypeList.STRING,
@@ -173,7 +174,7 @@ public class FixedTrees {
         ArrayList<IRNode> testAndPrintNodeContent = new ArrayList<>();
         testAndPrintNodeContent.add(new Statement(testCallNode, true));
         testAndPrintNodeContent.add(new Statement(print, true));
-        Block testAndPrintNodeBlock = new Block(owner, TypeList.VOID, testAndPrintNodeContent, 4);
+        Block testAndPrintNodeBlock = blockWithAnchor(owner, TypeList.VOID, testAndPrintNodeContent, 4, "test-and-print");
 
         IRNode tryNode = testCallNodeBlock;
         For mainLoopForNode = null;
@@ -186,7 +187,7 @@ public class FixedTrees {
                     new BinaryOperator(OperatorKind.ADD, TypeList.INT,
                             iVar, new Literal(1, TypeList.INT)));
             Loop loop = new Loop();
-            Block emptyBlock = new Block(owner, TypeList.VOID, new LinkedList<>(), 3);
+            Block emptyBlock = blockWithAnchor(owner, TypeList.VOID, new LinkedList<>(), 3, "main-loop-empty");
             loop.initialization = new CounterInitializer(iInfo, new Literal(0, TypeList.INT));
             loop.manipulator = new CounterManipulator(new Statement(increaseCounter, false));
             int baseIterations = Math.max(1, ProductionParams.mainLoopIterations.value());
@@ -203,8 +204,12 @@ public class FixedTrees {
             testAndPrintWithIterationMarkerContent.add(new Statement(iterationMarkerPrint, true));
             testAndPrintWithIterationMarkerContent.add(new Statement(testCallNode, true));
             testAndPrintWithIterationMarkerContent.add(new Statement(print, true));
-            Block testAndPrintWithIterationMarkerBlock = new Block(owner, TypeList.VOID,
-                    testAndPrintWithIterationMarkerContent, 4);
+            Block testAndPrintWithIterationMarkerBlock = blockWithAnchor(
+                    owner,
+                    TypeList.VOID,
+                    testAndPrintWithIterationMarkerContent,
+                    4,
+                    "main-loop-body");
 
             For forNode = new For(4, loop, limit, emptyBlock, new Statement(nothing, false),
                     new Statement(nothing, false), testAndPrintWithIterationMarkerBlock, emptyBlock, emptyBlock);
@@ -242,7 +247,7 @@ public class FixedTrees {
         printExceptionBlockContent.add(new Statement(
             new Function(printStreamKlass, printInfo, Arrays.asList(systemErrVar, EOL)), true));
 
-        Block printExceptionBlock = new Block(owner, TypeList.VOID, printExceptionBlockContent, 3);
+        Block printExceptionBlock = blockWithAnchor(owner, TypeList.VOID, printExceptionBlockContent, 3, "print-exception");
         List<CatchBlock> catchBlocks1 = new ArrayList<>();
         catchBlocks1.add(new CatchBlock(printExceptionBlock, throwables, 3));
         List<CatchBlock> catchBlocks2 = new ArrayList<>();
@@ -259,29 +264,29 @@ public class FixedTrees {
             }
             ArrayList<IRNode> testOnlyContent = new ArrayList<>();
             testOnlyContent.add(new Statement(testCallNode, true));
-            Block testOnlyBlock = new Block(owner, TypeList.VOID, testOnlyContent, 4);
+            Block testOnlyBlock = blockWithAnchor(owner, TypeList.VOID, testOnlyContent, 4, "main-loop-test-only");
             guardedBodyContent.add(new TryCatchBlock(testOnlyBlock, nothing, catchBlocks2, 4));
             guardedBodyContent.add(new Statement(print, true));
-            Block guardedBody = new Block(owner, TypeList.VOID, guardedBodyContent, 4);
+            Block guardedBody = blockWithAnchor(owner, TypeList.VOID, guardedBodyContent, 4, "main-loop-guarded-body");
             mainLoopForNode.getChildren().set(For.ForPart.BODY1.ordinal(), guardedBody);
         }
 
         TryCatchBlock tryCatch1 = new TryCatchBlock(tryNode, nothing, catchBlocks1, 3);
         ArrayList<IRNode> printBlockContent = new ArrayList<>();
         printBlockContent.add(new Statement(print, true));
-        Block printBlock = new Block(owner, TypeList.VOID, printBlockContent, 3);
+        Block printBlock = blockWithAnchor(owner, TypeList.VOID, printBlockContent, 3, "print-block");
         TryCatchBlock tryCatch2 = new TryCatchBlock(printBlock, nothing, catchBlocks2, 3);
 
         ArrayList<IRNode> printFinalBlockContent = new ArrayList<>();
         printFinalBlockContent.add(new Statement(finalMarkerPrint, true));
         printFinalBlockContent.add(new Statement(printFinal, true));
-        Block printFinalBlock = new Block(owner, TypeList.VOID, printFinalBlockContent, 3);
+        Block printFinalBlock = blockWithAnchor(owner, TypeList.VOID, printFinalBlockContent, 3, "print-final");
         TryCatchBlock tryCatchFinal = new TryCatchBlock(printFinalBlock, nothing, catchBlocks2, 3);
 
         ArrayList<IRNode> printInitialBlockContent = new ArrayList<>();
         printInitialBlockContent.add(new Statement(initialMarkerPrint, true));
         printInitialBlockContent.add(new Statement(printFinal, true));
-        Block printInitialBlock = new Block(owner, TypeList.VOID, printInitialBlockContent, 3);
+        Block printInitialBlock = blockWithAnchor(owner, TypeList.VOID, printInitialBlockContent, 3, "print-initial");
         TryCatchBlock tryCatchInitial = new TryCatchBlock(printInitialBlock, nothing, catchBlocks2, 3);
 
         List<IRNode> mainTryCatchBlockContent = new ArrayList<>();
@@ -299,11 +304,11 @@ public class FixedTrees {
             // execute() runs test once, then prints once.
             mainTryCatchBlockContent.add(tryCatch2);
         }
-        Block mainTryCatchBlock = new Block(owner, TypeList.VOID, mainTryCatchBlockContent, 2);
+        Block mainTryCatchBlock = blockWithAnchor(owner, TypeList.VOID, mainTryCatchBlockContent, 2, "main-try-catch");
         TryCatchBlock mainTryCatch = new TryCatchBlock(mainTryCatchBlock, nothing, catchBlocks3, 2);
         ArrayList<IRNode> bodyContent = new ArrayList<>();
         bodyContent.add(mainTryCatch);
-        Block funcBody = new Block(owner, TypeList.VOID, bodyContent, 1);
+        Block funcBody = blockWithAnchor(owner, TypeList.VOID, bodyContent, 1, isMain ? "main-func-body" : "execute-func-body");
 
         // static main(String[] args)V or static execute()V
         VariableInfo mainArgs = new VariableInfo("args", owner,
@@ -325,5 +330,20 @@ public class FixedTrees {
                 new VariableInfo("this", owner, printStreamKlass, VariableInfo.LOCAL | VariableInfo.INITIALIZED),
                 new VariableInfo("t", owner, TypeList.OBJECT,
                         VariableInfo.LOCAL | VariableInfo.INITIALIZED));
+    }
+
+    private static Block blockWithAnchor(TypeKlass owner, Type returnType, List<? extends IRNode> content,
+            int level, String tag) {
+        long anchorSeed = stableAnchorSeed(owner.getName() + ":" + tag + ":" + level);
+        return new Block(owner, returnType, content, level, new Gene(anchorSeed));
+    }
+
+    private static long stableAnchorSeed(String value) {
+        long h = 0xcbf29ce484222325L;
+        for (int i = 0; i < value.length(); i++) {
+            h ^= value.charAt(i);
+            h *= 0x100000001b3L;
+        }
+        return h & Long.MAX_VALUE;
     }
 }
