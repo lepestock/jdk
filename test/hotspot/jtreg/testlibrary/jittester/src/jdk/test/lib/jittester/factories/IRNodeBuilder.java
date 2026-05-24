@@ -60,6 +60,7 @@ import jdk.test.lib.jittester.VariableInitialization;
 import jdk.test.lib.jittester.arrays.ArrayCreation;
 import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.arrays.ArrayExtraction;
+import jdk.test.lib.jittester.arrays.ArrayInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -140,6 +141,11 @@ public class IRNodeBuilder {
 
     public Factory<ArrayExtraction> getArrayExtractionFactory() {
         return new ArrayExtractionFactory(getComplexityLimit(), getOperatorLimit(), getOwnerClass(),
+                getResultType(), getExceptionSafe(), getNoConsts());
+    }
+
+    public Factory<ArrayInitializer> getArrayInitializerFactory() {
+        return new ArrayInitializerFactory(getComplexityLimit(), getOperatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 

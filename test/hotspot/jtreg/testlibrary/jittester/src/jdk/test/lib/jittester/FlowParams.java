@@ -33,17 +33,20 @@ public final class FlowParams {
     private final FlowParams prev;
     private final int statementLimit;
     private final int operatorLimit;
+    private final String iterationVariable;
 
-    private FlowParams(FlowParams prev, int statementLimit, int operatorLimit) {
+    private FlowParams(FlowParams prev, int statementLimit, int operatorLimit, String iterationVariable) {
         this.prev = prev;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
+        this.iterationVariable = iterationVariable;
     }
 
     public static FlowParams fromProductionParams() {
         return new FlowParams(null,
                 normalizeLimit(ProductionParams.statementLimit.value()),
-                normalizeLimit(ProductionParams.operatorLimit.value()));
+                normalizeLimit(ProductionParams.operatorLimit.value()),
+                null);
     }
 
     public int statementLimit() {
@@ -54,12 +57,20 @@ public final class FlowParams {
         return operatorLimit;
     }
 
+    public String iterationVariable() {
+        return iterationVariable;
+    }
+
     public Builder withStatementLimit(int value) {
         return new Builder(this).withStatementLimit(value);
     }
 
     public Builder withOperatorLimit(int value) {
         return new Builder(this).withOperatorLimit(value);
+    }
+
+    public Builder withIterationVariable(String value) {
+        return new Builder(this).withIterationVariable(value);
     }
 
     public Builder withProductionParamsLimits() {
@@ -71,6 +82,7 @@ public final class FlowParams {
     public String dumpSnapshot() {
         return "FlowParams{statementLimit=" + statementLimit
                 + ", operatorLimit=" + operatorLimit
+                + ", iterationVariable=" + (iterationVariable == null ? "<none>" : iterationVariable)
                 + ", depth=" + depth(this)
                 + "}";
     }
@@ -93,6 +105,7 @@ public final class FlowParams {
         private final FlowParams base;
         private int statementLimit;
         private int operatorLimit;
+        private String iterationVariable;
 
         private Builder(FlowParams base) {
             if (base == null) {
@@ -101,6 +114,7 @@ public final class FlowParams {
             this.base = base;
             this.statementLimit = base.statementLimit;
             this.operatorLimit = base.operatorLimit;
+            this.iterationVariable = base.iterationVariable;
         }
 
         public Builder withStatementLimit(int value) {
@@ -113,8 +127,13 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withIterationVariable(String value) {
+            this.iterationVariable = value;
+            return this;
+        }
+
         public FlowParams advance() {
-            return new FlowParams(base, statementLimit, operatorLimit);
+            return new FlowParams(base, statementLimit, operatorLimit, iterationVariable);
         }
     }
 }

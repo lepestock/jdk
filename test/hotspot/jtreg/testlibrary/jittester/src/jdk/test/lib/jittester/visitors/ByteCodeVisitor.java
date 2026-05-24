@@ -77,6 +77,7 @@ import jdk.test.lib.jittester.VariableInitialization;
 import jdk.test.lib.jittester.arrays.ArrayCreation;
 import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.arrays.ArrayExtraction;
+import jdk.test.lib.jittester.arrays.ArrayInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -214,6 +215,56 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
             currentMV.visitInsn(Opcodes.DALOAD);
         } else {
             currentMV.visitInsn(Opcodes.AALOAD);
+        }
+        return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public byte[] visit(ArrayInitializer node) {
+        TypeArray arrayType = node.getArrayType();
+        Type elementType = arrayType.type;
+        int size = node.getChildren().size();
+        visitLiteral(size);
+        if (elementType.equals(TypeList.BOOLEAN)) {
+            currentMV.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_BOOLEAN);
+        } else if (elementType.equals(TypeList.BYTE)) {
+            currentMV.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_BYTE);
+        } else if (elementType.equals(TypeList.CHAR)) {
+            currentMV.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_CHAR);
+        } else if (elementType.equals(TypeList.SHORT)) {
+            currentMV.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_SHORT);
+        } else if (elementType.equals(TypeList.INT)) {
+            currentMV.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
+        } else if (elementType.equals(TypeList.LONG)) {
+            currentMV.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_LONG);
+        } else if (elementType.equals(TypeList.FLOAT)) {
+            currentMV.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_FLOAT);
+        } else if (elementType.equals(TypeList.DOUBLE)) {
+            currentMV.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_DOUBLE);
+        } else {
+            currentMV.visitTypeInsn(Opcodes.ANEWARRAY, asInternalName(elementType.getName()));
+        }
+        for (int i = 0; i < size; i++) {
+            currentMV.visitInsn(Opcodes.DUP);
+            visitLiteral(i);
+            node.getChild(i).accept(this);
+            if (elementType.equals(TypeList.BOOLEAN) || elementType.equals(TypeList.BYTE)) {
+                currentMV.visitInsn(Opcodes.BASTORE);
+            } else if (elementType.equals(TypeList.CHAR)) {
+                currentMV.visitInsn(Opcodes.CASTORE);
+            } else if (elementType.equals(TypeList.SHORT)) {
+                currentMV.visitInsn(Opcodes.SASTORE);
+            } else if (elementType.equals(TypeList.INT)) {
+                currentMV.visitInsn(Opcodes.IASTORE);
+            } else if (elementType.equals(TypeList.LONG)) {
+                currentMV.visitInsn(Opcodes.LASTORE);
+            } else if (elementType.equals(TypeList.FLOAT)) {
+                currentMV.visitInsn(Opcodes.FASTORE);
+            } else if (elementType.equals(TypeList.DOUBLE)) {
+                currentMV.visitInsn(Opcodes.DASTORE);
+            } else {
+                currentMV.visitInsn(Opcodes.AASTORE);
+            }
         }
         return EMPTY_BYTE_ARRAY;
     }

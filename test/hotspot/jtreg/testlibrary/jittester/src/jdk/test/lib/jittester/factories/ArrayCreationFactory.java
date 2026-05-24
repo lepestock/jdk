@@ -24,6 +24,7 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -76,11 +77,11 @@ class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
                             .getExpressionFactory()
                             .produce());
                 } else {
-                    Literal dimension = builder.getLiteralFactory().produce();
-                    while (Integer.valueOf(dimension.getValue().toString()) < 1) {
-                        dimension = builder.getLiteralFactory().produce();
-                    }
-                    dims.add(dimension);
+                    // FIXME: temporary simplification for collection-alignment experiments:
+                    // treat all arrays as int-typed for sizing and use one generation-wide fixed int count.
+                    int preferredSize = GenerationState.preferredIntCollectionSize();
+                    int byteSizedDimension = Math.max(1, Math.min(Byte.MAX_VALUE, preferredSize));
+                    dims.add(new Literal((byte) byteSizedDimension, TypeList.BYTE));
                 }
             }
             VariableDeclaration var = builder
