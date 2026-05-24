@@ -79,6 +79,7 @@ public class ProductionParams {
     public static Option<Boolean> disableClasses = null;
     public static Option<Boolean> disableNestedBlocks = null;
     public static Option<Boolean> disableArrays = null;
+    public static Option<Integer> arrayFieldDefinitionWeightBonus = null;
     public static Option<Boolean> enableFinalizers = null;
     // workaraound: to reduce chance throwing ArrayIndexOutOfBoundsException
     public static Option<Integer> chanceExpressionIndex = null;
@@ -207,7 +208,8 @@ public class ProductionParams {
         disableInterfaces = optionResolver.addBooleanOption("disable-interfaces", "Disable generation of interfaces");
         disableClasses = optionResolver.addBooleanOption("disable-classes", "Disable generation of classes");
         disableNestedBlocks = optionResolver.addBooleanOption("disable-nested-blocks", "Disable generation of nested blocks");
-        disableArrays = optionResolver.addBooleanOption("disable-arrays", "Disable generation of arrays");
+        disableArrays = optionResolver.addBooleanOption(null, "arrays-disable", true,
+                "Disable generation of arrays");
         enableFinalizers = optionResolver.addBooleanOption("enable-finalizers", "Enable finalizers (for stress testing)");
         chanceExpressionIndex = optionResolver.addIntegerOption("chance-expression-index", 0, "A non negative decimal integer used to restrict chane of generating expression in array index while creating or accessing by index");
         chanceThrow = optionResolver.addIntegerOption("chance-throw", 30, "A non negative decimal integer used to restrict chane of 'throw' statement (is adjusted by 30% afterwards, i.e. value of 100 means 30% chance of generating such a statement)");
@@ -232,6 +234,8 @@ public class ProductionParams {
                 "Magnet matching mode: 0=strict exact-id preference (deterministic), >0 enables distance-weighted stochastic magnetism");
         arrayProductionWeightBonus = optionResolver.addIntegerOption("array-production-weight-bonus", 0,
                 "Additional selection weight percent for array productions (0 keeps default)");
+        arrayFieldDefinitionWeightBonus = optionResolver.addIntegerOption("arrays-field-definition-weight-bonus", 0,
+                "Additional selection weight percent for choosing array-typed class field declarations");
         embedPrinterClass = optionResolver.addBooleanOption(null, "embed-printer-class", false,
                 "Embed Printer helper class into each generated Java test source");
         pulsemap = optionResolver.addBooleanOption(null, "pulsemap", false,

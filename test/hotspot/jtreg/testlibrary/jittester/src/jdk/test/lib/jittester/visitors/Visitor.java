@@ -50,6 +50,7 @@ import jdk.test.lib.jittester.VariableDeclarationBlock;
 import jdk.test.lib.jittester.arrays.ArrayCreation;
 import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.arrays.ArrayExtraction;
+import jdk.test.lib.jittester.arrays.ArrayInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -80,6 +81,7 @@ public interface Visitor<T> {
     T visit(ArrayCreation node);
     T visit(ArrayElement node);
     T visit(ArrayExtraction node);
+    T visit(ArrayInitializer node);
     T visit(BinaryOperator node);
     T visit(Block node);
     T visit(Break node);

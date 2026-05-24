@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import jdk.test.lib.jittester.arrays.ArrayCreation;
 import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.arrays.ArrayExtraction;
+import jdk.test.lib.jittester.arrays.ArrayInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -83,6 +84,7 @@ public class Formatter {
             case ArrayCreation node -> VISITOR.visit(node);
             case ArrayElement node -> VISITOR.visit(node);
             case ArrayExtraction node -> VISITOR.visit(node);
+            case ArrayInitializer node -> VISITOR.visit(node);
             case BinaryOperator node -> VISITOR.visit(node);
             case Block node -> VISITOR.visit(node);
             case Break node -> VISITOR.visit(node);

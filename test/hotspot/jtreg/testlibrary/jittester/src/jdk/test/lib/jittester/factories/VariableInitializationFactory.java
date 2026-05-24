@@ -37,6 +37,7 @@ import jdk.test.lib.jittester.BuiltInType;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.VariableInitialization;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 import jdk.test.lib.jittester.utils.GenomeChoice;
@@ -44,6 +45,7 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class VariableInitializationFactory extends SafeFactory<VariableInitialization> {
     private static final double NUMERIC_INIT_TYPE_PREFERENCE = 0.85;
+    private static final double FIELD_ARRAY_INIT_BASE_PROBABILITY = 0.08;
     private final int operatorLimit;
     private final long complexityLimit;
     private final boolean constant;
@@ -91,6 +93,16 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                 if (!ProductionParams.disableExprInInit.value()) {
                     // Prefer non-literal initializer expressions; fall back to literal when expression fails.
                     try {
+                        if (resultType instanceof TypeArray) {
+                            init = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
+                                    .setOperatorLimit(effectiveOperatorLimit)
+                                    .setOwnerKlass(ownerClass)
+                                    .setResultType(resultType)
+                                    .setExceptionSafe(exceptionSafe)
+                                    .setNoConsts(noConstsForInitExpr)
+                                    .getArrayInitializerFactory()
+                                    .produce();
+                        } else {
                         IRNodeBuilder exprBuilder = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
                                 .setOperatorLimit(effectiveOperatorLimit)
                                 .setOwnerKlass(ownerClass)
@@ -101,6 +113,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                             init = exprBuilder.getArithmeticOperatorFactory().produce();
                         } else {
                             init = exprBuilder.getLimitedExpressionFactory().produce();
+                        }
                         }
                     } catch (ProductionFailedException ignored) {
                         try {
@@ -169,6 +182,10 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
     }
 
     private Type pickInitializationType() throws ProductionFailedException {
+        if (!isLocal && !ProductionParams.disableArrays.value()
+                && PseudoRandom.randomBoolean(fieldArrayInitProbability())) {
+            return new TypeArray(pickArrayElementType(), 1);
+        }
         if (PseudoRandom.randomBoolean(NUMERIC_INIT_TYPE_PREFERENCE)) {
             List<Type> numericPreferred = new ArrayList<>();
             numericPreferred.add(TypeList.INT);
@@ -183,6 +200,21 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         LinkedList<Type> types = new LinkedList<>(TypeList.getAll());
         if (types.isEmpty()) {
             throw new ProductionFailedException();
+        }
+        return TypeSelectionUtil.pickPreferredOrAnyType(ownerClass, types);
+    }
+
+    private static double fieldArrayInitProbability() {
+        double bonusScale = 1.0
+                + Math.max(0, ProductionParams.arrayFieldDefinitionWeightBonus.value()) / 100.0;
+        return Math.max(0.0, Math.min(1.0, FIELD_ARRAY_INIT_BASE_PROBABILITY * bonusScale));
+    }
+
+    private Type pickArrayElementType() {
+        LinkedList<Type> types = new LinkedList<>(TypeList.getAll());
+        types.removeIf(t -> t instanceof TypeArray || t.equals(TypeList.VOID));
+        if (types.isEmpty()) {
+            return TypeList.INT;
         }
         return TypeSelectionUtil.pickPreferredOrAnyType(ownerClass, types);
     }

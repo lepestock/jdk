@@ -66,6 +66,7 @@ import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.arrays.ArrayCreation;
 import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.arrays.ArrayExtraction;
+import jdk.test.lib.jittester.arrays.ArrayInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -289,10 +290,13 @@ public class JavaCodeVisitor implements Visitor<String> {
             genePayload = ":gene " + node.getExpressionGeneToken();
         }
         String indexExpr = node.getChild(1).accept(this);
-        String suffix = node.getChildren().stream()
+        List<String> tailIndices = node.getChildren().stream()
                 .skip(2)
                 .map(c -> c.accept(this))
-                .collect(Collectors.joining("][", "[", "]"));
+                .toList();
+        String suffix = tailIndices.isEmpty()
+                ? ""
+                : tailIndices.stream().collect(Collectors.joining("][", "[", "]"));
         return "jdk.test.lib.jittester.pulse.Pulse." + method
                 + "(" + arrayExpr + ", " + indexExpr + ", \"" + genePayload + "\")"
                 + suffix;
@@ -314,6 +318,16 @@ public class JavaCodeVisitor implements Visitor<String> {
                 .map(c -> c.accept(this))
                 .collect(Collectors.joining("][", "[", "]")));
         return code.toString();
+    }
+
+    @Override
+    public String visit(ArrayInitializer node) {
+        TypeArray arrayType = node.getArrayType();
+        String elementType = arrayType.type.accept(this);
+        String elements = node.getChildren().stream()
+                .map(c -> c.accept(this))
+                .collect(Collectors.joining(", "));
+        return "new " + elementType + "[] { " + elements + " }";
     }
 
     @Override
