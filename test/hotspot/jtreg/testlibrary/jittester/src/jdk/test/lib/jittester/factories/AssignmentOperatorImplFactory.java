@@ -24,7 +24,9 @@
 package jdk.test.lib.jittester.factories;
 
 import jdk.test.lib.util.Pair;
+import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.BinaryOperator;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -72,22 +74,31 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
                 .setOperatorLimit(leftOperatorLimit)
                 .setResultType(leftOperandType)
                 .setIsConstant(false);
-        Rule<VariableBase> rule = new Rule<>("assignment");
+        Rule<IRNode> rule = new Rule<>("assignment");
         rule.add("initialized_nonconst_var", builder.setIsInitialized(true).getVariableFactory());
         rule.add("uninitialized_nonconst_var", builder.setIsInitialized(false).getVariableFactory());
-        VariableBase leftOperandValue = rule.produce();
+        if (GenerationState.currentFlowParams().inArrayKernel()) {
+            // Inside array-kernel blocks, array lvalue indices must follow the kernel iterator.
+            rule.add("array_element_lvalue",
+                    new IterationIndexedArrayElementFactory((TypeKlass) ownerClass, leftOperandType), 5.0);
+        }
+        IRNode leftOperandValue = rule.produce();
+        boolean preferIndexedArrayTerminal = GenerationState.currentFlowParams().inArrayKernel()
+                && leftOperandValue instanceof ArrayElement;
         IRNode rightOperandValue = builder.setComplexityLimit(rightComplexityLimit)
                 .setOperatorLimit(rightOperatorLimit)
                 .setResultType(rightOperandType)
-                .getExpressionFactory()
-                .produce();
+                .withPreferIterationIndexedArrayTerminal(preferIndexedArrayTerminal)
+                .produceExpression();
         try {
-            if ((leftOperandValue.getVariableInfo().flags & VariableInfo.INITIALIZED) == 0) {
-                leftOperandValue.getVariableInfo().flags |= VariableInfo.INITIALIZED;
+            if (leftOperandValue instanceof VariableBase variableBase
+                    && (variableBase.getVariableInfo().flags & VariableInfo.INITIALIZED) == 0) {
+                variableBase.getVariableInfo().flags |= VariableInfo.INITIALIZED;
             }
         } catch (Exception e) {
             throw new ProductionFailedException(e.getMessage());
         }
         return new BinaryOperator(opKind, resultType, leftOperandValue, rightOperandValue);
     }
+
 }

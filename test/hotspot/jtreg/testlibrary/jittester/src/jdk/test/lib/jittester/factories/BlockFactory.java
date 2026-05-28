@@ -60,6 +60,7 @@ class BlockFactory extends Factory<Block> {
     private static final double LOCAL_DECL_WEIGHT_BASE = 0.08;
     private static final double LOCAL_DECL_WEIGHT_SHALLOW_BONUS = 0.10;
     private static final double LOCAL_DECL_WEIGHT_EARLY_BONUS = 0.18;
+    private static final double ARRAY_KERNEL_WEIGHT = 0.35;
     private static final int SHALLOW_BLOCK_DEPTH_THRESHOLD = 2;
     private static final int EARLY_STATEMENT_INDEX_THRESHOLD = 2;
     private static final ThreadLocal<Integer> BLOCK_DEPTH = ThreadLocal.withInitial(() -> 0);
@@ -176,6 +177,15 @@ class BlockFactory extends Factory<Block> {
                             int childStatementLimit = Math.max(1,
                                     (int) Math.ceil(effectiveStatementLimit * CHILD_STATEMENT_LIMIT_FACTOR));
                             builder.setStatementLimit(childStatementLimit).setLevel(level + 1);
+                            boolean inArrayKernelContext = GenerationState.currentFlowParams().inArrayKernel();
+                            if (!inArrayKernelContext) {
+                                rule.add("array_kernel", builder
+                                        .setCanHaveReturn(false)
+                                        .setCanHaveThrow(false)
+                                        .setCanHaveBreaks(false)
+                                        .setCanHaveContinues(false)
+                                        .getArrayKernelLoopFactory(), ARRAY_KERNEL_WEIGHT);
+                            }
                             if (!ProductionParams.disableNestedBlocks.value()) {
                                 rule.add("block", builder.setCanHaveReturn(false)
                                         .setCanHaveThrow(false)

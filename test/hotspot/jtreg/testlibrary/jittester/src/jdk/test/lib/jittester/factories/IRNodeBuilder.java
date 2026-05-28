@@ -32,6 +32,8 @@ import jdk.test.lib.jittester.Break;
 import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.Continue;
 import jdk.test.lib.jittester.Declaration;
+import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.If;
 import jdk.test.lib.jittester.Literal;
@@ -119,6 +121,9 @@ public class IRNodeBuilder {
     private Optional<Integer> flags = Optional.empty();
     private Optional<FunctionInfo> functionInfo = Optional.empty();
     private Optional<Boolean> semicolon = Optional.empty();
+    private Optional<String> arrayKernelIterationVariable = Optional.empty();
+    private Optional<Boolean> inArrayKernel = Optional.empty();
+    private Optional<Boolean> preferIterationIndexedArrayTerminal = Optional.empty();
 
     public Factory<ArgumentDeclaration> getArgumentDeclarationFactory() {
         return new ArgumentDeclarationFactory(getArgumentType(), getVariableNumber());
@@ -256,6 +261,49 @@ public class IRNodeBuilder {
                 canHaveBreaks.orElse(false), canHaveContinues.orElse(false),
                 canHaveReturn.orElse(false), canHaveReturn.orElse(false));
         //now 'throw' can be placed only in the same positions as 'return'
+    }
+
+    public Factory<For> getArrayKernelLoopFactory() {
+        return new ArrayKernelLoopFactory(getOwnerClass(), getResultType(), getComplexityLimit(),
+                getStatementLimit(), getOperatorLimit(), getLevel(),
+                canHaveReturn.orElse(false));
+    }
+
+    /**
+     * Produces a block under an atomically advanced FlowParams frame.
+     * This is intended for context-shaped block production (e.g. array kernels).
+     */
+    public Block produceBlock() throws ProductionFailedException {
+        FlowParams previous = GenerationState.currentFlowParams();
+        FlowParams.Builder flowBuilder = previous
+                .withStatementLimit(getStatementLimit())
+                .withOperatorLimit(getOperatorLimit());
+        arrayKernelIterationVariable.ifPresent(flowBuilder::withIterationVariable);
+        inArrayKernel.ifPresent(flowBuilder::withInArrayKernel);
+        GenerationState.setCurrentFlowParams(flowBuilder.advance());
+        try {
+            return getBlockFactory().produce();
+        } finally {
+            GenerationState.setCurrentFlowParams(previous);
+        }
+    }
+
+    /**
+     * Produces an expression under an atomically advanced FlowParams frame.
+     * This allows expression-context hints without leaking them outside.
+     */
+    public IRNode produceExpression() throws ProductionFailedException {
+        FlowParams previous = GenerationState.currentFlowParams();
+        FlowParams.Builder flowBuilder = previous
+                .withStatementLimit(previous.statementLimit())
+                .withOperatorLimit(previous.operatorLimit());
+        preferIterationIndexedArrayTerminal.ifPresent(flowBuilder::withPreferIterationIndexedArrayTerminal);
+        GenerationState.setCurrentFlowParams(flowBuilder.advance());
+        try {
+            return getExpressionFactory().produce();
+        } finally {
+            GenerationState.setCurrentFlowParams(previous);
+        }
     }
 
     public Factory<Break> getBreakFactory() {
@@ -659,6 +707,33 @@ public class IRNodeBuilder {
     public IRNodeBuilder setSemicolon(boolean value) {
         semicolon = Optional.of(value);
         return this;
+    }
+
+    public IRNodeBuilder setArrayKernelIterationVariable(String value) {
+        arrayKernelIterationVariable = Optional.ofNullable(value);
+        return this;
+    }
+
+    public IRNodeBuilder withArrayKernelVariable(String value) {
+        return setArrayKernelIterationVariable(value);
+    }
+
+    public IRNodeBuilder setInArrayKernel(boolean value) {
+        inArrayKernel = Optional.of(value);
+        return this;
+    }
+
+    public IRNodeBuilder withInArrayKernel(boolean value) {
+        return setInArrayKernel(value);
+    }
+
+    public IRNodeBuilder setPreferIterationIndexedArrayTerminal(boolean value) {
+        preferIterationIndexedArrayTerminal = Optional.of(value);
+        return this;
+    }
+
+    public IRNodeBuilder withPreferIterationIndexedArrayTerminal(boolean value) {
+        return setPreferIterationIndexedArrayTerminal(value);
     }
 
     // getters

@@ -654,6 +654,7 @@ public class JavaCodeVisitor implements Visitor<String> {
         Loop loop = node.getLoop();
         StringBuilder code = new StringBuilder();
         int level = node.getLevel();
+        String manipulator = stripTrailingSemicolon(loop.manipulator.accept(this));
         code.append(loop.initialization.accept(this))
             .append("\n")
             .append(header.accept(this))
@@ -669,15 +670,17 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append(openBraceWithGene(level, body1))
             .append(loopPulseIterationBeat(level, "for", loop, body1))
             .append(body1.accept(this))
-            .append(PrintingUtils.align(level + 1))
-            .append(loop.manipulator.accept(this))
-            .append(";\n")
+            .append(manipulator.isEmpty() ? "" : PrintingUtils.align(level + 1) + manipulator + ";\n")
             .append(body2.accept(this))
             .append(body3.accept(this))
             .append(closeBraceWithGene(level, body1))
             .append("\n")
             .append(loopPulseEndScope(level, loop, body1));
         return code.toString();
+    }
+
+    private static String stripTrailingSemicolon(String code) {
+        return code.endsWith(";") ? code.substring(0, code.length() - 1) : code;
     }
 
     @Override

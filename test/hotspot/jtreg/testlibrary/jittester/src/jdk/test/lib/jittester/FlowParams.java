@@ -34,19 +34,27 @@ public final class FlowParams {
     private final int statementLimit;
     private final int operatorLimit;
     private final String iterationVariable;
+    private final boolean inArrayKernel;
+    private final boolean preferIterationIndexedArrayTerminal;
 
-    private FlowParams(FlowParams prev, int statementLimit, int operatorLimit, String iterationVariable) {
+    private FlowParams(FlowParams prev, int statementLimit, int operatorLimit,
+                       String iterationVariable, boolean inArrayKernel,
+                       boolean preferIterationIndexedArrayTerminal) {
         this.prev = prev;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.iterationVariable = iterationVariable;
+        this.inArrayKernel = inArrayKernel;
+        this.preferIterationIndexedArrayTerminal = preferIterationIndexedArrayTerminal;
     }
 
     public static FlowParams fromProductionParams() {
         return new FlowParams(null,
                 normalizeLimit(ProductionParams.statementLimit.value()),
                 normalizeLimit(ProductionParams.operatorLimit.value()),
-                null);
+                null,
+                false,
+                false);
     }
 
     public int statementLimit() {
@@ -59,6 +67,14 @@ public final class FlowParams {
 
     public String iterationVariable() {
         return iterationVariable;
+    }
+
+    public boolean inArrayKernel() {
+        return inArrayKernel;
+    }
+
+    public boolean preferIterationIndexedArrayTerminal() {
+        return preferIterationIndexedArrayTerminal;
     }
 
     public Builder withStatementLimit(int value) {
@@ -83,6 +99,8 @@ public final class FlowParams {
         return "FlowParams{statementLimit=" + statementLimit
                 + ", operatorLimit=" + operatorLimit
                 + ", iterationVariable=" + (iterationVariable == null ? "<none>" : iterationVariable)
+                + ", inArrayKernel=" + inArrayKernel
+                + ", preferIterationIndexedArrayTerminal=" + preferIterationIndexedArrayTerminal
                 + ", depth=" + depth(this)
                 + "}";
     }
@@ -106,6 +124,8 @@ public final class FlowParams {
         private int statementLimit;
         private int operatorLimit;
         private String iterationVariable;
+        private boolean inArrayKernel;
+        private boolean preferIterationIndexedArrayTerminal;
 
         private Builder(FlowParams base) {
             if (base == null) {
@@ -115,6 +135,8 @@ public final class FlowParams {
             this.statementLimit = base.statementLimit;
             this.operatorLimit = base.operatorLimit;
             this.iterationVariable = base.iterationVariable;
+            this.inArrayKernel = base.inArrayKernel;
+            this.preferIterationIndexedArrayTerminal = base.preferIterationIndexedArrayTerminal;
         }
 
         public Builder withStatementLimit(int value) {
@@ -132,8 +154,19 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withInArrayKernel(boolean value) {
+            this.inArrayKernel = value;
+            return this;
+        }
+
+        public Builder withPreferIterationIndexedArrayTerminal(boolean value) {
+            this.preferIterationIndexedArrayTerminal = value;
+            return this;
+        }
+
         public FlowParams advance() {
-            return new FlowParams(base, statementLimit, operatorLimit, iterationVariable);
+            return new FlowParams(base, statementLimit, operatorLimit, iterationVariable,
+                    inArrayKernel, preferIterationIndexedArrayTerminal);
         }
     }
 }
