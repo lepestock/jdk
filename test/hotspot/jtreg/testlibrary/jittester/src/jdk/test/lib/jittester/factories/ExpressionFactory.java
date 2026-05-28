@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.factories;
 
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.OperatorKind;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
@@ -36,6 +37,7 @@ import jdk.test.lib.jittester.Logger;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.GenomeChoice;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
@@ -108,6 +110,17 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                 .getVariableFactory();
         rule.add("variable", variableFactory, terminalWeight);
         terminalRule.add("variable", variableFactory);
+        if (GenerationState.currentFlowParams().preferIterationIndexedArrayTerminal()
+                && !ProductionParams.disableArrays.value()
+                && !exceptionSafe
+                && !(resultType instanceof TypeArray)) {
+            Factory<? extends IRNode> iterationArrayTerminalFactory =
+                    new IterationIndexedArrayElementFactory(ownerClass, resultType);
+            double boostedTerminalWeight = terminalWeight * 8.0;
+            rule.add("iteration_indexed_array_terminal",
+                    iterationArrayTerminalFactory, boostedTerminalWeight);
+            terminalRule.add("iteration_indexed_array_terminal", iterationArrayTerminalFactory);
+        }
         if (isReferenceTerminalType(resultType)) {
             Factory<? extends IRNode> classTerminalFactory = new ClassTerminalFactory(
                     complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
