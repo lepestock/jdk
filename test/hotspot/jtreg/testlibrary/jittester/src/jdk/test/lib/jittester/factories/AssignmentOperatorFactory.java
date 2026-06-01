@@ -36,6 +36,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class AssignmentOperatorFactory extends Factory<Operator> {
+    private static final double COMPOUND_MOD_WEIGHT = 0.1;
     private final int operatorLimit;
     private final long complexityLimit;
     private final Type resultType;
@@ -58,7 +59,9 @@ class AssignmentOperatorFactory extends Factory<Operator> {
         rule.add("compound_mul", builder.setOperatorKind(OperatorKind.COMPOUND_MUL).getBinaryOperatorFactory());
         if (!exceptionSafe) {
             rule.add("compound_div", builder.setOperatorKind(OperatorKind.COMPOUND_DIV).getBinaryOperatorFactory());
-            rule.add("compound_mod", builder.setOperatorKind(OperatorKind.COMPOUND_MOD).getBinaryOperatorFactory());
+            // Keep %= available but pessimised: it is a frequent source of runtime failures.
+            rule.add("compound_mod", builder.setOperatorKind(OperatorKind.COMPOUND_MOD).getBinaryOperatorFactory(),
+                    COMPOUND_MOD_WEIGHT);
         }
         rule.add("compound_and", builder.setOperatorKind(OperatorKind.COMPOUND_AND).getBinaryOperatorFactory());
         rule.add("compound_or", builder.setOperatorKind(OperatorKind.COMPOUND_OR).getBinaryOperatorFactory());

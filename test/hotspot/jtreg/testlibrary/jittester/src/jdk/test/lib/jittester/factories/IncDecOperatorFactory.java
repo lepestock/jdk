@@ -31,6 +31,8 @@ import jdk.test.lib.jittester.UnaryOperator;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class IncDecOperatorFactory extends UnaryOperatorFactory {
+    private static final int LVALUE_PICK_RETRIES = 16;
+
     IncDecOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
                           Type klass, Type resultType, boolean safe, boolean noconsts) {
         super(opKind, complexityLimit, operatorLimit, klass, resultType, safe, noconsts);
@@ -43,7 +45,8 @@ class IncDecOperatorFactory extends UnaryOperatorFactory {
 
     @Override
     protected UnaryOperator generateProduction(Type l) throws ProductionFailedException {
-        return new UnaryOperator(opKind, new IRNodeBuilder().setComplexityLimit(complexityLimit - 1)
+        return new UnaryOperator(opKind, new ReadOnlyLocalLValueFactory(
+                new IRNodeBuilder().setComplexityLimit(complexityLimit - 1)
                 .setOperatorLimit(operatorLimit - 1)
                 .setOwnerKlass((TypeKlass) ownerClass)
                 .setResultType(l)
@@ -52,6 +55,6 @@ class IncDecOperatorFactory extends UnaryOperatorFactory {
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(exceptionSafe)
                 .getVariableFactory()
-                .produce());
+                , LVALUE_PICK_RETRIES).produce());
     }
 }

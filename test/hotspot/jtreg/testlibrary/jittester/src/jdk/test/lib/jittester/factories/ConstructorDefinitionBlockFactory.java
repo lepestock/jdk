@@ -27,7 +27,11 @@ import java.util.ArrayList;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
+import jdk.test.lib.jittester.Symbol;
+import jdk.test.lib.jittester.SymbolTable;
+import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.functions.ConstructorDefinitionBlock;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.Logger;
@@ -64,7 +68,9 @@ class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlo
         Logger.log(ownerClass, "Point 1", content);
         int memFunLimit = PseudoRandom.randomNotZero(memberFunctionsLimit);
         builder.setComplexityLimit(complexityLimit / memFunLimit);
-        if (!ProductionParams.disableStatic.value() && PseudoRandom.randomBoolean()) {
+        boolean mustEmitStaticConstructor = hasPendingStaticArrayInitialization();
+        if (!ProductionParams.disableStatic.value()
+                && (mustEmitStaticConstructor || PseudoRandom.randomBoolean())) {
             // Generate static constructor
             content.add(builder.getStaticConstructorDefinitionFactory().produce());
             // take static constructor into account
@@ -92,5 +98,17 @@ class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlo
         ConstructorDefinitionBlock result = new ConstructorDefinitionBlock(content, level);
         Logger.log(ownerClass, "Result", content);
         return result;
+    }
+
+    private boolean hasPendingStaticArrayInitialization() {
+        for (Symbol symbol : SymbolTable.getAllCombined(ownerClass, VariableInfo.class)) {
+            VariableInfo variableInfo = (VariableInfo) symbol;
+            if (variableInfo.isStatic()
+                    && variableInfo.type instanceof TypeArray
+                    && (variableInfo.flags & VariableInfo.INITIALIZED) == 0) {
+                return true;
+            }
+        }
+        return false;
     }
 }

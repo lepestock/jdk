@@ -124,6 +124,9 @@ public class IRNodeBuilder {
     private Optional<String> arrayKernelIterationVariable = Optional.empty();
     private Optional<Boolean> inArrayKernel = Optional.empty();
     private Optional<Boolean> preferIterationIndexedArrayTerminal = Optional.empty();
+    private Optional<String[]> moreReadOnlyVars = Optional.empty();
+    private Optional<String[]> moreIterationVariables = Optional.empty();
+    private Optional<Boolean> denominatorContext = Optional.empty();
 
     public Factory<ArgumentDeclaration> getArgumentDeclarationFactory() {
         return new ArgumentDeclarationFactory(getArgumentType(), getVariableNumber());
@@ -280,6 +283,9 @@ public class IRNodeBuilder {
                 .withOperatorLimit(getOperatorLimit());
         arrayKernelIterationVariable.ifPresent(flowBuilder::withIterationVariable);
         inArrayKernel.ifPresent(flowBuilder::withInArrayKernel);
+        moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
+        moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
+        denominatorContext.ifPresent(flowBuilder::withDenominatorContext);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
             return getBlockFactory().produce();
@@ -298,6 +304,9 @@ public class IRNodeBuilder {
                 .withStatementLimit(previous.statementLimit())
                 .withOperatorLimit(previous.operatorLimit());
         preferIterationIndexedArrayTerminal.ifPresent(flowBuilder::withPreferIterationIndexedArrayTerminal);
+        moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
+        moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
+        denominatorContext.ifPresent(flowBuilder::withDenominatorContext);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
             return getExpressionFactory().produce();
@@ -734,6 +743,25 @@ public class IRNodeBuilder {
 
     public IRNodeBuilder withPreferIterationIndexedArrayTerminal(boolean value) {
         return setPreferIterationIndexedArrayTerminal(value);
+    }
+
+    public IRNodeBuilder withMoreReadOnlyVars(String... values) {
+        moreReadOnlyVars = Optional.ofNullable(values);
+        return this;
+    }
+
+    public IRNodeBuilder withMoreIterationVariables(String... values) {
+        moreIterationVariables = Optional.ofNullable(values);
+        return this;
+    }
+
+    public IRNodeBuilder setDenominatorContext(boolean value) {
+        denominatorContext = Optional.of(value);
+        return this;
+    }
+
+    public IRNodeBuilder withDenominatorContext(boolean value) {
+        return setDenominatorContext(value);
     }
 
     // getters

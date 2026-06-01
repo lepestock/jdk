@@ -36,6 +36,8 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory {
+    private static final int LVALUE_PICK_RETRIES = 16;
+
     CompoundArithmeticAssignmentOperatorFactory(OperatorKind opKind, long complexityLimit,
             int operatorLimit, TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
         super(opKind, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
@@ -64,15 +66,20 @@ class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory 
         IRNode rightExpr = builder.setComplexityLimit(rightComplexityLimit)
                 .setOperatorLimit(rightOperatorLimit)
                 .setResultType(rightType)
-                .getExpressionFactory()
-                .produce();
-        VariableBase leftExpr = builder.setComplexityLimit(leftComplexityLimit)
+                .withDenominatorContext(isDivisionLikeOperator())
+                .produceExpression();
+        Factory<VariableBase> leftExprFactory = builder.setComplexityLimit(leftComplexityLimit)
                 .setOperatorLimit(leftOperatorLimit)
                 .setResultType(leftType)
                 .setIsConstant(false)
                 .setIsInitialized(true)
-                .getVariableFactory()
-                .produce();
-        return new BinaryOperator(opKind, resultType, leftExpr, rightExpr);
+                .getVariableFactory();
+        VariableBase selectedLeft =
+                (VariableBase) new ReadOnlyLocalLValueFactory(leftExprFactory, LVALUE_PICK_RETRIES).produce();
+        return new BinaryOperator(opKind, resultType, selectedLeft, rightExpr);
+    }
+
+    private boolean isDivisionLikeOperator() {
+        return opKind == OperatorKind.COMPOUND_DIV || opKind == OperatorKind.COMPOUND_MOD;
     }
 }

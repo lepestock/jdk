@@ -276,6 +276,9 @@ public class JavaCodeVisitor implements Visitor<String> {
                 .skip(1)
                 .map(c -> c.accept(this))
                 .collect(Collectors.joining("][", "[", "]"));
+        if (isAssignmentLValueArrayElement(node)) {
+            return arrayExpr + indices;
+        }
         if (!ProductionParams.pulsemap.value()
                 || node.getChildren().size() < 2
                 || !(array.getResultType() instanceof TypeArray)) {
@@ -300,6 +303,23 @@ public class JavaCodeVisitor implements Visitor<String> {
         return "jdk.test.lib.jittester.pulse.Pulse." + method
                 + "(" + arrayExpr + ", " + indexExpr + ", \"" + genePayload + "\")"
                 + suffix;
+    }
+
+    private static boolean isAssignmentLValueArrayElement(ArrayElement node) {
+        IRNode parent = node.getParent();
+        if (!(parent instanceof BinaryOperator binOp)) {
+            return false;
+        }
+        if (binOp.getChild(Operator.Order.LEFT.ordinal()) != node) {
+            return false;
+        }
+        return switch (binOp.getOperationKind()) {
+            case ASSIGN,
+                    COMPOUND_ADD, COMPOUND_SUB, COMPOUND_MUL, COMPOUND_DIV, COMPOUND_MOD,
+                    COMPOUND_AND, COMPOUND_OR, COMPOUND_XOR,
+                    COMPOUND_SHL, COMPOUND_SHR, COMPOUND_SAR -> true;
+            default -> false;
+        };
     }
 
     @Override

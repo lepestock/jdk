@@ -35,6 +35,8 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class CompoundShiftAssignmentOperatorFactory extends BinaryOperatorFactory {
+    private static final int LVALUE_PICK_RETRIES = 16;
+
     CompoundShiftAssignmentOperatorFactory(OperatorKind opKind, long complexityLimit,
             int operatorLimit, TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
         super(opKind, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
@@ -60,13 +62,13 @@ class CompoundShiftAssignmentOperatorFactory extends BinaryOperatorFactory {
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
-        IRNode leftExpr = builder.setComplexityLimit(leftComplexityLimit)
+        IRNode leftExpr = new ReadOnlyLocalLValueFactory(builder.setComplexityLimit(leftComplexityLimit)
                 .setOperatorLimit(leftOperatorLimit)
                 .setResultType(leftType)
                 .setIsConstant(false)
                 .setIsInitialized(true)
                 .getVariableFactory()
-                .produce();
+                , LVALUE_PICK_RETRIES).produce();
         IRNode rightExpr = builder.setComplexityLimit(rightComplexityLimit)
                 .setOperatorLimit(rightOperatorLimit)
                 .setResultType(rightType)

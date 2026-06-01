@@ -23,6 +23,10 @@
 
 package jdk.test.lib.jittester;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
  * Scoped generation-time parameters that may vary across replay/mutation scopes.
  *
@@ -36,16 +40,25 @@ public final class FlowParams {
     private final String iterationVariable;
     private final boolean inArrayKernel;
     private final boolean preferIterationIndexedArrayTerminal;
+    private final Set<String> readOnlyVars;
+    private final Set<String> iterationVariables;
+    private final boolean denominatorContext;
 
     private FlowParams(FlowParams prev, int statementLimit, int operatorLimit,
                        String iterationVariable, boolean inArrayKernel,
-                       boolean preferIterationIndexedArrayTerminal) {
+                       boolean preferIterationIndexedArrayTerminal,
+                       Set<String> readOnlyVars,
+                       Set<String> iterationVariables,
+                       boolean denominatorContext) {
         this.prev = prev;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.iterationVariable = iterationVariable;
         this.inArrayKernel = inArrayKernel;
         this.preferIterationIndexedArrayTerminal = preferIterationIndexedArrayTerminal;
+        this.readOnlyVars = readOnlyVars;
+        this.iterationVariables = iterationVariables;
+        this.denominatorContext = denominatorContext;
     }
 
     public static FlowParams fromProductionParams() {
@@ -54,6 +67,9 @@ public final class FlowParams {
                 normalizeLimit(ProductionParams.operatorLimit.value()),
                 null,
                 false,
+                false,
+                Collections.emptySet(),
+                Collections.emptySet(),
                 false);
     }
 
@@ -77,6 +93,32 @@ public final class FlowParams {
         return preferIterationIndexedArrayTerminal;
     }
 
+    public boolean isReadOnlyVar(String variableName) {
+        if (variableName == null || variableName.isBlank()) {
+            return false;
+        }
+        return readOnlyVars.contains(variableName);
+    }
+
+    public Set<String> readOnlyVars() {
+        return readOnlyVars;
+    }
+
+    public boolean isIterationVariable(String variableName) {
+        if (variableName == null || variableName.isBlank()) {
+            return false;
+        }
+        return iterationVariables.contains(variableName);
+    }
+
+    public Set<String> iterationVariables() {
+        return iterationVariables;
+    }
+
+    public boolean denominatorContext() {
+        return denominatorContext;
+    }
+
     public Builder withStatementLimit(int value) {
         return new Builder(this).withStatementLimit(value);
     }
@@ -95,12 +137,23 @@ public final class FlowParams {
                 .withOperatorLimit(ProductionParams.operatorLimit.value());
     }
 
+    public Builder withMoreReadOnlyVars(String... values) {
+        return new Builder(this).withMoreReadOnlyVars(values);
+    }
+
+    public Builder withMoreIterationVariables(String... values) {
+        return new Builder(this).withMoreIterationVariables(values);
+    }
+
     public String dumpSnapshot() {
         return "FlowParams{statementLimit=" + statementLimit
                 + ", operatorLimit=" + operatorLimit
                 + ", iterationVariable=" + (iterationVariable == null ? "<none>" : iterationVariable)
                 + ", inArrayKernel=" + inArrayKernel
                 + ", preferIterationIndexedArrayTerminal=" + preferIterationIndexedArrayTerminal
+                + ", readOnlyVars=" + readOnlyVars
+                + ", iterationVariables=" + iterationVariables
+                + ", denominatorContext=" + denominatorContext
                 + ", depth=" + depth(this)
                 + "}";
     }
@@ -126,6 +179,9 @@ public final class FlowParams {
         private String iterationVariable;
         private boolean inArrayKernel;
         private boolean preferIterationIndexedArrayTerminal;
+        private LinkedHashSet<String> readOnlyVars;
+        private LinkedHashSet<String> iterationVariables;
+        private boolean denominatorContext;
 
         private Builder(FlowParams base) {
             if (base == null) {
@@ -137,6 +193,9 @@ public final class FlowParams {
             this.iterationVariable = base.iterationVariable;
             this.inArrayKernel = base.inArrayKernel;
             this.preferIterationIndexedArrayTerminal = base.preferIterationIndexedArrayTerminal;
+            this.readOnlyVars = new LinkedHashSet<>(base.readOnlyVars);
+            this.iterationVariables = new LinkedHashSet<>(base.iterationVariables);
+            this.denominatorContext = base.denominatorContext;
         }
 
         public Builder withStatementLimit(int value) {
@@ -164,9 +223,41 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withMoreReadOnlyVars(String... values) {
+            if (values == null) {
+                return this;
+            }
+            for (String value : values) {
+                if (value != null && !value.isBlank()) {
+                    readOnlyVars.add(value);
+                }
+            }
+            return this;
+        }
+
+        public Builder withMoreIterationVariables(String... values) {
+            if (values == null) {
+                return this;
+            }
+            for (String value : values) {
+                if (value != null && !value.isBlank()) {
+                    iterationVariables.add(value);
+                }
+            }
+            return this;
+        }
+
+        public Builder withDenominatorContext(boolean value) {
+            this.denominatorContext = value;
+            return this;
+        }
+
         public FlowParams advance() {
             return new FlowParams(base, statementLimit, operatorLimit, iterationVariable,
-                    inArrayKernel, preferIterationIndexedArrayTerminal);
+                    inArrayKernel, preferIterationIndexedArrayTerminal,
+                    Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
+                    Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)),
+                    denominatorContext);
         }
     }
 }

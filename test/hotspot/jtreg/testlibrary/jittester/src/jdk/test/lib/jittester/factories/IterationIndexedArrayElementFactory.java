@@ -25,14 +25,18 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.List;
+import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.LocalVariable;
+import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.StaticMemberVariable;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.types.TypeArray;
@@ -71,6 +75,9 @@ class IterationIndexedArrayElementFactory extends SafeFactory<ArrayElement> {
             if (!(symbol instanceof VariableInfo varInfo)) {
                 continue;
             }
+            if ((varInfo.flags & VariableInfo.INITIALIZED) == 0) {
+                continue;
+            }
             if (varInfo.isLocal()) {
                 arrayCandidates.add(new LocalVariable(varInfo));
             } else if (varInfo.isStatic()) {
@@ -82,8 +89,13 @@ class IterationIndexedArrayElementFactory extends SafeFactory<ArrayElement> {
         }
         IRNode baseArray = PseudoRandom.randomElement(arrayCandidates);
         ArrayList<IRNode> indexes = new ArrayList<>(1);
-        indexes.add(new LocalVariable(iterationInfo));
+        IRNode rawIndex = new LocalVariable(iterationInfo);
+        // Keep kernel indexing safe for now.
+        IRNode nonNegative = new BinaryOperator(OperatorKind.SAR, TypeList.INT, rawIndex,
+                new Literal(1, TypeList.INT));
+        IRNode bounded = new BinaryOperator(OperatorKind.MOD, TypeList.INT, nonNegative,
+                new Literal(GenerationState.preferredIntCollectionSize(), TypeList.INT));
+        indexes.add(bounded);
         return new ArrayElement(baseArray, indexes);
     }
 }
-
