@@ -26,9 +26,13 @@ package jdk.test.lib.jittester;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.OptionResolver;
@@ -37,6 +41,8 @@ import jdk.test.lib.jittester.genocode.full.FullGenocode;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public class ProductionParams {
+    private static final String PROFILE_FILE_OPTION = "--profile-file";
+    private static final String PROFILE_ALIAS_OPTION = "--profile";
 
     public static Option<List<String>> mainClassNames = null;
     public static Option<Integer> dataMemberLimit = null;
@@ -336,7 +342,8 @@ public class ProductionParams {
      * @param args command-line arguments to use for initialization
      */
     public static void initializeFromCmdline(String[] args) {
-        OverrideParseResult overrideParseResult = parseOverrideArgs(args);
+        String[] expandedArgs = expandProfileArgs(args);
+        OverrideParseResult overrideParseResult = parseOverrideArgs(expandedArgs);
         OptionResolver parser = new OptionResolver();
         Option<String> propertyFileOpt = parser.addStringOption('p', "property-file",
                 "conf/default.properties", "File to read properties from");
@@ -576,6 +583,137 @@ public class ProductionParams {
                 passthrough.toArray(new String[0]),
                 overrides);
     }
+
+    private static String[] expandProfileArgs(String[] args) {
+        List<String> expanded = expandProfileArgs(List.of(args), new LinkedHashSet<>());
+        return expanded.toArray(new String[0]);
+    }
+
+    private static List<String> expandProfileArgs(List<String> args, Set<Path> includeStack) {
+        List<String> out = new ArrayList<>();
+        int i = 0;
+        while (i < args.size()) {
+            String arg = args.get(i);
+            ProfileInclude include = parseProfileInclude(arg, i + 1 < args.size() ? args.get(i + 1) : null);
+            if (include == null) {
+                out.add(arg);
+                i++;
+                continue;
+            }
+            Path profilePath = Path.of(include.path()).toAbsolutePath().normalize();
+            if (!includeStack.add(profilePath)) {
+                throw new IllegalArgumentException("Cyclic profile include detected: " + profilePath);
+            }
+            List<String> profileTokens = tokenizeProfile(profilePath, readProfile(profilePath));
+            out.addAll(expandProfileArgs(profileTokens, includeStack));
+            includeStack.remove(profilePath);
+            i += include.argsConsumed();
+        }
+        return out;
+    }
+
+    private static ProfileInclude parseProfileInclude(String arg, String nextArg) {
+        if (PROFILE_FILE_OPTION.equals(arg) || PROFILE_ALIAS_OPTION.equals(arg)) {
+            if (nextArg == null || nextArg.isBlank()) {
+                throw new IllegalArgumentException(arg + " requires <path>");
+            }
+            return new ProfileInclude(nextArg, 2);
+        }
+        if (arg.startsWith(PROFILE_FILE_OPTION + "=")) {
+            return new ProfileInclude(arg.substring((PROFILE_FILE_OPTION + "=").length()), 1);
+        }
+        if (arg.startsWith(PROFILE_ALIAS_OPTION + "=")) {
+            return new ProfileInclude(arg.substring((PROFILE_ALIAS_OPTION + "=").length()), 1);
+        }
+        return null;
+    }
+
+    private static String readProfile(Path profilePath) {
+        try {
+            return Files.readString(profilePath);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Cannot read profile file: " + profilePath, e);
+        }
+    }
+
+    private static List<String> tokenizeProfile(Path profilePath, String content) {
+        List<String> out = new ArrayList<>();
+        StringBuilder token = new StringBuilder();
+        boolean inSingle = false;
+        boolean inDouble = false;
+        boolean escaped = false;
+        int line = 1;
+        for (int i = 0; i < content.length(); i++) {
+            char ch = content.charAt(i);
+            if (ch == '\n') {
+                line++;
+            }
+            if (escaped) {
+                token.append(ch);
+                escaped = false;
+                continue;
+            }
+            if (ch == '\\') {
+                escaped = true;
+                continue;
+            }
+            if (inSingle) {
+                if (ch == '\'') {
+                    inSingle = false;
+                } else {
+                    token.append(ch);
+                }
+                continue;
+            }
+            if (inDouble) {
+                if (ch == '"') {
+                    inDouble = false;
+                } else {
+                    token.append(ch);
+                }
+                continue;
+            }
+            if (ch == '#') {
+                while (i < content.length() && content.charAt(i) != '\n') {
+                    i++;
+                }
+                line++;
+                continue;
+            }
+            if (Character.isWhitespace(ch)) {
+                flushToken(out, token);
+                continue;
+            }
+            if (ch == '\'') {
+                inSingle = true;
+                continue;
+            }
+            if (ch == '"') {
+                inDouble = true;
+                continue;
+            }
+            token.append(ch);
+        }
+        if (escaped) {
+            throw new IllegalArgumentException("Profile parse error in " + profilePath + ": trailing escape");
+        }
+        if (inSingle || inDouble) {
+            throw new IllegalArgumentException("Profile parse error in " + profilePath
+                    + ": unterminated quote near line " + line);
+        }
+        flushToken(out, token);
+        return out;
+    }
+
+    private static void flushToken(List<String> out, StringBuilder token) {
+        if (token.isEmpty()) {
+            return;
+        }
+        out.add(token.toString());
+        token.setLength(0);
+    }
+
+    private record ProfileInclude(String path, int argsConsumed) { }
 
     private record OverrideParseResult(String[] argsWithoutOverrides, Map<String, String> overrides) { }
 
