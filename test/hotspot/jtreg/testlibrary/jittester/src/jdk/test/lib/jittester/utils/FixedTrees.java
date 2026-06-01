@@ -132,6 +132,7 @@ public class FixedTrees {
     }
 
     public static FunctionDefinition generateMainOrExecuteMethod(TypeKlass owner, boolean isMain) {
+        boolean disableExceptionGuards = ProductionParams.disableFixedTreeExceptionGuards.value();
         Nothing nothing = new Nothing();
         ArrayList<IRNode> testCallNodeContent = new ArrayList<>();
         VariableInfo tInfo = new VariableInfo("t", owner, owner, VariableInfo.LOCAL);
@@ -255,7 +256,7 @@ public class FixedTrees {
         List<CatchBlock> catchBlocks3 = new ArrayList<>();
         catchBlocks3.add(new CatchBlock(printExceptionBlock, throwables, 2));
 
-        if (mainLoopForNode != null) {
+        if (mainLoopForNode != null && !disableExceptionGuards) {
             // Keep main-loop iterations alive and always print state:
             // marker -> try(test) catch(Throwable) -> print(state)
             ArrayList<IRNode> guardedBodyContent = new ArrayList<>();
@@ -271,43 +272,54 @@ public class FixedTrees {
             mainLoopForNode.getChildren().set(For.ForPart.BODY1.ordinal(), guardedBody);
         }
 
-        TryCatchBlock tryCatch1 = new TryCatchBlock(tryNode, nothing, catchBlocks1, 3);
+        IRNode testCallWithOptionalGuard = disableExceptionGuards
+                ? tryNode
+                : new TryCatchBlock(tryNode, nothing, catchBlocks1, 3);
         ArrayList<IRNode> printBlockContent = new ArrayList<>();
         printBlockContent.add(new Statement(print, true));
         Block printBlock = blockWithAnchor(owner, TypeList.VOID, printBlockContent, 3, "print-block");
-        TryCatchBlock tryCatch2 = new TryCatchBlock(printBlock, nothing, catchBlocks2, 3);
+        IRNode printWithOptionalGuard = disableExceptionGuards
+                ? printBlock
+                : new TryCatchBlock(printBlock, nothing, catchBlocks2, 3);
 
         ArrayList<IRNode> printFinalBlockContent = new ArrayList<>();
         printFinalBlockContent.add(new Statement(finalMarkerPrint, true));
         printFinalBlockContent.add(new Statement(printFinal, true));
         Block printFinalBlock = blockWithAnchor(owner, TypeList.VOID, printFinalBlockContent, 3, "print-final");
-        TryCatchBlock tryCatchFinal = new TryCatchBlock(printFinalBlock, nothing, catchBlocks2, 3);
+        IRNode printFinalWithOptionalGuard = disableExceptionGuards
+                ? printFinalBlock
+                : new TryCatchBlock(printFinalBlock, nothing, catchBlocks2, 3);
 
         ArrayList<IRNode> printInitialBlockContent = new ArrayList<>();
         printInitialBlockContent.add(new Statement(initialMarkerPrint, true));
         printInitialBlockContent.add(new Statement(printFinal, true));
         Block printInitialBlock = blockWithAnchor(owner, TypeList.VOID, printInitialBlockContent, 3, "print-initial");
-        TryCatchBlock tryCatchInitial = new TryCatchBlock(printInitialBlock, nothing, catchBlocks2, 3);
+        IRNode printInitialWithOptionalGuard = disableExceptionGuards
+                ? printInitialBlock
+                : new TryCatchBlock(printInitialBlock, nothing, catchBlocks2, 3);
 
         List<IRNode> mainTryCatchBlockContent = new ArrayList<>();
         mainTryCatchBlockContent.add(new Statement(testInit, true));
         if (isMain) {
             // Print one-time initial final-field snapshot before iterations start.
-            mainTryCatchBlockContent.add(tryCatchInitial);
+            mainTryCatchBlockContent.add(printInitialWithOptionalGuard);
         }
-        mainTryCatchBlockContent.add(tryCatch1);
+        mainTryCatchBlockContent.add(testCallWithOptionalGuard);
         if (isMain) {
             // Print final-field snapshot once after the loop for diagnostics.
-            mainTryCatchBlockContent.add(tryCatchFinal);
+            mainTryCatchBlockContent.add(printFinalWithOptionalGuard);
         }
         if (!isMain) {
             // execute() runs test once, then prints once.
-            mainTryCatchBlockContent.add(tryCatch2);
+            mainTryCatchBlockContent.add(printWithOptionalGuard);
         }
         Block mainTryCatchBlock = blockWithAnchor(owner, TypeList.VOID, mainTryCatchBlockContent, 2, "main-try-catch");
-        TryCatchBlock mainTryCatch = new TryCatchBlock(mainTryCatchBlock, nothing, catchBlocks3, 2);
         ArrayList<IRNode> bodyContent = new ArrayList<>();
-        bodyContent.add(mainTryCatch);
+        if (disableExceptionGuards) {
+            bodyContent.add(mainTryCatchBlock);
+        } else {
+            bodyContent.add(new TryCatchBlock(mainTryCatchBlock, nothing, catchBlocks3, 2));
+        }
         Block funcBody = blockWithAnchor(owner, TypeList.VOID, bodyContent, 1, isMain ? "main-func-body" : "execute-func-body");
 
         // static main(String[] args)V or static execute()V
