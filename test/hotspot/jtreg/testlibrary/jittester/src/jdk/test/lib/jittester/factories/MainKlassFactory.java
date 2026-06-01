@@ -37,6 +37,9 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.classes.MainKlass;
 import jdk.test.lib.jittester.functions.FunctionInfo;
+import jdk.test.lib.jittester.functions.FunctionDefinitionBlock;
+import jdk.test.lib.jittester.functions.StaticConstructorDefinition;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -91,6 +94,7 @@ class MainKlassFactory extends Factory<MainKlass> {
                     .getFunctionDefinitionBlockFactory()
                     .produce();
         }
+        functionDefinitions = ensureMainClassStaticArrayInitializer(builder, functionDefinitions);
         IRNode testFunction = builder.setResultType(TypeList.VOID)
                 .setComplexityLimit(complexityLimit)
                 .setStatementLimit(statementsInTestFunctionLimit)
@@ -110,6 +114,38 @@ class MainKlassFactory extends Factory<MainKlass> {
         TypeList.add(thisKlass);
         return new MainKlass(name, thisKlass, variableDeclarations,
                 functionDefinitions, testFunction, printVariables);
+    }
+
+    private IRNode ensureMainClassStaticArrayInitializer(IRNodeBuilder builder, IRNode memberFunctions)
+            throws ProductionFailedException {
+        if (!hasPendingStaticArrayInitialization()) {
+            return memberFunctions;
+        }
+        StaticConstructorDefinition staticCtor = builder.getStaticConstructorDefinitionFactory().produce();
+        if (memberFunctions == null) {
+            ArrayList<IRNode> content = new ArrayList<>();
+            content.add(staticCtor);
+            return new FunctionDefinitionBlock(content, 1, thisKlass);
+        }
+        if (memberFunctions instanceof FunctionDefinitionBlock block) {
+            ArrayList<IRNode> content = new ArrayList<>(block.getChildren().size() + 1);
+            content.add(staticCtor);
+            content.addAll(block.getChildren());
+            return new FunctionDefinitionBlock(content, block.getLevel(), thisKlass);
+        }
+        return memberFunctions;
+    }
+
+    private boolean hasPendingStaticArrayInitialization() {
+        for (Symbol symbol : SymbolTable.getAllCombined(thisKlass, VariableInfo.class)) {
+            VariableInfo variableInfo = (VariableInfo) symbol;
+            if (variableInfo.isStatic()
+                    && variableInfo.type instanceof TypeArray
+                    && (variableInfo.flags & VariableInfo.INITIALIZED) == 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void ensureMaxDepth(List<IRNode> children) {

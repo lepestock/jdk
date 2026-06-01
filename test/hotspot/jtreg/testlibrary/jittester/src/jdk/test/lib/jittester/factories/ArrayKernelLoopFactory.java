@@ -115,6 +115,8 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
                     .setCanHaveThrow(false)
                     .withArrayKernelVariable(iterationVariable)
                     .withInArrayKernel(true)
+                    .withMoreReadOnlyVars(iterationVariable)
+                    .withMoreIterationVariables(iterationVariable)
                     .produceBlock();
             Block body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level);
             Block body3 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level);

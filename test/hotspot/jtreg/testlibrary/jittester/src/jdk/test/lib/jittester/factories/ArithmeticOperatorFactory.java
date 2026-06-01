@@ -31,6 +31,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class ArithmeticOperatorFactory extends Factory<Operator> {
+    private static final double MOD_WEIGHT = 0.1;
     private final Rule<Operator> rule;
 
     ArithmeticOperatorFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
@@ -49,7 +50,8 @@ class ArithmeticOperatorFactory extends Factory<Operator> {
         if (!exceptionSafe) {
             // Low probability is due to div operator often leads to the divizion by zero
             rule.add("div", builder.setOperatorKind(OperatorKind.DIV).getBinaryOperatorFactory(), 0.1);
-            rule.add("mod", builder.setOperatorKind(OperatorKind.MOD).getBinaryOperatorFactory());
+            // Keep modulo available but pessimised: it is a frequent source of runtime failures.
+            rule.add("mod", builder.setOperatorKind(OperatorKind.MOD).getBinaryOperatorFactory(), MOD_WEIGHT);
         }
         rule.add("unary_plus", builder.setOperatorKind(OperatorKind.UNARY_PLUS).getUnaryOperatorFactory());
         rule.add("unary_minus", builder.setOperatorKind(OperatorKind.UNARY_MINUS).getUnaryOperatorFactory());

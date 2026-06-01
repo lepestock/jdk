@@ -24,8 +24,11 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+import jdk.test.lib.jittester.BinaryOperator;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Literal;
+import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Type;
@@ -84,9 +87,15 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
                 .getExpressionFactory();
         double chanceExpression = ProductionParams.chanceExpressionIndex.value() / 100.;
         ArrayList<IRNode> perDimensionExpressions = new ArrayList<>(dimensionsCount);
+        int preferredSize = GenerationState.preferredIntCollectionSize();
+        Literal shiftByOne = new Literal(1, TypeList.INT);
+        Literal preferredSizeLiteral = new Literal(preferredSize, TypeList.INT);
         for (int i = 0; i < dimensionsCount; i++) {
             if (PseudoRandom.randomBoolean(chanceExpression)) {
-                perDimensionExpressions.add(expressionFactory.produce());
+                IRNode rawIndex = expressionFactory.produce();
+                IRNode nonNegative = new BinaryOperator(OperatorKind.SAR, TypeList.INT, rawIndex, shiftByOne);
+                IRNode bounded = new BinaryOperator(OperatorKind.MOD, TypeList.INT, nonNegative, preferredSizeLiteral);
+                perDimensionExpressions.add(bounded);
             } else {
                 byte dimLimit = 0;
                 if (arrayReturningExpression instanceof ArrayCreation) {
@@ -97,7 +106,8 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
                     if (i < arrayExtraction.getDimsNumber())
                         dimLimit = arrayExtraction.getDim(i);
                 }
-                perDimensionExpressions.add(new Literal((byte)PseudoRandom.randomNotNegative(dimLimit), TypeList.BYTE));
+                int boundedLimit = dimLimit > 0 ? dimLimit : preferredSize;
+                perDimensionExpressions.add(new Literal((byte)PseudoRandom.randomNotNegative(boundedLimit), TypeList.BYTE));
             }
         }
         ArrayElement produced = new ArrayElement(arrayReturningExpression, perDimensionExpressions);

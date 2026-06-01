@@ -37,8 +37,13 @@ import java.nio.file.StandardOpenOption;
  */
 public final class Pulse {
     private static final String INDENT = "  ";
+    private static final int DEFAULT_MAX_RECORDS = 50_000;
+    private static final int MAX_RECORDS = Integer.getInteger("jittester.pulse.max.records", DEFAULT_MAX_RECORDS);
     private static BufferedWriter writer;
     private static int depth;
+    private static int recordCount;
+    private static long droppedCount;
+    private static boolean truncatedNoteWritten;
 
     private Pulse() {
     }
@@ -55,14 +60,16 @@ public final class Pulse {
     public static void startScope(String type, String payload) {
         try {
             ensureOpen();
-            writeIndent(depth);
-            writer.write("(");
-            writer.write(type == null ? "unknown" : type);
-            if (payload != null && !payload.isBlank()) {
-                writer.write(" ");
-                writer.write(payload);
+            if (shouldWriteRecord()) {
+                writeIndent(depth);
+                writer.write("(");
+                writer.write(type == null ? "unknown" : type);
+                if (payload != null && !payload.isBlank()) {
+                    writer.write(" ");
+                    writer.write(payload);
+                }
+                writer.newLine();
             }
-            writer.newLine();
             depth++;
         } catch (IOException ignored) {
             // Pulse is a debug/metrics side-channel; never affect test semantics.
@@ -75,9 +82,11 @@ public final class Pulse {
             if (depth > 0) {
                 depth--;
             }
-            writeIndent(depth);
-            writer.write(")");
-            writer.newLine();
+            if (shouldWriteRecord()) {
+                writeIndent(depth);
+                writer.write(")");
+                writer.newLine();
+            }
         } catch (IOException ignored) {
             // Pulse is a debug/metrics side-channel; never affect test semantics.
         }
@@ -95,6 +104,9 @@ public final class Pulse {
         writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
                 StandardOpenOption.WRITE);
+        recordCount = 0;
+        droppedCount = 0L;
+        truncatedNoteWritten = false;
         Runtime.getRuntime().addShutdownHook(new Thread(Pulse::closeQuietly, "jittester-pulse-close"));
     }
 
@@ -121,21 +133,31 @@ public final class Pulse {
             return;
         }
         try {
+            writeTruncationNoteIfNeeded();
             while (depth > 0) {
                 depth--;
-                writeIndent(depth);
-                writer.write(")");
-                writer.newLine();
+                if (recordCount < MAX_RECORDS || MAX_RECORDS <= 0) {
+                    writeIndent(depth);
+                    writer.write(")");
+                    writer.newLine();
+                    recordCount++;
+                }
             }
             writer.close();
         } catch (IOException ignored) {
         } finally {
             writer = null;
             depth = 0;
+            recordCount = 0;
+            droppedCount = 0L;
+            truncatedNoteWritten = false;
         }
     }
 
     private static void writeRecord(String type, String payload) throws IOException {
+        if (!shouldWriteRecord()) {
+            return;
+        }
         writeIndent(depth);
         writer.write("(");
         writer.write(type == null ? "unknown" : type);
@@ -145,6 +167,29 @@ public final class Pulse {
         }
         writer.write(")");
         writer.newLine();
+    }
+
+    private static boolean shouldWriteRecord() throws IOException {
+        if (MAX_RECORDS <= 0) {
+            return true;
+        }
+        if (recordCount < MAX_RECORDS) {
+            recordCount++;
+            return true;
+        }
+        droppedCount++;
+        writeTruncationNoteIfNeeded();
+        return false;
+    }
+
+    private static void writeTruncationNoteIfNeeded() throws IOException {
+        if (MAX_RECORDS <= 0 || truncatedNoteWritten || droppedCount == 0L) {
+            return;
+        }
+        writer.write("(pulse-truncated :max-records " + MAX_RECORDS
+                + " :dropped-at-least " + droppedCount + ")");
+        writer.newLine();
+        truncatedNoteWritten = true;
     }
 
     private static void writeIndent(int level) throws IOException {

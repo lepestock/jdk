@@ -24,6 +24,8 @@
 package jdk.test.lib.jittester.factories;
 
 import jdk.test.lib.jittester.Block;
+import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.LocalVariable;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -108,6 +110,7 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
             }
             // getChildren().set(DoWhile.DoWhilePart.HEADER.ordinal(), header);
             LocalVariable counter = new LocalVariable(loop.initialization.getVariableInfo());
+            String iterationVariable = counter.getVariableInfo().name;
             Literal limiter = new Literal((int) thisLoopIterLimit, TypeList.INT);
             Factory<LoopingCondition> lcFactory = builder.setComplexityLimit(condComplLimit)
                     .setLocalVariable(counter)
@@ -122,46 +125,54 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
                         " :loop-initializer-type " + init.value.getClass() +
                         " :loop-initializer-value " + init.value);
             }
-
-            loop.condition = lcFactory
-                    .produce();
-                Logger.disableTrace();
-            SymbolTable.push();
             Block body1;
-            try {
-                body1 = builder.setComplexityLimit(body1ComplLimit)
-                        .setStatementLimit(body1StatementLimit)
-                        .setLevel(level)
-                        .setSubBlock(true)
-                        .setCanHaveBreaks(true)
-                        .setCanHaveContinues(false)
-                        .setCanHaveReturn(false)
-                        .getBlockFactory()
-                        .produce();
-            } catch (ProductionFailedException e) {
-                body1 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
-            }
-            // getChildren().set(DoWhile.DoWhilePart.BODY1.ordinal(), body1);
-            loop.manipulator = builder.setLocalVariable(counter)
-                                      .getCounterManipulatorFactory()
-                                      .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
-                                      .produce();
             Block body2;
+            SymbolTable.push();
+            FlowParams previousFlowParams = GenerationState.currentFlowParams();
+            GenerationState.setCurrentFlowParams(previousFlowParams
+                    .withMoreIterationVariables(iterationVariable)
+                    .advance());
             try {
-                body2 = builder.setComplexityLimit(body2ComplLimit)
-                        .setStatementLimit(body2StatementLimit)
-                        .setLevel(level)
-                        .setSubBlock(true)
-                        .setCanHaveBreaks(true)
-                        .setCanHaveContinues(false)
-                        .setCanHaveReturn(canHaveReturn)
-                        .getBlockFactory()
-                        .produce();
-            } catch (ProductionFailedException e) {
-                body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
+                loop.condition = lcFactory.produce();
+                Logger.disableTrace();
+                try {
+                    body1 = builder.setComplexityLimit(body1ComplLimit)
+                            .setStatementLimit(body1StatementLimit)
+                            .setLevel(level)
+                            .setSubBlock(true)
+                            .setCanHaveBreaks(true)
+                            .setCanHaveContinues(false)
+                            .setCanHaveReturn(false)
+                            .withMoreReadOnlyVars(iterationVariable)
+                            .withMoreIterationVariables(iterationVariable)
+                            .produceBlock();
+                } catch (ProductionFailedException e) {
+                    body1 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
+                }
+                // getChildren().set(DoWhile.DoWhilePart.BODY1.ordinal(), body1);
+                loop.manipulator = builder.setLocalVariable(counter)
+                                          .getCounterManipulatorFactory()
+                                          .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
+                                          .produce();
+                try {
+                    body2 = builder.setComplexityLimit(body2ComplLimit)
+                            .setStatementLimit(body2StatementLimit)
+                            .setLevel(level)
+                            .setSubBlock(true)
+                            .setCanHaveBreaks(true)
+                            .setCanHaveContinues(false)
+                            .setCanHaveReturn(canHaveReturn)
+                            .withMoreReadOnlyVars(iterationVariable)
+                            .withMoreIterationVariables(iterationVariable)
+                            .produceBlock();
+                } catch (ProductionFailedException e) {
+                    body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
+                }
+            } finally {
+                GenerationState.setCurrentFlowParams(previousFlowParams);
+                SymbolTable.pop();
             }
             // getChildren().set(DoWhile.DoWhilePart.BODY2.ordinal(), body2);
-            SymbolTable.pop();
             return new DoWhile(level, loop, thisLoopIterLimit, header, body1, body2);
         }
         throw new ProductionFailedException();

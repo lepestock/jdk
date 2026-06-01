@@ -40,6 +40,8 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
+    private static final int LVALUE_PICK_RETRIES = 16;
+
     AssignmentOperatorImplFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
         super(OperatorKind.ASSIGN, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
@@ -75,12 +77,32 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
                 .setResultType(leftOperandType)
                 .setIsConstant(false);
         Rule<IRNode> rule = new Rule<>("assignment");
-        rule.add("initialized_nonconst_var", builder.setIsInitialized(true).getVariableFactory());
-        rule.add("uninitialized_nonconst_var", builder.setIsInitialized(false).getVariableFactory());
         if (GenerationState.currentFlowParams().inArrayKernel()) {
+            String iterationVariable = GenerationState.currentFlowParams().iterationVariable();
+            rule.add("initialized_nonconst_var",
+                    new ReadOnlyLocalLValueFactory(
+                            new ExcludingLocalVariableLValueFactory(
+                                    builder.setIsInitialized(true).getVariableFactory(),
+                                    iterationVariable,
+                                    LVALUE_PICK_RETRIES),
+                            LVALUE_PICK_RETRIES));
+            rule.add("uninitialized_nonconst_var",
+                    new ReadOnlyLocalLValueFactory(
+                            new ExcludingLocalVariableLValueFactory(
+                                    builder.setIsInitialized(false).getVariableFactory(),
+                                    iterationVariable,
+                                    LVALUE_PICK_RETRIES),
+                            LVALUE_PICK_RETRIES));
             // Inside array-kernel blocks, array lvalue indices must follow the kernel iterator.
             rule.add("array_element_lvalue",
                     new IterationIndexedArrayElementFactory((TypeKlass) ownerClass, leftOperandType), 5.0);
+        } else {
+            rule.add("initialized_nonconst_var",
+                    new ReadOnlyLocalLValueFactory(builder.setIsInitialized(true).getVariableFactory(),
+                            LVALUE_PICK_RETRIES));
+            rule.add("uninitialized_nonconst_var",
+                    new ReadOnlyLocalLValueFactory(builder.setIsInitialized(false).getVariableFactory(),
+                            LVALUE_PICK_RETRIES));
         }
         IRNode leftOperandValue = rule.produce();
         boolean preferIndexedArrayTerminal = GenerationState.currentFlowParams().inArrayKernel()
@@ -101,4 +123,42 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         return new BinaryOperator(opKind, resultType, leftOperandValue, rightOperandValue);
     }
 
+    private static final class ExcludingLocalVariableLValueFactory extends Factory<IRNode> {
+        private final Factory<? extends IRNode> delegate;
+        private final String forbiddenLocalName;
+        private final int retries;
+
+        private ExcludingLocalVariableLValueFactory(Factory<? extends IRNode> delegate,
+                                                    String forbiddenLocalName,
+                                                    int retries) {
+            this.delegate = delegate;
+            this.forbiddenLocalName = forbiddenLocalName;
+            this.retries = retries;
+        }
+
+        @Override
+        public IRNode produce() throws ProductionFailedException {
+            if (forbiddenLocalName == null || forbiddenLocalName.isBlank()) {
+                return delegate.produce();
+            }
+            ProductionFailedException lastFailure = null;
+            for (int i = 0; i < retries; i++) {
+                try {
+                    IRNode candidate = delegate.produce();
+                    if (candidate instanceof VariableBase variableBase
+                            && variableBase.getVariableInfo().isLocal()
+                            && forbiddenLocalName.equals(variableBase.getVariableInfo().name)) {
+                        continue;
+                    }
+                    return candidate;
+                } catch (ProductionFailedException e) {
+                    lastFailure = e;
+                }
+            }
+            if (lastFailure != null) {
+                throw lastFailure;
+            }
+            throw new ProductionFailedException();
+        }
+    }
 }

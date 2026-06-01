@@ -23,12 +23,22 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.ArrayList;
+import java.util.List;
+import jdk.test.lib.jittester.BinaryOperator;
+import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
+import jdk.test.lib.jittester.Statement;
+import jdk.test.lib.jittester.StaticMemberVariable;
+import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.arrays.ArrayInitializer;
 import jdk.test.lib.jittester.functions.StaticConstructorDefinition;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -76,6 +86,58 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
         } finally {
             SymbolTable.pop();
         }
-        return new StaticConstructorDefinition(body);
+        return new StaticConstructorDefinition(prependStaticArrayInitializers(body));
+    }
+
+    private IRNode prependStaticArrayInitializers(IRNode originalBody) {
+        if (!(originalBody instanceof Block blockBody)) {
+            return originalBody;
+        }
+        List<IRNode> prelude = buildStaticArrayInitializers();
+        if (prelude.isEmpty()) {
+            return originalBody;
+        }
+        List<IRNode> merged = new ArrayList<>(prelude.size() + blockBody.getChildren().size());
+        merged.addAll(prelude);
+        merged.addAll(blockBody.getChildren());
+        return new Block(ownerClass, TypeList.VOID, merged, blockBody.getLevel(), blockBody.getBlockGene());
+    }
+
+    private List<IRNode> buildStaticArrayInitializers() {
+        List<IRNode> statements = new ArrayList<>();
+        for (Symbol symbol : SymbolTable.getAllCombined(ownerClass, VariableInfo.class)) {
+            VariableInfo variableInfo = (VariableInfo) symbol;
+            if (!needsStaticArrayInitializer(variableInfo)) {
+                continue;
+            }
+            try {
+                statements.add(createStaticArrayInitializerStatement(variableInfo));
+            } catch (ProductionFailedException ignored) {
+                // Keep generation resilient: if initializer creation fails, keep previous behavior.
+            }
+        }
+        return statements;
+    }
+
+    private static boolean needsStaticArrayInitializer(VariableInfo variableInfo) {
+        return variableInfo.isStatic()
+                && variableInfo.type instanceof TypeArray
+                && (variableInfo.flags & VariableInfo.INITIALIZED) == 0;
+    }
+
+    private Statement createStaticArrayInitializerStatement(VariableInfo variableInfo)
+            throws ProductionFailedException {
+        TypeArray arrayType = (TypeArray) variableInfo.type;
+        IRNodeBuilder initBuilder = new IRNodeBuilder()
+                .setOwnerKlass(ownerClass)
+                .setComplexityLimit(Math.max(1L, complexityLimit / 8))
+                .setOperatorLimit(Math.max(1, operatorLimit / 8))
+                .setResultType(arrayType)
+                .setExceptionSafe(true)
+                .setNoConsts(false);
+        ArrayInitializer initializer = initBuilder.getArrayInitializerFactory().produce();
+        variableInfo.flags |= VariableInfo.INITIALIZED;
+        StaticMemberVariable target = new StaticMemberVariable(ownerClass, variableInfo);
+        return new Statement(new BinaryOperator(OperatorKind.ASSIGN, arrayType, target, initializer), true);
     }
 }
