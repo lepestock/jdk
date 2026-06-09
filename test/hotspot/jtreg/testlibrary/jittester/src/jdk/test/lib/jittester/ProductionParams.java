@@ -85,6 +85,7 @@ public class ProductionParams {
     public static Option<Boolean> disableClasses = null;
     public static Option<Boolean> disableNestedBlocks = null;
     public static Option<Boolean> disableArrays = null;
+    public static Option<String> arraysAllowedTypes = null;
     public static Option<Integer> arrayFieldDefinitionWeightBonus = null;
     public static Option<Boolean> enableFinalizers = null;
     // workaraound: to reduce chance throwing ArrayIndexOutOfBoundsException
@@ -103,6 +104,8 @@ public class ProductionParams {
     public static Option<Integer> intrinsicCallWeightBonus = null;
     public static Option<Integer> magnetismLevel = null;
     public static Option<Integer> arrayProductionWeightBonus = null;
+    public static Option<Integer> arrayKernelBodyComplexityPercent = null;
+    public static Option<Integer> arrayKernelBodyStatementPercent = null;
     public static Option<Boolean> embedPrinterClass = null;
     public static Option<Boolean> pulsemap = null;
     public static Option<Boolean> disableFixedTreeExceptionGuards = null;
@@ -141,6 +144,8 @@ public class ProductionParams {
     public static Option<String> debugMethodCallWrapArgKinds = null;
     public static Option<String> debugMethodCallWrapGenes = null;
     public static Option<Integer> debugMethodCallWrapGenesMax = null;
+    public static Option<Boolean> debugArrayAssignmentCandidates = null;
+    public static Option<Integer> debugArrayAssignmentCandidatesMax = null;
     private static boolean genomeRecordEnabled = false;
     private static OptionResolver activeOptionResolver = null;
     private static Map<String, String> mutationOverrides = Collections.emptyMap();
@@ -217,6 +222,10 @@ public class ProductionParams {
         disableNestedBlocks = optionResolver.addBooleanOption("disable-nested-blocks", "Disable generation of nested blocks");
         disableArrays = optionResolver.addBooleanOption(null, "arrays-disable", true,
                 "Disable generation of arrays");
+        arraysAllowedTypes = optionResolver.addStringOption(
+                "arrays-allowed-types",
+                "",
+                "Comma-separated array element type allowlist; empty means no restriction");
         enableFinalizers = optionResolver.addBooleanOption("enable-finalizers", "Enable finalizers (for stress testing)");
         chanceExpressionIndex = optionResolver.addIntegerOption("chance-expression-index", 0, "A non negative decimal integer used to restrict chane of generating expression in array index while creating or accessing by index");
         chanceThrow = optionResolver.addIntegerOption("chance-throw", 30, "A non negative decimal integer used to restrict chane of 'throw' statement (is adjusted by 30% afterwards, i.e. value of 100 means 30% chance of generating such a statement)");
@@ -241,6 +250,10 @@ public class ProductionParams {
                 "Magnet matching mode: 0=strict exact-id preference (deterministic), >0 enables distance-weighted stochastic magnetism");
         arrayProductionWeightBonus = optionResolver.addIntegerOption("array-production-weight-bonus", 0,
                 "Additional selection weight percent for array productions (0 keeps default)");
+        arrayKernelBodyComplexityPercent = optionResolver.addIntegerOption("array-kernel-body-complexity-percent", 50,
+                "Percent of parent complexity budget used for array-kernel body generation");
+        arrayKernelBodyStatementPercent = optionResolver.addIntegerOption("array-kernel-body-statement-percent", 50,
+                "Percent of parent statement budget used for array-kernel body generation");
         arrayFieldDefinitionWeightBonus = optionResolver.addIntegerOption("arrays-field-definition-weight-bonus", 0,
                 "Additional selection weight percent for choosing array-typed class field declarations");
         embedPrinterClass = optionResolver.addBooleanOption(null, "embed-printer-class", false,
@@ -340,6 +353,15 @@ public class ProductionParams {
                 "debug-method-call-wrap-genes-max",
                 8,
                 "Maximum number of genes to use from --debug-method-call-wrap-genes");
+        debugArrayAssignmentCandidates = optionResolver.addBooleanOption(
+                null,
+                "debug-array-assignment-candidates",
+                false,
+                "Emit source comments with candidate array pools for array-kernel assignments");
+        debugArrayAssignmentCandidatesMax = optionResolver.addIntegerOption(
+                "debug-array-assignment-candidates-max",
+                12,
+                "Maximum number of array candidates listed per debug-array-assignment-candidates comment");
     }
 
     /**

@@ -61,6 +61,8 @@ class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
             TypeArray arrayResultType = (TypeArray) resultType;
             if (arrayResultType.type.equals(TypeList.VOID)) {
                 arrayResultType = arrayResultType.produce();
+            } else if (!TypeArray.isElementTypeAllowed(arrayResultType.type)) {
+                throw new ProductionFailedException();
             }
             IRNodeBuilder builder = new IRNodeBuilder()
                     .setComplexityLimit(complexityLimit)

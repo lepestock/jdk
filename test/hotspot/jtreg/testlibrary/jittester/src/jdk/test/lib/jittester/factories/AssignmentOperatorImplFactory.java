@@ -35,12 +35,16 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.diagnostics.ArrayAssignmentDiagnostics;
+import jdk.test.lib.jittester.diagnostics.Diagnostics;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
     private static final int LVALUE_PICK_RETRIES = 16;
+    private static final ArrayAssignmentDiagnostics ARRAY_ASSIGNMENT_DIAGNOSTICS =
+            Diagnostics.arrayAssignment();
 
     AssignmentOperatorImplFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
@@ -104,6 +108,8 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
                     new ReadOnlyLocalLValueFactory(builder.setIsInitialized(false).getVariableFactory(),
                             LVALUE_PICK_RETRIES));
         }
+        ArrayAssignmentDiagnostics.Snapshot diagnosticSnapshot =
+                ARRAY_ASSIGNMENT_DIAGNOSTICS.snapshot(leftOperandType, rightOperandType);
         IRNode leftOperandValue = rule.produce();
         boolean preferIndexedArrayTerminal = GenerationState.currentFlowParams().inArrayKernel()
                 && leftOperandValue instanceof ArrayElement;
@@ -120,7 +126,10 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         } catch (Exception e) {
             throw new ProductionFailedException(e.getMessage());
         }
-        return new BinaryOperator(opKind, resultType, leftOperandValue, rightOperandValue);
+        BinaryOperator result = new BinaryOperator(opKind, resultType, leftOperandValue, rightOperandValue);
+        ARRAY_ASSIGNMENT_DIAGNOSTICS.attach(diagnosticSnapshot, result, opKind,
+                leftOperandValue, rightOperandValue);
+        return result;
     }
 
     private static final class ExcludingLocalVariableLValueFactory extends Factory<IRNode> {

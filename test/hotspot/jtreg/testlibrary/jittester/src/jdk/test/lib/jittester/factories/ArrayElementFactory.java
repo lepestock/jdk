@@ -64,6 +64,9 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
         if (resultType instanceof TypeArray) {
             throw new ProductionFailedException();
         }
+        if (!TypeArray.isElementTypeAllowed(resultType)) {
+            throw new ProductionFailedException();
+        }
         long arrayComplexityLimit = (long) (complexityLimit * 0.5 * PseudoRandom.random());
         int arrayOperatorLimit = (int) (operatorLimit * 0.5 * PseudoRandom.random());
         int dimensionsCount = PseudoRandom.randomNotZero(ProductionParams.dimensionsLimit.value());

@@ -24,6 +24,7 @@
 package jdk.test.lib.jittester.types;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -117,16 +118,69 @@ public class TypeArray extends TypeKlass {
     }
 
     public TypeArray produce() {
-        ArrayList<Type> all = new ArrayList<>(TypeList.getAll());
+        ArrayList<Type> all = new ArrayList<>(filterAllowedElementTypes(TypeList.getAll()));
         PseudoRandom.shuffle(all);
         for (Type t : all) {
-            if (t instanceof TypeArray) {
-                continue;
-            }
             int dims = PseudoRandom.randomNotZero(ProductionParams.dimensionsLimit.value());
             return new TypeArray(t, dims);
         }
-        throw new Error("Shouldn't happen");
+        throw new Error("No array element types available");
+    }
+
+    public static boolean isElementTypeAllowed(Type type) {
+        if (!isPossibleElementType(type)) {
+            return false;
+        }
+        List<String> allowedNames = allowedElementTypeNames();
+        if (allowedNames.isEmpty()) {
+            return true;
+        }
+        String typeName = type.getName();
+        String simpleName = simpleName(typeName);
+        for (String allowedName : allowedNames) {
+            if (typeName.equals(allowedName) || simpleName.equals(allowedName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static List<Type> filterAllowedElementTypes(Collection<Type> types) {
+        ArrayList<Type> result = new ArrayList<>();
+        for (Type type : types) {
+            if (isElementTypeAllowed(type)) {
+                result.add(type);
+            }
+        }
+        return result;
+    }
+
+    public static Type pickAllowedElementType() {
+        List<Type> candidates = filterAllowedElementTypes(TypeList.getAll());
+        return candidates.isEmpty() ? null : PseudoRandom.randomElement(candidates);
+    }
+
+    private static boolean isPossibleElementType(Type type) {
+        return type != null && !(type instanceof TypeArray) && !type.equals(TypeList.VOID);
+    }
+
+    private static List<String> allowedElementTypeNames() {
+        if (ProductionParams.arraysAllowedTypes == null) {
+            return List.of();
+        }
+        String value = ProductionParams.arraysAllowedTypes.value();
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return Stream.of(value.split(","))
+                .map(String::trim)
+                .filter(token -> !token.isEmpty())
+                .toList();
+    }
+
+    private static String simpleName(String typeName) {
+        int lastDot = typeName.lastIndexOf('.');
+        return lastDot < 0 ? typeName : typeName.substring(lastDot + 1);
     }
 
     @Override

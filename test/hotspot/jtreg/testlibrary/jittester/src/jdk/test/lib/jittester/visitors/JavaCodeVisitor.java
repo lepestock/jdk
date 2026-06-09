@@ -72,6 +72,7 @@ import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.classes.MainKlass;
 import jdk.test.lib.jittester.classes.ValueKlass;
+import jdk.test.lib.jittester.diagnostics.SourceDiagnostics;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
 import jdk.test.lib.jittester.functions.ConstructorDefinition;
 import jdk.test.lib.jittester.functions.ConstructorDefinitionBlock;
@@ -374,6 +375,12 @@ public class JavaCodeVisitor implements Visitor<String> {
                         .append(s)
                         .append(closeBraceWithGene(level + 1, i));
                 } else {
+                    String comment = statementGeneComment(i);
+                    if (!comment.isEmpty()) {
+                        code.append(PrintingUtils.align(level + 1))
+                            .append(comment.trim())
+                            .append("\n");
+                    }
                     code.append(PrintingUtils.align(level + 1))
                         .append(s);
                 }
@@ -384,17 +391,27 @@ public class JavaCodeVisitor implements Visitor<String> {
         return code.toString();
     }
 
-    private static String geneComment(IRNode node) {
-        String token = blockGeneToken(node);
-        if (token.isEmpty()) {
-            return "";
+    private static String statementGeneComment(IRNode node) {
+        String comment = geneComment(node);
+        if (!comment.isEmpty() || !(node instanceof Statement)) {
+            return comment;
         }
+        return geneComment(node.getChild(0));
+    }
+
+    private static String geneComment(IRNode node) {
+        ArrayList<String> comments = new ArrayList<>();
+        String token = blockGeneToken(node);
         if (Genome.isSourceDebugEnabled()
                 && node instanceof Block
                 && ((Block) node).hasBlockRngSeed()) {
-            return "  // gene: " + token;
+            comments.add("gene: " + token);
         }
-        return "";
+        String diagnosticComment = SourceDiagnostics.comment(node);
+        if (!diagnosticComment.isEmpty()) {
+            comments.add(diagnosticComment);
+        }
+        return comments.isEmpty() ? "" : "  // " + String.join(" ", comments);
     }
 
     private static String blockGeneToken(IRNode node) {
