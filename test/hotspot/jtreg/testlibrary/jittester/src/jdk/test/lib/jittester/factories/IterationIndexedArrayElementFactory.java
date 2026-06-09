@@ -25,18 +25,14 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.List;
-import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
-import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.LocalVariable;
-import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.StaticMemberVariable;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
-import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.types.TypeArray;
@@ -67,10 +63,14 @@ class IterationIndexedArrayElementFactory extends SafeFactory<ArrayElement> {
         if (!(iterationSymbol instanceof VariableInfo iterationInfo)) {
             throw new ProductionFailedException();
         }
+        if (!TypeArray.isElementTypeAllowed(elementType)) {
+            throw new ProductionFailedException();
+        }
 
         TypeArray arrayType = new TypeArray(elementType, 1);
         List<Symbol> symbols = new ArrayList<>(SymbolTable.get(arrayType, VariableInfo.class));
         ArrayList<IRNode> arrayCandidates = new ArrayList<>();
+        ArrayList<VariableInfo> arrayCandidateInfos = new ArrayList<>();
         for (Symbol symbol : symbols) {
             if (!(symbol instanceof VariableInfo varInfo)) {
                 continue;
@@ -78,24 +78,29 @@ class IterationIndexedArrayElementFactory extends SafeFactory<ArrayElement> {
             if ((varInfo.flags & VariableInfo.INITIALIZED) == 0) {
                 continue;
             }
+            if (varInfo.getArrayLength().isEmpty()) {
+                continue;
+            }
             if (varInfo.isLocal()) {
                 arrayCandidates.add(new LocalVariable(varInfo));
+                arrayCandidateInfos.add(varInfo);
             } else if (varInfo.isStatic()) {
                 arrayCandidates.add(new StaticMemberVariable(ownerClass, varInfo));
+                arrayCandidateInfos.add(varInfo);
             }
         }
         if (arrayCandidates.isEmpty()) {
             throw new ProductionFailedException();
         }
-        IRNode baseArray = PseudoRandom.randomElement(arrayCandidates);
+        int selected = PseudoRandom.randomNotNegative(arrayCandidates.size());
+        IRNode baseArray = arrayCandidates.get(selected);
+        VariableInfo baseArrayInfo = arrayCandidateInfos.get(selected);
+        if (baseArrayInfo.getArrayLength().isEmpty()) {
+            throw new ProductionFailedException();
+        }
         ArrayList<IRNode> indexes = new ArrayList<>(1);
-        IRNode rawIndex = new LocalVariable(iterationInfo);
-        // Keep kernel indexing safe for now.
-        IRNode nonNegative = new BinaryOperator(OperatorKind.SAR, TypeList.INT, rawIndex,
-                new Literal(1, TypeList.INT));
-        IRNode bounded = new BinaryOperator(OperatorKind.MOD, TypeList.INT, nonNegative,
-                new Literal(GenerationState.preferredIntCollectionSize(), TypeList.INT));
-        indexes.add(bounded);
+        // Array candidates here carry known generation-time lengths. Kernel loops keep iterator in-range.
+        indexes.add(new LocalVariable(iterationInfo));
         return new ArrayElement(baseArray, indexes);
     }
 }

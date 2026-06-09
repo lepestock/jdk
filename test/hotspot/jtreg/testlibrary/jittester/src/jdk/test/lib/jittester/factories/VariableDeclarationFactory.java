@@ -87,8 +87,15 @@ class VariableDeclarationFactory extends Factory<VariableDeclaration> {
         if (!PseudoRandom.randomBoolean(probability)) {
             return selectedType;
         }
+        Type elementType = selectedType;
+        if (!TypeArray.isElementTypeAllowed(elementType)) {
+            elementType = TypeArray.pickAllowedElementType();
+        }
+        if (elementType == null) {
+            return selectedType;
+        }
         // Keep field arrays 1D for now: this path is tuned for stable initialization/use,
         // and multi-dimensional declarations here tend to produce brittle behavior.
-        return new TypeArray(selectedType, 1);
+        return new TypeArray(elementType, 1);
     }
 }

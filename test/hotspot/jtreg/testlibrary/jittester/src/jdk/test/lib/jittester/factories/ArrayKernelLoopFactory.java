@@ -31,6 +31,7 @@ import jdk.test.lib.jittester.LocalVariable;
 import jdk.test.lib.jittester.Nothing;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
+import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Statement;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
@@ -104,9 +105,13 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
             Block header = BlockFactory.produceEmptyBlock(ownerClass, returnType, Math.max(0, level - 1));
             Statement statement1 = headerInit;
             Statement statement2 = headerUpdate;
+            long kernelBodyComplexityLimit = scaleLimit(complexityLimit,
+                    ProductionParams.arrayKernelBodyComplexityPercent.value());
+            int kernelBodyStatementLimit = (int) scaleLimit(statementLimit,
+                    ProductionParams.arrayKernelBodyStatementPercent.value());
             Block body1 = builder
-                    .setComplexityLimit(Math.max(1L, complexityLimit / 2))
-                    .setStatementLimit(Math.max(1, statementLimit / 2))
+                    .setComplexityLimit(kernelBodyComplexityLimit)
+                    .setStatementLimit(kernelBodyStatementLimit)
                     .setLevel(level)
                     .setSubBlock(true)
                     .setCanHaveBreaks(true)
@@ -176,5 +181,11 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
             return (short) value;
         }
         return value;
+    }
+
+    private static long scaleLimit(long base, int percent) {
+        int clampedPercent = Math.max(1, percent);
+        long scaled = (long) Math.ceil(base * (clampedPercent / 100.0));
+        return Math.max(1L, scaled);
     }
 }

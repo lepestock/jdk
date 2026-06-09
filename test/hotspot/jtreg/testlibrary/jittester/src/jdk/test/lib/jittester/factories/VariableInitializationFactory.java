@@ -210,11 +210,10 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         return Math.max(0.0, Math.min(1.0, FIELD_ARRAY_INIT_BASE_PROBABILITY * bonusScale));
     }
 
-    private Type pickArrayElementType() {
-        LinkedList<Type> types = new LinkedList<>(TypeList.getAll());
-        types.removeIf(t -> t instanceof TypeArray || t.equals(TypeList.VOID));
+    private Type pickArrayElementType() throws ProductionFailedException {
+        LinkedList<Type> types = new LinkedList<>(TypeArray.filterAllowedElementTypes(TypeList.getAll()));
         if (types.isEmpty()) {
-            return TypeList.INT;
+            throw new ProductionFailedException();
         }
         return TypeSelectionUtil.pickPreferredOrAnyType(ownerClass, types);
     }

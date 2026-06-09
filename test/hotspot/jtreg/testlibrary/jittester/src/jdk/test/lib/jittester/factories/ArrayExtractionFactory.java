@@ -58,6 +58,9 @@ class ArrayExtractionFactory extends SafeFactory<ArrayExtraction> {
     public ArrayExtraction sproduce() throws ProductionFailedException {
         if (resultType instanceof TypeArray) {
             TypeArray arrayType = (TypeArray) resultType;
+            if (!TypeArray.isElementTypeAllowed(arrayType.type)) {
+                throw new ProductionFailedException();
+            }
             int delta = PseudoRandom.randomNotZero(ProductionParams.dimensionsLimit.value()
                     - arrayType.dimensions);
             if (arrayType.dimensions + delta <= ProductionParams.dimensionsLimit.value()) {

@@ -23,6 +23,8 @@
 
 package jdk.test.lib.jittester;
 
+import java.util.OptionalInt;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 
@@ -30,20 +32,24 @@ public class VariableInfo extends Symbol {
 
     public static final int LOCAL = 0x40;
     public static final int INITIALIZED = 0x80;
+    private OptionalInt arrayLength = OptionalInt.empty();
 
     protected VariableInfo() {
     }
 
     public VariableInfo(VariableInfo value) {
         super(value);
+        this.arrayLength = value.arrayLength;
     }
 
     public VariableInfo(String name, TypeKlass owner, Type type, int flags) {
         super(name, owner, type, flags);
+        initializeArrayLength(type);
     }
 
     public VariableInfo(TypeKlass owner, Type type) {
         super("", owner, type, Symbol.NONE);
+        initializeArrayLength(type);
     }
 
     @Override
@@ -58,5 +64,23 @@ public class VariableInfo extends Symbol {
 
     public boolean isLocal() {
         return (flags & LOCAL) != 0;
+    }
+
+    public OptionalInt getArrayLength() {
+        return arrayLength;
+    }
+
+    public void setArrayLength(int value) {
+        if (value < 1) {
+            throw new IllegalArgumentException("Array length must be positive");
+        }
+        arrayLength = OptionalInt.of(value);
+    }
+
+    private void initializeArrayLength(Type symbolType) {
+        if (!(symbolType instanceof TypeArray)) {
+            return;
+        }
+        arrayLength = OptionalInt.of(GenerationState.preferredIntCollectionSize());
     }
 }

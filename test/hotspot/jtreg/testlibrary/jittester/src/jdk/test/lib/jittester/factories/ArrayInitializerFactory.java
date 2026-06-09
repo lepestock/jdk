@@ -56,6 +56,9 @@ class ArrayInitializerFactory extends SafeFactory<ArrayInitializer> {
         if (!(resultType instanceof TypeArray arrayType) || arrayType.dimensions != 1) {
             throw new ProductionFailedException();
         }
+        if (!TypeArray.isElementTypeAllowed(arrayType.type)) {
+            throw new ProductionFailedException();
+        }
         Type elementType = arrayType.type;
         int elementCount = chooseElementCount(elementType);
         long perElemComplexity = Math.max(1L, complexityLimit / Math.max(1, elementCount));
