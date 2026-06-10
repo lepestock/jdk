@@ -23,7 +23,6 @@
 
 package jdk.test.lib.jittester.factories;
 
-import jdk.test.lib.jittester.BuiltInType;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Type;
@@ -41,16 +40,13 @@ class UnaryPlusMinusOperatorFactory extends UnaryOperatorFactory {
 
     @Override
     protected boolean isApplicable(Type resultType) {
-        if (!TypeList.isBuiltIn(resultType) || resultType.equals(TypeList.BOOLEAN)) {
-            return false;
-        }
-        BuiltInType resType = (BuiltInType) resultType;
-        return resType.equals(TypeList.INT) || resType.isMoreCapaciousThan(TypeList.INT);
+        return TypeBoxingUtil.isArithmeticResultType(resultType);
     }
 
     @Override
     protected Type generateType() {
-        if (resultType.equals(TypeList.INT)) {
+        Type primitiveResultType = TypeBoxingUtil.toPrimitiveType(resultType);
+        if (primitiveResultType.equals(TypeList.INT)) {
             return PseudoRandom.randomElement(TypeBoxingUtil.getArithmeticOperandTypesForResult(resultType));
         } else {
             return resultType;
@@ -59,7 +55,7 @@ class UnaryPlusMinusOperatorFactory extends UnaryOperatorFactory {
 
     @Override
     protected UnaryOperator generateProduction(Type type) throws ProductionFailedException {
-        return new UnaryOperator(opKind, new IRNodeBuilder()
+        return new UnaryOperator(opKind, resultType, new IRNodeBuilder()
                 .setComplexityLimit(complexityLimit)
                 .setOperatorLimit(operatorLimit)
                 .setOwnerKlass((TypeKlass) ownerClass)
