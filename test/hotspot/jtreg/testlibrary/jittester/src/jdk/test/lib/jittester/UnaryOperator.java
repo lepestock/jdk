@@ -31,6 +31,11 @@ public class UnaryOperator extends Operator {
         addChild(expression);
     }
 
+    public UnaryOperator(OperatorKind opKind, Type resultType, IRNode expression) {
+        super(opKind, resultType);
+        addChild(expression);
+    }
+
     @Override
     public long complexity() {
         IRNode expression = getChild(0);

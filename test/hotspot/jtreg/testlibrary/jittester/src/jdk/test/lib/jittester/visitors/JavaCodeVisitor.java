@@ -98,6 +98,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PrintingUtils;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 public class JavaCodeVisitor implements Visitor<String> {
     private Set<String> debugWrapGeneFilter = null;
@@ -358,9 +359,10 @@ public class JavaCodeVisitor implements Visitor<String> {
         if (left == null || right == null) {
             return "null";
         }
-        return expressionToJavaCode(node, left, Operator.Order.LEFT)
-               + " " + operatorToJaveCode(node.getOperationKind()) + " "
-               + expressionToJavaCode(node, right, Operator.Order.RIGHT);
+        String expression = expressionToJavaCode(node, left, Operator.Order.LEFT)
+                + " " + operatorToJaveCode(node.getOperationKind()) + " "
+                + expressionToJavaCode(node, right, Operator.Order.RIGHT);
+        return boxPrimitiveOperatorResultIfNeeded(node, expression);
     }
 
     @Override
@@ -1329,20 +1331,38 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(UnaryOperator node) {
         IRNode exp = node.getChild(0);
+        String expression;
         if (node.isPrefix()) {
             String op = operatorToJaveCode(node.getOperationKind());
             // Keep unary +/- separated from signed numeric literals to avoid lexical ambiguity:
             // without a gap, "- -10" can be emitted as "--10", which javac parses as pre-decrement.
             boolean needsUnaryGap = node.getOperationKind() == OperatorKind.UNARY_MINUS
                     || node.getOperationKind() == OperatorKind.UNARY_PLUS;
-            return op
+            expression = op
                     + (needsUnaryGap || exp instanceof Operator ? " " : "")
                     + expressionToJavaCode(node, exp, Operator.Order.LEFT);
         } else {
-            return expressionToJavaCode(node, exp, Operator.Order.RIGHT)
+            expression = expressionToJavaCode(node, exp, Operator.Order.RIGHT)
                     + (exp instanceof Operator ? " " : "")
                     + operatorToJaveCode(node.getOperationKind());
         }
+        return boxPrimitiveOperatorResultIfNeeded(node, expression);
+    }
+
+    private String boxPrimitiveOperatorResultIfNeeded(Operator node, String expression) {
+        if (!TypeBoxingUtil.isWrapperType(node.getResultType())
+                || !TypeBoxingUtil.isArithmeticResultType(node.getResultType())
+                || !producesPrimitiveOperatorResult(node.getOperationKind())) {
+            return expression;
+        }
+        return "(" + node.getResultType().accept(this) + ")(" + expression + ")";
+    }
+
+    private static boolean producesPrimitiveOperatorResult(OperatorKind kind) {
+        return switch (kind) {
+            case ADD, SUB, MUL, DIV, MOD, UNARY_PLUS, UNARY_MINUS -> true;
+            default -> false;
+        };
     }
 
     @Override

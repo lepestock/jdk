@@ -24,7 +24,6 @@
 package jdk.test.lib.jittester.factories;
 
 import jdk.test.lib.util.Pair;
-import jdk.test.lib.jittester.BuiltInType;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Type;
@@ -43,21 +42,18 @@ class BinaryArithmeticOperatorFactory extends BinaryOperatorFactory {
 
     @Override
     protected boolean isApplicable(Type resultType) {
-        // arithmetic for built-in types less capacious than "int" is not supported.
-        if (TypeList.isBuiltIn(resultType)) {
-            BuiltInType builtInType = (BuiltInType) resultType;
-            return builtInType.equals(TypeList.INT) || builtInType.isMoreCapaciousThan(TypeList.INT);
-        } else {
-            return false;
-        }
+        // Arithmetic expressions produce at least int; keep narrower result types out unless
+        // an explicit cast factory asks for them.
+        return TypeBoxingUtil.isArithmeticResultType(resultType);
     }
 
     @Override
     protected Pair<Type, Type> generateTypes() {
         List<Type> castableFromResultType = TypeBoxingUtil.getArithmeticOperandTypesForResult(resultType);
+        Type primitiveResultType = TypeBoxingUtil.toPrimitiveType(resultType);
         // built-in types less capacious than int are automatically casted to int in arithmetic.
         final Type leftType = PseudoRandom.randomElement(castableFromResultType);
-        final Type rightType = resultType.equals(TypeList.INT) ?
+        final Type rightType = primitiveResultType.equals(TypeList.INT) ?
                 PseudoRandom.randomElement(castableFromResultType) : resultType;
         //TODO: is there sense to swap them randomly as it was done in original code?
         return PseudoRandom.randomBoolean() ? new Pair<>(leftType, rightType) : new Pair<>(rightType, leftType);

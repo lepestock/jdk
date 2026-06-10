@@ -31,7 +31,6 @@ import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
-import jdk.test.lib.jittester.BuiltInType;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.Logger;
 import jdk.test.lib.jittester.Symbol;
@@ -42,6 +41,7 @@ import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.GenomeChoice;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 class ExpressionFactory extends SafeFactory<IRNode> {
     private static final double CAST_WEIGHT = 0.02;
@@ -165,11 +165,7 @@ class ExpressionFactory extends SafeFactory<IRNode> {
     }
 
     private static boolean isArithmeticFriendlyResultType(Type resultType) {
-        if (!TypeList.isBuiltIn(resultType)) {
-            return false;
-        }
-        BuiltInType bt = (BuiltInType) resultType;
-        return bt.equals(TypeList.INT) || bt.isMoreCapaciousThan(TypeList.INT);
+        return TypeBoxingUtil.isArithmeticResultType(resultType);
     }
 
     private static boolean isReferenceTerminalType(Type resultType) {

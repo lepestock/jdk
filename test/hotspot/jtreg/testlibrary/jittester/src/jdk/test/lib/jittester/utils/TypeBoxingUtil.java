@@ -23,15 +23,15 @@
 
 package jdk.test.lib.jittester.utils;
 
-import jdk.test.lib.jittester.Type;
-import jdk.test.lib.jittester.TypeList;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import jdk.test.lib.jittester.BuiltInType;
+import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.TypeList;
 
 public final class TypeBoxingUtil {
     private static final Map<String, String> PRIMITIVE_TO_WRAPPER;
@@ -64,7 +64,8 @@ public final class TypeBoxingUtil {
     }
 
     public static boolean isPrimitiveNumeric(Type type) {
-        return TypeList.isBuiltIn(type)
+        return type != null
+                && TypeList.isBuiltIn(type)
                 && !type.equals(TypeList.VOID)
                 && !type.equals(TypeList.BOOLEAN);
     }
@@ -72,6 +73,15 @@ public final class TypeBoxingUtil {
     public static boolean isNumericPrimitiveOrWrapper(Type type) {
         return isPrimitiveNumeric(type) || (isWrapperType(type)
                 && isPrimitiveNumeric(toPrimitiveType(type)));
+    }
+
+    public static boolean isArithmeticResultType(Type type) {
+        Type primitiveType = toPrimitiveType(type);
+        if (!isPrimitiveNumeric(primitiveType)) {
+            return false;
+        }
+        BuiltInType builtInType = (BuiltInType) primitiveType;
+        return builtInType.equals(TypeList.INT) || builtInType.isMoreCapaciousThan(TypeList.INT);
     }
 
     public static Type toPrimitiveType(Type type) {
