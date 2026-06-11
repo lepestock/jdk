@@ -126,6 +126,8 @@ public class IRNodeBuilder {
     private Optional<Boolean> preferIterationIndexedArrayTerminal = Optional.empty();
     private Optional<Type> fixedOperandType = Optional.empty();
     private boolean clearFixedOperandType = false;
+    private Optional<Integer> arrayElementExpressionWeightPercent = Optional.empty();
+    private Optional<Integer> arrayExtractionExpressionWeightPercent = Optional.empty();
     private Optional<String[]> moreReadOnlyVars = Optional.empty();
     private Optional<String[]> moreIterationVariables = Optional.empty();
     private Optional<Boolean> denominatorContext = Optional.empty();
@@ -285,6 +287,8 @@ public class IRNodeBuilder {
                 .withOperatorLimit(getOperatorLimit());
         arrayKernelIterationVariable.ifPresent(flowBuilder::withIterationVariable);
         inArrayKernel.ifPresent(flowBuilder::withInArrayKernel);
+        arrayElementExpressionWeightPercent.ifPresent(flowBuilder::withArrayElementExpressionWeightPercent);
+        arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withArrayExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
         denominatorContext.ifPresent(flowBuilder::withDenominatorContext);
@@ -310,6 +314,8 @@ public class IRNodeBuilder {
         if (clearFixedOperandType) {
             flowBuilder.clearFixedOperandType();
         }
+        arrayElementExpressionWeightPercent.ifPresent(flowBuilder::withArrayElementExpressionWeightPercent);
+        arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withArrayExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
         denominatorContext.ifPresent(flowBuilder::withDenominatorContext);
@@ -760,6 +766,16 @@ public class IRNodeBuilder {
     public IRNodeBuilder clearFixedOperandType() {
         fixedOperandType = Optional.empty();
         clearFixedOperandType = true;
+        return this;
+    }
+
+    public IRNodeBuilder withArrayElementExpressionWeightPercent(int value) {
+        arrayElementExpressionWeightPercent = Optional.of(value);
+        return this;
+    }
+
+    public IRNodeBuilder withArrayExtractionExpressionWeightPercent(int value) {
+        arrayExtractionExpressionWeightPercent = Optional.of(value);
         return this;
     }
 

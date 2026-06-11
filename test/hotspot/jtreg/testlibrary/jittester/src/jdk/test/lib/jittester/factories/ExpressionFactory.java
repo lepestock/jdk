@@ -164,12 +164,24 @@ class ExpressionFactory extends SafeFactory<IRNode> {
             rule.add("str_plus", builder.setOperatorKind(OperatorKind.STRADD).getBinaryOperatorFactory());
             if (!ProductionParams.disableArrays.value() && !exceptionSafe) {
                 //rule.add("array_creation", builder.getArrayCreationFactory());
-                double arrayWeight = 1.0
+                double baseArrayWeight = 1.0
                         + Math.max(0, ProductionParams.arrayProductionWeightBonus.value()) / 100.0;
-                rule.add("array_element", builder.getArrayElementFactory(), arrayWeight);
-                rule.add("array_extraction", builder.getArrayExtractionFactory(), arrayWeight);
+                double arrayElementWeight = scaleWeight(baseArrayWeight,
+                        GenerationState.currentFlowParams().arrayElementExpressionWeightPercent());
+                double arrayExtractionWeight = scaleWeight(baseArrayWeight,
+                        GenerationState.currentFlowParams().arrayExtractionExpressionWeightPercent());
+                if (arrayElementWeight > 0.0) {
+                    rule.add("array_element", builder.getArrayElementFactory(), arrayElementWeight);
+                }
+                if (arrayExtractionWeight > 0.0) {
+                    rule.add("array_extraction", builder.getArrayExtractionFactory(), arrayExtractionWeight);
+                }
             }
         }
+    }
+
+    private static double scaleWeight(double baseWeight, int percent) {
+        return baseWeight * Math.max(0, percent) / 100.0;
     }
 
     private void addTerminal(String name, Factory<? extends IRNode> factory, double expressionWeight,
