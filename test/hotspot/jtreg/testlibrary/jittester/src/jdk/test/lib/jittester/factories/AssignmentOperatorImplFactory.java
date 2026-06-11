@@ -43,6 +43,8 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
     private static final int LVALUE_PICK_RETRIES = 16;
+    private static final int ARRAY_KERNEL_LVALUE_COMPLEXITY_PERCENT = 5;
+    private static final int ARRAY_KERNEL_LVALUE_OPERATOR_PERCENT = 10;
     private static final ArrayAssignmentDiagnostics ARRAY_ASSIGNMENT_DIAGNOSTICS =
             Diagnostics.arrayAssignment();
 
@@ -58,6 +60,13 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
 
     @Override
     protected Pair<Type, Type> generateTypes() {
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!resultType.equals(fixedType)) {
+                throw new IllegalArgumentException();
+            }
+            return new Pair<>(resultType, fixedType);
+        }
         return new Pair<>(resultType, PseudoRandom.randomElement(
                 TypeBoxingUtil.getAssignmentCompatibleWithBoxing(TypeList.getAll(), resultType)));
     }
@@ -65,9 +74,14 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
     @Override
     protected BinaryOperator generateProduction(Type leftOperandType, Type rightOperandType)
             throws ProductionFailedException {
-        long leftComplexityLimit = (long) (PseudoRandom.random() * complexityLimit);
+        boolean inArrayKernel = GenerationState.currentFlowParams().inArrayKernel();
+        long leftComplexityLimit = inArrayKernel
+                ? percentageLimit(complexityLimit, ARRAY_KERNEL_LVALUE_COMPLEXITY_PERCENT)
+                : (long) (PseudoRandom.random() * complexityLimit);
         long rightComplexityLimit = complexityLimit - leftComplexityLimit;
-        int leftOperatorLimit = (int) (PseudoRandom.random() * operatorLimit);
+        int leftOperatorLimit = inArrayKernel
+                ? percentageLimit(operatorLimit, ARRAY_KERNEL_LVALUE_OPERATOR_PERCENT)
+                : (int) (PseudoRandom.random() * operatorLimit);
         int rightOperatorLimit = operatorLimit - leftOperatorLimit;
         if (leftOperatorLimit <= 0 || rightOperatorLimit <= 0
                 || leftComplexityLimit <= 0 || rightComplexityLimit <= 0) {
@@ -81,7 +95,7 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
                 .setResultType(leftOperandType)
                 .setIsConstant(false);
         Rule<IRNode> rule = new Rule<>("assignment");
-        if (GenerationState.currentFlowParams().inArrayKernel()) {
+        if (inArrayKernel) {
             String iterationVariable = GenerationState.currentFlowParams().iterationVariable();
             rule.add("initialized_nonconst_var",
                     new ReadOnlyLocalLValueFactory(
@@ -108,15 +122,16 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
                     new ReadOnlyLocalLValueFactory(builder.setIsInitialized(false).getVariableFactory(),
                             LVALUE_PICK_RETRIES));
         }
-        ArrayAssignmentDiagnostics.Snapshot diagnosticSnapshot =
-                ARRAY_ASSIGNMENT_DIAGNOSTICS.snapshot(leftOperandType, rightOperandType);
         IRNode leftOperandValue = rule.produce();
-        boolean preferIndexedArrayTerminal = GenerationState.currentFlowParams().inArrayKernel()
-                && leftOperandValue instanceof ArrayElement;
+        boolean preferIndexedArrayTerminal = inArrayKernel && leftOperandValue instanceof ArrayElement;
+        Type effectiveRightOperandType = preferIndexedArrayTerminal ? leftOperandType : rightOperandType;
+        ArrayAssignmentDiagnostics.Snapshot diagnosticSnapshot =
+                ARRAY_ASSIGNMENT_DIAGNOSTICS.snapshot(leftOperandType, effectiveRightOperandType);
         IRNode rightOperandValue = builder.setComplexityLimit(rightComplexityLimit)
                 .setOperatorLimit(rightOperatorLimit)
-                .setResultType(rightOperandType)
+                .setResultType(effectiveRightOperandType)
                 .withPreferIterationIndexedArrayTerminal(preferIndexedArrayTerminal)
+                .setFixedOperandType(preferIndexedArrayTerminal ? leftOperandType : null)
                 .produceExpression();
         try {
             if (leftOperandValue instanceof VariableBase variableBase
@@ -130,6 +145,14 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         ARRAY_ASSIGNMENT_DIAGNOSTICS.attach(diagnosticSnapshot, result, opKind,
                 leftOperandValue, rightOperandValue);
         return result;
+    }
+
+    private static long percentageLimit(long limit, int percent) {
+        return Math.max(1L, Math.min(limit - 1L, (long) Math.ceil(limit * (percent / 100.0))));
+    }
+
+    private static int percentageLimit(int limit, int percent) {
+        return Math.max(1, Math.min(limit - 1, (int) Math.ceil(limit * (percent / 100.0))));
     }
 
     private static final class ExcludingLocalVariableLValueFactory extends Factory<IRNode> {
