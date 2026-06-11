@@ -35,26 +35,35 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.arrays.ArrayElement;
+import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 /**
  * Produces array element accesses of shape array[iterationVariable].
  * The array base is intentionally simple (local/static variable) to keep this
  * deterministic and avoid extra factory complexity in kernel-map contexts.
  */
-class IterationIndexedArrayElementFactory extends SafeFactory<ArrayElement> {
+class IterationIndexedArrayElementFactory extends SafeFactory<IRNode> {
     private final TypeKlass ownerClass;
     private final Type elementType;
+    private final boolean assignmentCompatible;
 
     IterationIndexedArrayElementFactory(TypeKlass ownerClass, Type elementType) {
+        this(ownerClass, elementType, false);
+    }
+
+    IterationIndexedArrayElementFactory(TypeKlass ownerClass, Type elementType,
+            boolean assignmentCompatible) {
         this.ownerClass = ownerClass;
         this.elementType = elementType;
+        this.assignmentCompatible = assignmentCompatible;
     }
 
     @Override
-    protected ArrayElement sproduce() throws ProductionFailedException {
+    protected IRNode sproduce() throws ProductionFailedException {
         String iterationVariable = GenerationState.currentFlowParams().iterationVariable();
         if (iterationVariable == null || iterationVariable.isBlank()) {
             throw new ProductionFailedException();
@@ -67,11 +76,9 @@ class IterationIndexedArrayElementFactory extends SafeFactory<ArrayElement> {
             throw new ProductionFailedException();
         }
 
-        TypeArray arrayType = new TypeArray(elementType, 1);
-        List<Symbol> symbols = new ArrayList<>(SymbolTable.get(arrayType, VariableInfo.class));
         ArrayList<IRNode> arrayCandidates = new ArrayList<>();
         ArrayList<VariableInfo> arrayCandidateInfos = new ArrayList<>();
-        for (Symbol symbol : symbols) {
+        for (Symbol symbol : candidateSymbols()) {
             if (!(symbol instanceof VariableInfo varInfo)) {
                 continue;
             }
@@ -101,6 +108,35 @@ class IterationIndexedArrayElementFactory extends SafeFactory<ArrayElement> {
         ArrayList<IRNode> indexes = new ArrayList<>(1);
         // Array candidates here carry known generation-time lengths. Kernel loops keep iterator in-range.
         indexes.add(new LocalVariable(iterationInfo));
-        return new ArrayElement(baseArray, indexes);
+        ArrayElement element = new ArrayElement(baseArray, indexes);
+        if (element.getResultType().equals(elementType)) {
+            return element;
+        }
+        return new CastOperator(elementType, element);
+    }
+
+    private List<Symbol> candidateSymbols() {
+        if (!assignmentCompatible) {
+            return new ArrayList<>(SymbolTable.get(new TypeArray(elementType, 1), VariableInfo.class));
+        }
+        ArrayList<Symbol> result = new ArrayList<>();
+        for (Symbol symbol : SymbolTable.getAllCombined(VariableInfo.class)) {
+            if (!(symbol instanceof VariableInfo varInfo)) {
+                continue;
+            }
+            if (!(varInfo.type instanceof TypeArray arrayType)) {
+                continue;
+            }
+            if (arrayType.dimensions != 1) {
+                continue;
+            }
+            if (!TypeArray.isElementTypeAllowed(arrayType.type)) {
+                continue;
+            }
+            if (TypeBoxingUtil.isAssignmentCompatibleWithBoxing(arrayType.type, elementType)) {
+                result.add(varInfo);
+            }
+        }
+        return result;
     }
 }

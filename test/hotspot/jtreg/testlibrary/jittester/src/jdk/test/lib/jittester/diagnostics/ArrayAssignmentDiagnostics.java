@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.diagnostics;
 
 import java.util.ArrayList;
 import java.util.List;
+import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.OperatorKind;
@@ -115,6 +116,9 @@ public final class ArrayAssignmentDiagnostics {
     }
 
     private static VariableInfo selectedArrayInfo(IRNode node) {
+        if (node instanceof CastOperator castOperator) {
+            node = castOperator.getChild(0);
+        }
         if (!(node instanceof ArrayElement arrayElement)) {
             return null;
         }
