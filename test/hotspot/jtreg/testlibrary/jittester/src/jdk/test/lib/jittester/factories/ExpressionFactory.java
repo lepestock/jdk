@@ -100,7 +100,7 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                         && !exceptionSafe
                         && !(resultType instanceof TypeArray);
         boolean groupTerminals = preferIterationIndexedArrayTerminal;
-        double groupedTerminalWeight = 0.0;
+        double groupedTerminalWeight = terminalWeight;
         if (!noconsts) {
             Factory<? extends IRNode> literalFactory = builder.getLiteralFactory();
             Factory<? extends IRNode> constantFactory = builder.setIsConstant(true)
@@ -108,31 +108,28 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                     //.setVariableType(resultType)
                     .getVariableFactory();
             addTerminal("literal", literalFactory, terminalWeight, 1.0, groupTerminals);
-            groupedTerminalWeight += groupTerminals ? terminalWeight : 0.0;
             addTerminal("constant", constantFactory, terminalWeight, 1.0, groupTerminals);
-            groupedTerminalWeight += groupTerminals ? terminalWeight : 0.0;
         }
         Factory<? extends IRNode> variableFactory = builder
                 .setIsConstant(false)
                 .setIsInitialized(true)
                 .getVariableFactory();
         addTerminal("variable", variableFactory, terminalWeight, 1.0, groupTerminals);
-        groupedTerminalWeight += groupTerminals ? terminalWeight : 0.0;
         if (preferIterationIndexedArrayTerminal) {
             Factory<? extends IRNode> iterationArrayTerminalFactory =
                     new IterationIndexedArrayElementFactory(ownerClass, resultType, true);
             terminalRule.add("iteration_indexed_array_terminal", iterationArrayTerminalFactory,
                     ITERATION_INDEXED_ARRAY_TERMINAL_WEIGHT);
-            groupedTerminalWeight += terminalWeight;
         }
         if (isReferenceTerminalType(resultType)) {
             Factory<? extends IRNode> classTerminalFactory = new ClassTerminalFactory(
                     complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
             double classTerminalWeight = terminalWeight * 2.0;
             addTerminal("class_terminal", classTerminalFactory, classTerminalWeight, 2.0, groupTerminals);
-            groupedTerminalWeight += groupTerminals ? classTerminalWeight : 0.0;
         }
         if (groupTerminals) {
+            // Once terminals are grouped, the expression-level rule should only decide
+            // terminal-vs-operator. The terminalRule weights decide which terminal is used.
             rule.add("terminal", terminalRule, groupedTerminalWeight);
         }
         double operatorEnableProbability = Math.max(0.0,
