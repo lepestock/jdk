@@ -25,13 +25,18 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.List;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Statement;
+import jdk.test.lib.jittester.Symbol;
+import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
+import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -60,6 +65,12 @@ class StatementFactory extends Factory<Statement> {
     }
 
     private static Type pickStatementResultType() {
+        if (GenerationState.currentFlowParams().inArrayKernel()) {
+            Type arrayElementType = pickKernelArrayElementType();
+            if (arrayElementType != null) {
+                return arrayElementType;
+            }
+        }
         if (PseudoRandom.randomBoolean(NUMERIC_RESULT_TYPE_PREFERENCE)) {
             List<Type> numericPreferred = new ArrayList<>();
             numericPreferred.add(TypeList.INT);
@@ -69,6 +80,34 @@ class StatementFactory extends Factory<Statement> {
             return PseudoRandom.randomElement(numericPreferred);
         }
         return PseudoRandom.randomElement(TypeList.getAll());
+    }
+
+    private static Type pickKernelArrayElementType() {
+        ArrayList<Type> candidates = new ArrayList<>();
+        for (Symbol symbol : SymbolTable.getAllCombined(VariableInfo.class)) {
+            if (!(symbol instanceof VariableInfo varInfo)) {
+                continue;
+            }
+            if (!(varInfo.type instanceof TypeArray arrayType)) {
+                continue;
+            }
+            if (arrayType.dimensions != 1) {
+                continue;
+            }
+            if ((varInfo.flags & VariableInfo.INITIALIZED) == 0) {
+                continue;
+            }
+            if (varInfo.getArrayLength().isEmpty()) {
+                continue;
+            }
+            if (!TypeArray.isElementTypeAllowed(arrayType.type)) {
+                continue;
+            }
+            if (!candidates.contains(arrayType.type)) {
+                candidates.add(arrayType.type);
+            }
+        }
+        return candidates.isEmpty() ? null : PseudoRandom.randomElement(candidates);
     }
 
     @Override
