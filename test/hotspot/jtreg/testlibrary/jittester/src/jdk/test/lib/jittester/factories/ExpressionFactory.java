@@ -49,6 +49,7 @@ class ExpressionFactory extends SafeFactory<IRNode> {
     private static final double NUMERIC_CAST_WEIGHT = 0.005;
     private static final double NUMERIC_ARITHMETIC_WEIGHT = 4.0;
     private static final double NUMERIC_ASSIGNMENT_WEIGHT = 0.6;
+    private static final double ITERATION_INDEXED_ARRAY_TERMINAL_WEIGHT = 8.0;
     private static final ThreadLocal<Integer> EXPRESSION_DEPTH = ThreadLocal.withInitial(() -> 0);
     private static final ThreadLocal<DebugStats> DEBUG_STATS =
             ThreadLocal.withInitial(DebugStats::new);
@@ -93,39 +94,46 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         this.stopHalfDepth = Math.max(1, ProductionParams.expressionStopHalfDepth.value());
         double terminalWeight = Math.max(1.0,
                 ProductionParams.expressionStopPercent.value() / 2.0);
+        boolean preferIterationIndexedArrayTerminal =
+                GenerationState.currentFlowParams().preferIterationIndexedArrayTerminal()
+                        && !ProductionParams.disableArrays.value()
+                        && !exceptionSafe
+                        && !(resultType instanceof TypeArray);
+        boolean groupTerminals = preferIterationIndexedArrayTerminal;
+        double groupedTerminalWeight = 0.0;
         if (!noconsts) {
             Factory<? extends IRNode> literalFactory = builder.getLiteralFactory();
             Factory<? extends IRNode> constantFactory = builder.setIsConstant(true)
                     .setIsInitialized(true)
                     //.setVariableType(resultType)
                     .getVariableFactory();
-            rule.add("literal", literalFactory, terminalWeight);
-            terminalRule.add("literal", literalFactory);
-            rule.add("constant", constantFactory, terminalWeight);
-            terminalRule.add("constant", constantFactory);
+            addTerminal("literal", literalFactory, terminalWeight, 1.0, groupTerminals);
+            groupedTerminalWeight += groupTerminals ? terminalWeight : 0.0;
+            addTerminal("constant", constantFactory, terminalWeight, 1.0, groupTerminals);
+            groupedTerminalWeight += groupTerminals ? terminalWeight : 0.0;
         }
         Factory<? extends IRNode> variableFactory = builder
                 .setIsConstant(false)
                 .setIsInitialized(true)
                 .getVariableFactory();
-        rule.add("variable", variableFactory, terminalWeight);
-        terminalRule.add("variable", variableFactory);
-        if (GenerationState.currentFlowParams().preferIterationIndexedArrayTerminal()
-                && !ProductionParams.disableArrays.value()
-                && !exceptionSafe
-                && !(resultType instanceof TypeArray)) {
+        addTerminal("variable", variableFactory, terminalWeight, 1.0, groupTerminals);
+        groupedTerminalWeight += groupTerminals ? terminalWeight : 0.0;
+        if (preferIterationIndexedArrayTerminal) {
             Factory<? extends IRNode> iterationArrayTerminalFactory =
-                    new IterationIndexedArrayElementFactory(ownerClass, resultType);
-            double boostedTerminalWeight = terminalWeight * 8.0;
-            rule.add("iteration_indexed_array_terminal",
-                    iterationArrayTerminalFactory, boostedTerminalWeight);
-            terminalRule.add("iteration_indexed_array_terminal", iterationArrayTerminalFactory);
+                    new IterationIndexedArrayElementFactory(ownerClass, resultType, true);
+            terminalRule.add("iteration_indexed_array_terminal", iterationArrayTerminalFactory,
+                    ITERATION_INDEXED_ARRAY_TERMINAL_WEIGHT);
+            groupedTerminalWeight += terminalWeight;
         }
         if (isReferenceTerminalType(resultType)) {
             Factory<? extends IRNode> classTerminalFactory = new ClassTerminalFactory(
                     complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
-            rule.add("class_terminal", classTerminalFactory, terminalWeight * 2.0);
-            terminalRule.add("class_terminal", classTerminalFactory);
+            double classTerminalWeight = terminalWeight * 2.0;
+            addTerminal("class_terminal", classTerminalFactory, classTerminalWeight, 2.0, groupTerminals);
+            groupedTerminalWeight += groupTerminals ? classTerminalWeight : 0.0;
+        }
+        if (groupTerminals) {
+            rule.add("terminal", terminalRule, groupedTerminalWeight);
         }
         double operatorEnableProbability = Math.max(0.0,
                 (1.0 - ProductionParams.expressionStopPercent.value() / 100.0) * 0.6);
@@ -162,6 +170,14 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                 rule.add("array_extraction", builder.getArrayExtractionFactory(), arrayWeight);
             }
         }
+    }
+
+    private void addTerminal(String name, Factory<? extends IRNode> factory, double expressionWeight,
+            double terminalChoiceWeight, boolean grouped) {
+        if (!grouped) {
+            rule.add(name, factory, expressionWeight);
+        }
+        terminalRule.add(name, factory, terminalChoiceWeight);
     }
 
     private static boolean isArithmeticFriendlyResultType(Type resultType) {
