@@ -51,6 +51,9 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
  * It emits a canonical for-loop shape and marks kernel body blocks for source-level probing.
  */
 class ArrayKernelLoopFactory extends SafeFactory<For> {
+    private static final int KERNEL_ARRAY_ELEMENT_EXPRESSION_WEIGHT_PERCENT = 10;
+    private static final int KERNEL_ARRAY_EXTRACTION_EXPRESSION_WEIGHT_PERCENT = 10;
+
     private final TypeKlass ownerClass;
     private final Type returnType;
     private final long complexityLimit;
@@ -120,6 +123,9 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
                     .setCanHaveThrow(false)
                     .withArrayKernelVariable(iterationVariable)
                     .withInArrayKernel(true)
+                    // Generic array expression roots tend to collapse kernel RHS into simple loads.
+                    .withArrayElementExpressionWeightPercent(KERNEL_ARRAY_ELEMENT_EXPRESSION_WEIGHT_PERCENT)
+                    .withArrayExtractionExpressionWeightPercent(KERNEL_ARRAY_EXTRACTION_EXPRESSION_WEIGHT_PERCENT)
                     .withMoreReadOnlyVars(iterationVariable)
                     .withMoreIterationVariables(iterationVariable)
                     .produceBlock();

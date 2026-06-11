@@ -42,6 +42,8 @@ public final class FlowParams {
     private final boolean inArrayKernel;
     private final boolean preferIterationIndexedArrayTerminal;
     private final Type fixedOperandType;
+    private final int arrayElementExpressionWeightPercent;
+    private final int arrayExtractionExpressionWeightPercent;
     private final Set<String> readOnlyVars;
     private final Set<String> iterationVariables;
     private final boolean denominatorContext;
@@ -50,6 +52,8 @@ public final class FlowParams {
                        String iterationVariable, boolean inArrayKernel,
                        boolean preferIterationIndexedArrayTerminal,
                        Type fixedOperandType,
+                       int arrayElementExpressionWeightPercent,
+                       int arrayExtractionExpressionWeightPercent,
                        Set<String> readOnlyVars,
                        Set<String> iterationVariables,
                        boolean denominatorContext) {
@@ -60,6 +64,8 @@ public final class FlowParams {
         this.inArrayKernel = inArrayKernel;
         this.preferIterationIndexedArrayTerminal = preferIterationIndexedArrayTerminal;
         this.fixedOperandType = fixedOperandType;
+        this.arrayElementExpressionWeightPercent = arrayElementExpressionWeightPercent;
+        this.arrayExtractionExpressionWeightPercent = arrayExtractionExpressionWeightPercent;
         this.readOnlyVars = readOnlyVars;
         this.iterationVariables = iterationVariables;
         this.denominatorContext = denominatorContext;
@@ -73,6 +79,8 @@ public final class FlowParams {
                 false,
                 false,
                 null,
+                100,
+                100,
                 Collections.emptySet(),
                 Collections.emptySet(),
                 false);
@@ -100,6 +108,14 @@ public final class FlowParams {
 
     public Optional<Type> fixedOperandType() {
         return Optional.ofNullable(fixedOperandType);
+    }
+
+    public int arrayElementExpressionWeightPercent() {
+        return arrayElementExpressionWeightPercent;
+    }
+
+    public int arrayExtractionExpressionWeightPercent() {
+        return arrayExtractionExpressionWeightPercent;
     }
 
     public boolean isReadOnlyVar(String variableName) {
@@ -161,6 +177,8 @@ public final class FlowParams {
                 + ", inArrayKernel=" + inArrayKernel
                 + ", preferIterationIndexedArrayTerminal=" + preferIterationIndexedArrayTerminal
                 + ", fixedOperandType=" + (fixedOperandType == null ? "<none>" : fixedOperandType.getName())
+                + ", arrayElementExpressionWeightPercent=" + arrayElementExpressionWeightPercent
+                + ", arrayExtractionExpressionWeightPercent=" + arrayExtractionExpressionWeightPercent
                 + ", readOnlyVars=" + readOnlyVars
                 + ", iterationVariables=" + iterationVariables
                 + ", denominatorContext=" + denominatorContext
@@ -182,6 +200,10 @@ public final class FlowParams {
         return Math.max(1, value);
     }
 
+    private static int normalizePercent(int value) {
+        return Math.max(0, value);
+    }
+
     public static final class Builder {
         private final FlowParams base;
         private int statementLimit;
@@ -190,6 +212,8 @@ public final class FlowParams {
         private boolean inArrayKernel;
         private boolean preferIterationIndexedArrayTerminal;
         private Type fixedOperandType;
+        private int arrayElementExpressionWeightPercent;
+        private int arrayExtractionExpressionWeightPercent;
         private LinkedHashSet<String> readOnlyVars;
         private LinkedHashSet<String> iterationVariables;
         private boolean denominatorContext;
@@ -205,6 +229,8 @@ public final class FlowParams {
             this.inArrayKernel = base.inArrayKernel;
             this.preferIterationIndexedArrayTerminal = base.preferIterationIndexedArrayTerminal;
             this.fixedOperandType = base.fixedOperandType;
+            this.arrayElementExpressionWeightPercent = base.arrayElementExpressionWeightPercent;
+            this.arrayExtractionExpressionWeightPercent = base.arrayExtractionExpressionWeightPercent;
             this.readOnlyVars = new LinkedHashSet<>(base.readOnlyVars);
             this.iterationVariables = new LinkedHashSet<>(base.iterationVariables);
             this.denominatorContext = base.denominatorContext;
@@ -245,6 +271,16 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withArrayElementExpressionWeightPercent(int value) {
+            this.arrayElementExpressionWeightPercent = normalizePercent(value);
+            return this;
+        }
+
+        public Builder withArrayExtractionExpressionWeightPercent(int value) {
+            this.arrayExtractionExpressionWeightPercent = normalizePercent(value);
+            return this;
+        }
+
         public Builder withMoreReadOnlyVars(String... values) {
             if (values == null) {
                 return this;
@@ -277,6 +313,7 @@ public final class FlowParams {
         public FlowParams advance() {
             return new FlowParams(base, statementLimit, operatorLimit, iterationVariable,
                     inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
+                    arrayElementExpressionWeightPercent, arrayExtractionExpressionWeightPercent,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
                     Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)),
                     denominatorContext);
