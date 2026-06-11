@@ -124,6 +124,8 @@ public class IRNodeBuilder {
     private Optional<String> arrayKernelIterationVariable = Optional.empty();
     private Optional<Boolean> inArrayKernel = Optional.empty();
     private Optional<Boolean> preferIterationIndexedArrayTerminal = Optional.empty();
+    private Optional<Type> fixedOperandType = Optional.empty();
+    private boolean clearFixedOperandType = false;
     private Optional<String[]> moreReadOnlyVars = Optional.empty();
     private Optional<String[]> moreIterationVariables = Optional.empty();
     private Optional<Boolean> denominatorContext = Optional.empty();
@@ -304,6 +306,10 @@ public class IRNodeBuilder {
                 .withStatementLimit(previous.statementLimit())
                 .withOperatorLimit(previous.operatorLimit());
         preferIterationIndexedArrayTerminal.ifPresent(flowBuilder::withPreferIterationIndexedArrayTerminal);
+        fixedOperandType.ifPresent(flowBuilder::withFixedOperandType);
+        if (clearFixedOperandType) {
+            flowBuilder.clearFixedOperandType();
+        }
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
         denominatorContext.ifPresent(flowBuilder::withDenominatorContext);
@@ -743,6 +749,18 @@ public class IRNodeBuilder {
 
     public IRNodeBuilder withPreferIterationIndexedArrayTerminal(boolean value) {
         return setPreferIterationIndexedArrayTerminal(value);
+    }
+
+    public IRNodeBuilder setFixedOperandType(Type value) {
+        fixedOperandType = Optional.ofNullable(value);
+        clearFixedOperandType = false;
+        return this;
+    }
+
+    public IRNodeBuilder clearFixedOperandType() {
+        fixedOperandType = Optional.empty();
+        clearFixedOperandType = true;
+        return this;
     }
 
     public IRNodeBuilder withMoreReadOnlyVars(String... values) {

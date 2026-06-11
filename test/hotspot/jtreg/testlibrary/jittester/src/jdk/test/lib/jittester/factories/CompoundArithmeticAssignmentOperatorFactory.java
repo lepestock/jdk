@@ -50,6 +50,13 @@ class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory 
 
     @Override
     protected Pair<Type, Type> generateTypes() {
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!resultType.equals(fixedType)) {
+                throw new IllegalArgumentException();
+            }
+            return new Pair<>(resultType, fixedType);
+        }
         return new Pair<>(resultType, PseudoRandom.randomElement(
                 TypeBoxingUtil.getCompoundAssignmentRightOperandTypes(resultType)));
     }

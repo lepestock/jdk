@@ -25,6 +25,7 @@ package jdk.test.lib.jittester;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -40,6 +41,7 @@ public final class FlowParams {
     private final String iterationVariable;
     private final boolean inArrayKernel;
     private final boolean preferIterationIndexedArrayTerminal;
+    private final Type fixedOperandType;
     private final Set<String> readOnlyVars;
     private final Set<String> iterationVariables;
     private final boolean denominatorContext;
@@ -47,6 +49,7 @@ public final class FlowParams {
     private FlowParams(FlowParams prev, int statementLimit, int operatorLimit,
                        String iterationVariable, boolean inArrayKernel,
                        boolean preferIterationIndexedArrayTerminal,
+                       Type fixedOperandType,
                        Set<String> readOnlyVars,
                        Set<String> iterationVariables,
                        boolean denominatorContext) {
@@ -56,6 +59,7 @@ public final class FlowParams {
         this.iterationVariable = iterationVariable;
         this.inArrayKernel = inArrayKernel;
         this.preferIterationIndexedArrayTerminal = preferIterationIndexedArrayTerminal;
+        this.fixedOperandType = fixedOperandType;
         this.readOnlyVars = readOnlyVars;
         this.iterationVariables = iterationVariables;
         this.denominatorContext = denominatorContext;
@@ -68,6 +72,7 @@ public final class FlowParams {
                 null,
                 false,
                 false,
+                null,
                 Collections.emptySet(),
                 Collections.emptySet(),
                 false);
@@ -91,6 +96,10 @@ public final class FlowParams {
 
     public boolean preferIterationIndexedArrayTerminal() {
         return preferIterationIndexedArrayTerminal;
+    }
+
+    public Optional<Type> fixedOperandType() {
+        return Optional.ofNullable(fixedOperandType);
     }
 
     public boolean isReadOnlyVar(String variableName) {
@@ -151,6 +160,7 @@ public final class FlowParams {
                 + ", iterationVariable=" + (iterationVariable == null ? "<none>" : iterationVariable)
                 + ", inArrayKernel=" + inArrayKernel
                 + ", preferIterationIndexedArrayTerminal=" + preferIterationIndexedArrayTerminal
+                + ", fixedOperandType=" + (fixedOperandType == null ? "<none>" : fixedOperandType.getName())
                 + ", readOnlyVars=" + readOnlyVars
                 + ", iterationVariables=" + iterationVariables
                 + ", denominatorContext=" + denominatorContext
@@ -179,6 +189,7 @@ public final class FlowParams {
         private String iterationVariable;
         private boolean inArrayKernel;
         private boolean preferIterationIndexedArrayTerminal;
+        private Type fixedOperandType;
         private LinkedHashSet<String> readOnlyVars;
         private LinkedHashSet<String> iterationVariables;
         private boolean denominatorContext;
@@ -193,6 +204,7 @@ public final class FlowParams {
             this.iterationVariable = base.iterationVariable;
             this.inArrayKernel = base.inArrayKernel;
             this.preferIterationIndexedArrayTerminal = base.preferIterationIndexedArrayTerminal;
+            this.fixedOperandType = base.fixedOperandType;
             this.readOnlyVars = new LinkedHashSet<>(base.readOnlyVars);
             this.iterationVariables = new LinkedHashSet<>(base.iterationVariables);
             this.denominatorContext = base.denominatorContext;
@@ -220,6 +232,16 @@ public final class FlowParams {
 
         public Builder withPreferIterationIndexedArrayTerminal(boolean value) {
             this.preferIterationIndexedArrayTerminal = value;
+            return this;
+        }
+
+        public Builder withFixedOperandType(Type value) {
+            this.fixedOperandType = value;
+            return this;
+        }
+
+        public Builder clearFixedOperandType() {
+            this.fixedOperandType = null;
             return this;
         }
 
@@ -254,7 +276,7 @@ public final class FlowParams {
 
         public FlowParams advance() {
             return new FlowParams(base, statementLimit, operatorLimit, iterationVariable,
-                    inArrayKernel, preferIterationIndexedArrayTerminal,
+                    inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
                     Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)),
                     denominatorContext);

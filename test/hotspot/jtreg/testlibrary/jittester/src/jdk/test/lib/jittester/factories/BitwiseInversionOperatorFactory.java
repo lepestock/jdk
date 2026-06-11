@@ -45,6 +45,13 @@ class BitwiseInversionOperatorFactory extends UnaryOperatorFactory {
 
     @Override
     protected Type generateType() {
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!resultType.equals(fixedType)) {
+                throw new IllegalArgumentException();
+            }
+            return fixedType;
+        }
         if (resultType.equals(TypeList.INT)) {
             return PseudoRandom.randomElement(TypeUtil.getImplicitlyCastable(TypeList.getBuiltIn(), resultType));
         } else {

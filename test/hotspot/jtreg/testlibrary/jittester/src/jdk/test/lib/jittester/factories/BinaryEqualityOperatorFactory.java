@@ -47,6 +47,13 @@ class BinaryEqualityOperatorFactory extends BinaryOperatorFactory {
 
     @Override
     protected Pair<Type, Type> generateTypes() {
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!TypeList.isBuiltIn(fixedType) || fixedType.equals(TypeList.BOOLEAN)) {
+                throw new IllegalArgumentException();
+            }
+            return new Pair<>(fixedType, fixedType);
+        }
         final List<Type> builtInExceptBoolean = new ArrayList<>(TypeList.getBuiltIn());
         builtInExceptBoolean.remove(TypeList.BOOLEAN);
         return new Pair<>(PseudoRandom.randomElement(builtInExceptBoolean), PseudoRandom.randomElement(builtInExceptBoolean));

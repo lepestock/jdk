@@ -45,6 +45,13 @@ class BinaryShiftOperatorFactory extends BinaryOperatorFactory {
 
     @Override
     protected Pair<Type, Type> generateTypes() {
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!resultType.equals(fixedType)) {
+                throw new IllegalArgumentException();
+            }
+            return new Pair<>(fixedType, fixedType);
+        }
         Type leftType = resultType.equals(TypeList.INT) ? PseudoRandom.randomElement(TypeUtil.getImplicitlyCastable(TypeList.getBuiltInInt(), resultType)) : resultType;
         Type rightType = PseudoRandom.randomElement(TypeUtil.getImplicitlyCastable(TypeList.getBuiltInInt(), TypeList.LONG));
         return new Pair<>(leftType, rightType);

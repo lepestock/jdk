@@ -49,6 +49,13 @@ class BinaryArithmeticOperatorFactory extends BinaryOperatorFactory {
 
     @Override
     protected Pair<Type, Type> generateTypes() {
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!resultType.equals(fixedType)) {
+                throw new IllegalArgumentException();
+            }
+            return new Pair<>(fixedType, fixedType);
+        }
         List<Type> castableFromResultType = TypeBoxingUtil.getArithmeticOperandTypesForResult(resultType);
         Type primitiveResultType = TypeBoxingUtil.toPrimitiveType(resultType);
         // built-in types less capacious than int are automatically casted to int in arithmetic.
