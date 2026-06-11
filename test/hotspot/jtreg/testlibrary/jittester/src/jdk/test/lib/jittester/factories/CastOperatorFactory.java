@@ -63,6 +63,33 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
                 System.err.printf("[JTDBG][Cast]   shuffled[%d]=%s%n", i, argType.get(i).getName());
             }
         }
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!fixedType.equals(resultType)) {
+                throw new ProductionFailedException();
+            }
+            int symbolCheckpoint = SymbolTable.checkpoint();
+            boolean merged = false;
+            try {
+                Factory<IRNode> expressionFactory = new IRNodeBuilder()
+                        .setComplexityLimit(complexityLimit - 1)
+                        .setOperatorLimit(operatorLimit - 1)
+                        .setOwnerKlass((TypeKlass) ownerClass)
+                        .setExceptionSafe(exceptionSafe)
+                        .setNoConsts(noconsts)
+                        .setResultType(fixedType)
+                        .getExpressionFactory();
+                SymbolTable.push();
+                CastOperator castOperator = new CastOperator(resultType, expressionFactory.produce());
+                SymbolTable.merge();
+                merged = true;
+                return castOperator;
+            } finally {
+                if (!merged) {
+                    SymbolTable.rollbackToCheckpoint(symbolCheckpoint);
+                }
+            }
+        }
         int idx = 0;
         for (Type type : argType) {
             int symbolCheckpoint = SymbolTable.checkpoint();

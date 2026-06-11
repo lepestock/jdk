@@ -45,6 +45,13 @@ class UnaryPlusMinusOperatorFactory extends UnaryOperatorFactory {
 
     @Override
     protected Type generateType() {
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!resultType.equals(fixedType)) {
+                throw new IllegalArgumentException();
+            }
+            return fixedType;
+        }
         Type primitiveResultType = TypeBoxingUtil.toPrimitiveType(resultType);
         if (primitiveResultType.equals(TypeList.INT)) {
             return PseudoRandom.randomElement(TypeBoxingUtil.getArithmeticOperandTypesForResult(resultType));

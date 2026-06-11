@@ -23,7 +23,11 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.Optional;
+
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.Operator;
+import jdk.test.lib.jittester.Type;
 
 public abstract class OperatorFactory<T extends Operator> extends Factory<T> {
     protected final long complexityLimit;
@@ -39,5 +43,17 @@ public abstract class OperatorFactory<T extends Operator> extends Factory<T> {
         this.operatorPriority = operatorPriority;
         this.exceptionSafe = exceptionSafe;
         this.noconsts = noconsts;
+    }
+
+    protected Optional<Type> fixedOperandType() {
+        return GenerationState.currentFlowParams().fixedOperandType();
+    }
+
+    protected boolean hasFixedOperandType() {
+        return fixedOperandType().isPresent();
+    }
+
+    protected Type fixedOr(Type fallback) {
+        return fixedOperandType().orElse(fallback);
     }
 }

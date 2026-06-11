@@ -47,6 +47,13 @@ class BinaryBitwiseOperatorFactory extends BinaryOperatorFactory {
 
     @Override
     protected Pair<Type, Type> generateTypes() {
+        if (hasFixedOperandType()) {
+            Type fixedType = fixedOr(resultType);
+            if (!resultType.equals(fixedType)) {
+                throw new IllegalArgumentException();
+            }
+            return new Pair<>(fixedType, fixedType);
+        }
         Collection<Type> castableFromResult = TypeUtil.getImplicitlyCastable(TypeList.getBuiltIn(), resultType);
         // built-in types less capacious than int are automatically casted to int in arithmetic.
         final Type leftType = PseudoRandom.randomElement(castableFromResult);
