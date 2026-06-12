@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import jdk.test.lib.jittester.MethodArgumentConstraint;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -195,10 +196,10 @@ public class FunctionFactory extends SafeFactory<Function> {
                                     .setOperatorLimit(argumentOperatorLimit)
                                     .setExceptionSafe(exceptionSafe)
                                     .setNoConsts(noconsts);
-                            for (VariableInfo argType : functionInfo.argTypes) {
-                                accum.add(b.setResultType(argType.type)
-                                        .getExpressionFactory()
-                                        .produce());
+                            for (int argIndex = 0; argIndex < functionInfo.argTypes.size(); argIndex++) {
+                                VariableInfo argType = functionInfo.argTypes.get(argIndex);
+                                accum.add(produceArgument(b.setResultType(argType.type),
+                                        functionInfo.getArgumentConstraint(argIndex), argType.type));
             Logger.log(ownerClass, "(FunctionFactory :point1 :function " + functionInfo + ")", accum);
                             }
                         }
@@ -247,6 +248,14 @@ public class FunctionFactory extends SafeFactory<Function> {
             }
         }
         throw new ProductionFailedException();
+    }
+
+    private static IRNode produceArgument(IRNodeBuilder builder, MethodArgumentConstraint constraint, Type type)
+            throws ProductionFailedException {
+        if (constraint == MethodArgumentConstraint.NONZERO && DenominatorExpressionFactory.canThrowFor(type, type)) {
+            return builder.produceExpression(true);
+        }
+        return builder.getExpressionFactory().produce();
     }
 
     private static List<FunctionInfo> toFunctionList(List<Symbol> symbols) {

@@ -25,7 +25,9 @@ package jdk.test.lib.jittester.functions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
+import jdk.test.lib.jittester.MethodArgumentConstraint;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
@@ -38,6 +40,7 @@ public class FunctionInfo extends Symbol {
     public static final int NONRECURSIVE = 0x80;
     public static final int SYNCHRONIZED = 0x100;
     public boolean intrinsic = false;
+    private HashMap<Integer, MethodArgumentConstraint> argumentConstraints = new HashMap<>();
 
     public FunctionInfo() {
     }
@@ -65,6 +68,7 @@ public class FunctionInfo extends Symbol {
         }
         complexity = value.complexity;
         intrinsic = value.intrinsic;
+        argumentConstraints = new HashMap<>(value.argumentConstraints);
     }
 
     @Override
@@ -138,4 +142,15 @@ public class FunctionInfo extends Symbol {
         return (flags & STATIC) > 0;
     }
 
+    public void setArgumentConstraint(int argumentIndex, MethodArgumentConstraint constraint) {
+        if (constraint == null || constraint == MethodArgumentConstraint.NONE) {
+            argumentConstraints.remove(argumentIndex);
+        } else {
+            argumentConstraints.put(argumentIndex, constraint);
+        }
+    }
+
+    public MethodArgumentConstraint getArgumentConstraint(int argumentIndex) {
+        return argumentConstraints.getOrDefault(argumentIndex, MethodArgumentConstraint.NONE);
+    }
 }
