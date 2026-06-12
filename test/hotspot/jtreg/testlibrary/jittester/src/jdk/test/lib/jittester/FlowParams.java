@@ -46,7 +46,6 @@ public final class FlowParams {
     private final int arrayExtractionExpressionWeightPercent;
     private final Set<String> readOnlyVars;
     private final Set<String> iterationVariables;
-    private final boolean denominatorContext;
 
     private FlowParams(FlowParams prev, int statementLimit, int operatorLimit,
                        String iterationVariable, boolean inArrayKernel,
@@ -55,8 +54,7 @@ public final class FlowParams {
                        int arrayElementExpressionWeightPercent,
                        int arrayExtractionExpressionWeightPercent,
                        Set<String> readOnlyVars,
-                       Set<String> iterationVariables,
-                       boolean denominatorContext) {
+                       Set<String> iterationVariables) {
         this.prev = prev;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
@@ -68,7 +66,6 @@ public final class FlowParams {
         this.arrayExtractionExpressionWeightPercent = arrayExtractionExpressionWeightPercent;
         this.readOnlyVars = readOnlyVars;
         this.iterationVariables = iterationVariables;
-        this.denominatorContext = denominatorContext;
     }
 
     public static FlowParams fromProductionParams() {
@@ -82,8 +79,7 @@ public final class FlowParams {
                 100,
                 100,
                 Collections.emptySet(),
-                Collections.emptySet(),
-                false);
+                Collections.emptySet());
     }
 
     public int statementLimit() {
@@ -140,10 +136,6 @@ public final class FlowParams {
         return iterationVariables;
     }
 
-    public boolean denominatorContext() {
-        return denominatorContext;
-    }
-
     public Builder withStatementLimit(int value) {
         return new Builder(this).withStatementLimit(value);
     }
@@ -181,7 +173,6 @@ public final class FlowParams {
                 + ", arrayExtractionExpressionWeightPercent=" + arrayExtractionExpressionWeightPercent
                 + ", readOnlyVars=" + readOnlyVars
                 + ", iterationVariables=" + iterationVariables
-                + ", denominatorContext=" + denominatorContext
                 + ", depth=" + depth(this)
                 + "}";
     }
@@ -216,7 +207,6 @@ public final class FlowParams {
         private int arrayExtractionExpressionWeightPercent;
         private LinkedHashSet<String> readOnlyVars;
         private LinkedHashSet<String> iterationVariables;
-        private boolean denominatorContext;
 
         private Builder(FlowParams base) {
             if (base == null) {
@@ -233,7 +223,6 @@ public final class FlowParams {
             this.arrayExtractionExpressionWeightPercent = base.arrayExtractionExpressionWeightPercent;
             this.readOnlyVars = new LinkedHashSet<>(base.readOnlyVars);
             this.iterationVariables = new LinkedHashSet<>(base.iterationVariables);
-            this.denominatorContext = base.denominatorContext;
         }
 
         public Builder withStatementLimit(int value) {
@@ -305,18 +294,12 @@ public final class FlowParams {
             return this;
         }
 
-        public Builder withDenominatorContext(boolean value) {
-            this.denominatorContext = value;
-            return this;
-        }
-
         public FlowParams advance() {
             return new FlowParams(base, statementLimit, operatorLimit, iterationVariable,
                     inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
                     arrayElementExpressionWeightPercent, arrayExtractionExpressionWeightPercent,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
-                    Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)),
-                    denominatorContext);
+                    Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)));
         }
     }
 }

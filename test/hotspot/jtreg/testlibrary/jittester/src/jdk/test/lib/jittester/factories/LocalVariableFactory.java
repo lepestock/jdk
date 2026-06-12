@@ -25,7 +25,6 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 
-import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.LocalVariable;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Symbol;
@@ -56,14 +55,7 @@ class LocalVariableFactory extends Factory<LocalVariable> {
             ArrayList<Symbol> eligible = new ArrayList<>();
             for (Symbol symbol : allVariables) {
                 VariableInfo varInfo = (VariableInfo) symbol;
-                boolean inDenominatorContext = GenerationState.currentFlowParams().denominatorContext();
                 if (ThisVariableControl.isThisForbidden() && "this".equals(varInfo.name)) {
-                    continue;
-                }
-                if (inDenominatorContext && GenerationState.currentFlowParams().isIterationVariable(varInfo.name)) {
-                    continue;
-                }
-                if (inDenominatorContext && (varInfo.flags & VariableInfo.INITIALIZED) == 0) {
                     continue;
                 }
                 if ((varInfo.flags & VariableInfo.FINAL) == (flags & VariableInfo.FINAL)

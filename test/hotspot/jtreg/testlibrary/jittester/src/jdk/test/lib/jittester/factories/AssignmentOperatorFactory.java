@@ -36,7 +36,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class AssignmentOperatorFactory extends Factory<Operator> {
-    private static final double COMPOUND_MOD_WEIGHT = 0.1;
+    private static final double COMPOUND_DIVISION_LIKE_WEIGHT = 0.05;
     private final int operatorLimit;
     private final long complexityLimit;
     private final Type resultType;
@@ -58,10 +58,12 @@ class AssignmentOperatorFactory extends Factory<Operator> {
         rule.add("compound_sub", builder.setOperatorKind(OperatorKind.COMPOUND_SUB).getBinaryOperatorFactory());
         rule.add("compound_mul", builder.setOperatorKind(OperatorKind.COMPOUND_MUL).getBinaryOperatorFactory());
         if (!exceptionSafe) {
-            rule.add("compound_div", builder.setOperatorKind(OperatorKind.COMPOUND_DIV).getBinaryOperatorFactory());
-            // Keep %= available but pessimised: it is a frequent source of runtime failures.
+            // Keep division-like compound assignments available but rare; denominator
+            // guarding handles most generated cases, while a small raw tail remains.
+            rule.add("compound_div", builder.setOperatorKind(OperatorKind.COMPOUND_DIV).getBinaryOperatorFactory(),
+                    COMPOUND_DIVISION_LIKE_WEIGHT);
             rule.add("compound_mod", builder.setOperatorKind(OperatorKind.COMPOUND_MOD).getBinaryOperatorFactory(),
-                    COMPOUND_MOD_WEIGHT);
+                    COMPOUND_DIVISION_LIKE_WEIGHT);
         }
         rule.add("compound_and", builder.setOperatorKind(OperatorKind.COMPOUND_AND).getBinaryOperatorFactory());
         rule.add("compound_or", builder.setOperatorKind(OperatorKind.COMPOUND_OR).getBinaryOperatorFactory());
