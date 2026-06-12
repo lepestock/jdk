@@ -117,9 +117,9 @@ public class ProductionParams {
     public static Option<String> genomeMutationTarget = null;
     public static Option<String> genocode = null;
     public static Option<Integer> branchStopPercent = null;
-    public static Option<Integer> expressionStopPercent = null;
-    public static Option<Integer> expressionStopMaxPercent = null;
-    public static Option<Integer> expressionStopHalfDepth = null;
+    public static Option<Integer> expressionStopFloorPercent = null;
+    public static Option<Integer> expressionStopStartDepth = null;
+    public static Option<Integer> expressionStopFullDepth = null;
     public static Option<Integer> blockStatementBoostPercent = null;
     public static Option<Integer> blockStatementBoostHalfDepth = null;
     public static Option<Integer> assignmentFieldBiasBoostPercent = null;
@@ -282,12 +282,12 @@ public class ProductionParams {
 
         branchStopPercent = optionResolver.addIntegerOption("branch-stop-percent", 12,
                 "Base probability (0..100) to stop generating more statements in a block");
-        expressionStopPercent = optionResolver.addIntegerOption("expression-stop-percent", 12,
-                "Base probability (0..100) to force terminal expression generation and stop recursion");
-        expressionStopMaxPercent = optionResolver.addIntegerOption("expression-stop-max-percent", 92,
-                "Asymptotic upper bound (0..100) for depth-aware expression stop probability");
-        expressionStopHalfDepth = optionResolver.addIntegerOption("expression-stop-half-depth", 14,
-                "Depth where dynamic stop probability reaches the midpoint between base and max");
+        expressionStopFloorPercent = optionResolver.addIntegerOption("expression-stop-floor-percent", 1,
+                "Minimum probability (0..100) to force terminal expression generation at shallow depths");
+        expressionStopStartDepth = optionResolver.addIntegerOption("expression-stop-start-depth", 3,
+                "Expression depth where S-shaped terminal-forcing ramp starts rising");
+        expressionStopFullDepth = optionResolver.addIntegerOption("expression-stop-full-depth", 12,
+                "Expression depth where S-shaped terminal-forcing ramp reaches 100%");
         blockStatementBoostPercent = optionResolver.addIntegerOption("block-statement-boost-percent", 140,
                 "Depth-tapered shallow-block statement-attempt boost (0..1000), applied on top of block-seed count");
         blockStatementBoostHalfDepth = optionResolver.addIntegerOption("block-statement-boost-half-depth", 3,

@@ -49,6 +49,32 @@ public final class DepthProbabilityTaper {
     }
 
     /**
+     * Bounded S-shaped ramp:
+     * p(depth) = floor + (1 - floor) * (6x^5 - 15x^4 + 10x^3),
+     * where x = (depth - startDepth) / (fullDepth - startDepth), clamped to [0, 1].
+     *
+     * Use this when early depths should strongly favor recursive/operator production and
+     * late depths should strongly favor terminals. The floor is the minimum terminal-forcing
+     * probability before the ramp starts. The start and full depths define the transition
+     * interval; a shorter interval makes the switch from operators to terminals steeper.
+     * At fullDepth and beyond the result is exactly 1.0, so terminal production is forced.
+     */
+    public static double smootherStepRamp(int depth, double floor, int startDepth, int fullDepth) {
+        double normalizedFloor = clamp01(floor);
+        int start = Math.max(1, startDepth);
+        int full = Math.max(start + 1, fullDepth);
+        if (depth <= start) {
+            return normalizedFloor;
+        }
+        if (depth >= full) {
+            return 1.0;
+        }
+        double x = (depth - start) / (double) (full - start);
+        double s = x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+        return normalizedFloor + (1.0 - normalizedFloor) * s;
+    }
+
+    /**
      * Decaying asymptote:
      * p(depth) = base * (halfDepth / (depth + halfDepth))
      */
