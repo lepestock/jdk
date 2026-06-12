@@ -60,9 +60,9 @@ class ExpressionFactory extends SafeFactory<IRNode> {
     private final Type resultType;
     private final boolean noConsts;
     private final long SEED;
-    private final double baseStopProbability;
-    private final double maxStopProbability;
-    private final int stopHalfDepth;
+    private final double stopFloorProbability;
+    private final int stopStartDepth;
+    private final int stopFullDepth;
     private final boolean expressionDebugEnabled;
     private final int expressionDepthWarn;
     private final int expressionDepthHardLimit;
@@ -87,13 +87,13 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         this.expressionDepthWarn = Math.max(1, ProductionParams.expressionDebugDepthWarn.value());
         this.expressionDepthHardLimit = Math.max(0, ProductionParams.expressionDebugDepthHardLimit.value());
         this.expressionMaxDepth = Math.max(1, ProductionParams.expressionMaxDepth.value());
-        this.baseStopProbability = Math.max(0.0, Math.min(0.999,
-                ProductionParams.expressionStopPercent.value() / 100.0));
-        this.maxStopProbability = Math.max(baseStopProbability, Math.min(0.999,
-                ProductionParams.expressionStopMaxPercent.value() / 100.0));
-        this.stopHalfDepth = Math.max(1, ProductionParams.expressionStopHalfDepth.value());
+        this.stopFloorProbability = Math.max(0.0, Math.min(0.999,
+                ProductionParams.expressionStopFloorPercent.value() / 100.0));
+        this.stopStartDepth = Math.max(1, ProductionParams.expressionStopStartDepth.value());
+        this.stopFullDepth = Math.max(stopStartDepth + 1,
+                ProductionParams.expressionStopFullDepth.value());
         double terminalWeight = Math.max(1.0,
-                ProductionParams.expressionStopPercent.value() / 2.0);
+                ProductionParams.expressionStopFloorPercent.value() / 2.0);
         boolean preferIterationIndexedArrayTerminal =
                 GenerationState.currentFlowParams().preferIterationIndexedArrayTerminal()
                         && !ProductionParams.disableArrays.value()
@@ -137,14 +137,14 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         double operatorEnableProbability = preferIterationIndexedArrayTerminal
                 ? 1.0
                 : Math.max(0.0,
-                        (1.0 - ProductionParams.expressionStopPercent.value() / 100.0) * 0.6);
+                        (1.0 - stopFloorProbability) * 0.6);
         boolean operatorsEnabledLive = operatorLimit > 0 && complexityLimit > 0
                 && PseudoRandom.randomSilent() < operatorEnableProbability;
         boolean operatorsEnabled = GenomeChoice.bool(operatorsEnabledLive);
         if (expressionDebugEnabled) {
-            System.out.printf("EXPR_DEBUG init seed=%d terminalWeight=%.3f operatorEnableP=%.3f operatorEnabled=%s baseStopP=%.3f maxStopP=%.3f halfDepth=%d%n",
+            System.out.printf("EXPR_DEBUG init seed=%d terminalWeight=%.3f operatorEnableP=%.3f operatorEnabled=%s stopFloorP=%.3f stopStartDepth=%d stopFullDepth=%d%n",
                     SEED, terminalWeight, operatorEnableProbability, operatorsEnabled,
-                    baseStopProbability, maxStopProbability, stopHalfDepth);
+                    stopFloorProbability, stopStartDepth, stopFullDepth);
             System.out.printf("EXPR_DEBUG terminal_context type=%s noConsts=%s literalSupported=%s%n",
                     resultType.getName(), noConsts, supportsLiteral(resultType));
         }
@@ -285,22 +285,21 @@ class ExpressionFactory extends SafeFactory<IRNode> {
 
     /*
      * Why this is needed:
-     * With a flat stop probability, recursive operator expansions can keep growing for too long
-     * and only be cut by hard limits/timeouts. We need a depth-aware taper so deeper recursion
-     * becomes increasingly likely to terminate into a terminal expression.
+     * Recursive operator expansions should usually survive near the expression root but
+     * reliably terminate once they become deep. Use an S-shaped curve: a low floor for
+     * shallow depths, a smooth transition interval, and exact terminal forcing at the end.
      *
      * Function:
-     *   p(depth) = base + (max - base) * depth / (depth + halfDepth)
+     *   p(depth) = floor + (1 - floor) * smootherStep(depth, startDepth, fullDepth)
      *
      * Properties:
-     * - simple rational asymptote (no exp/log),
-     * - monotonic increase with depth,
-     * - p(halfDepth) is midpoint between base and max,
-     * - tends to max as depth -> infinity.
+     * - floor controls the minimum terminal-forcing probability at shallow depths,
+     * - startDepth/fullDepth define the transition range and therefore the ramp steepness,
+     * - p(fullDepth) is exactly 1.0, so terminal production is forced at and beyond it.
      */
     private double computeStopProbability(int depth) {
-        return DepthProbabilityTaper.risingAsymptote(
-                depth, baseStopProbability, maxStopProbability, stopHalfDepth);
+        return DepthProbabilityTaper.smootherStepRamp(
+                depth, stopFloorProbability, stopStartDepth, stopFullDepth);
     }
 
     private int enterDepth() {
