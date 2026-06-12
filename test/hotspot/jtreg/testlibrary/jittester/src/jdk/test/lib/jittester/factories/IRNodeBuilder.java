@@ -130,7 +130,6 @@ public class IRNodeBuilder {
     private Optional<Integer> arrayExtractionExpressionWeightPercent = Optional.empty();
     private Optional<String[]> moreReadOnlyVars = Optional.empty();
     private Optional<String[]> moreIterationVariables = Optional.empty();
-    private Optional<Boolean> denominatorContext = Optional.empty();
 
     public Factory<ArgumentDeclaration> getArgumentDeclarationFactory() {
         return new ArgumentDeclarationFactory(getArgumentType(), getVariableNumber());
@@ -291,7 +290,6 @@ public class IRNodeBuilder {
         arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withArrayExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
-        denominatorContext.ifPresent(flowBuilder::withDenominatorContext);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
             return getBlockFactory().produce();
@@ -305,6 +303,16 @@ public class IRNodeBuilder {
      * This allows expression-context hints without leaking them outside.
      */
     public IRNode produceExpression() throws ProductionFailedException {
+        return produceExpression(false);
+    }
+
+    /**
+     * Produces an expression under an atomically advanced FlowParams frame.
+     *
+     * @param denominator when true, produce the expression through the
+     *        denominator wrapper used by division-like operators
+     */
+    public IRNode produceExpression(boolean denominator) throws ProductionFailedException {
         FlowParams previous = GenerationState.currentFlowParams();
         FlowParams.Builder flowBuilder = previous
                 .withStatementLimit(previous.statementLimit())
@@ -318,10 +326,9 @@ public class IRNodeBuilder {
         arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withArrayExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
-        denominatorContext.ifPresent(flowBuilder::withDenominatorContext);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
-            return getExpressionFactory().produce();
+            return denominator ? getDenominatorExpressionFactory().produce() : getExpressionFactory().produce();
         } finally {
             GenerationState.setCurrentFlowParams(previous);
         }
@@ -418,6 +425,11 @@ public class IRNodeBuilder {
 
     public Factory<IRNode> getExpressionFactory() throws ProductionFailedException {
         return new ExpressionFactory(getComplexityLimit(), getOperatorLimit(), getOwnerClass(),
+                getResultType(), getExceptionSafe(), getNoConsts());
+    }
+
+    public Factory<IRNode> getDenominatorExpressionFactory() throws ProductionFailedException {
+        return new DenominatorExpressionFactory(getComplexityLimit(), getOperatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
@@ -787,15 +799,6 @@ public class IRNodeBuilder {
     public IRNodeBuilder withMoreIterationVariables(String... values) {
         moreIterationVariables = Optional.ofNullable(values);
         return this;
-    }
-
-    public IRNodeBuilder setDenominatorContext(boolean value) {
-        denominatorContext = Optional.of(value);
-        return this;
-    }
-
-    public IRNodeBuilder withDenominatorContext(boolean value) {
-        return setDenominatorContext(value);
     }
 
     // getters

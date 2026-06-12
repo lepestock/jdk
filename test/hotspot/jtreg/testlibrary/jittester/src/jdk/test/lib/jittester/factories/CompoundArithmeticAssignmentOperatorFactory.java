@@ -73,8 +73,7 @@ class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory 
         IRNode rightExpr = builder.setComplexityLimit(rightComplexityLimit)
                 .setOperatorLimit(rightOperatorLimit)
                 .setResultType(rightType)
-                .withDenominatorContext(isDivisionLikeOperator())
-                .produceExpression();
+                .produceExpression(needsSafeDenominator(leftType, rightType));
         Factory<VariableBase> leftExprFactory = builder.setComplexityLimit(leftComplexityLimit)
                 .setOperatorLimit(leftOperatorLimit)
                 .setResultType(leftType)
@@ -88,5 +87,9 @@ class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory 
 
     private boolean isDivisionLikeOperator() {
         return opKind == OperatorKind.COMPOUND_DIV || opKind == OperatorKind.COMPOUND_MOD;
+    }
+
+    private boolean needsSafeDenominator(Type leftType, Type rightType) {
+        return isDivisionLikeOperator() && DenominatorExpressionFactory.canThrowFor(leftType, rightType);
     }
 }

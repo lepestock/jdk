@@ -70,13 +70,16 @@ abstract class BinaryOperatorFactory extends OperatorFactory<BinaryOperator> {
         IRNode rightExpr = builder.setComplexityLimit(rightComplLimit)
                 .setOperatorLimit(rightOpLimit)
                 .setResultType(rightType)
-                .withDenominatorContext(isDivisionLikeOperator())
-                .produceExpression();
+                .produceExpression(needsSafeDenominator(leftType, rightType));
         return new BinaryOperator(opKind, resultType, leftExpr, rightExpr);
     }
 
     private boolean isDivisionLikeOperator() {
         return opKind == OperatorKind.DIV || opKind == OperatorKind.MOD;
+    }
+
+    private boolean needsSafeDenominator(Type leftType, Type rightType) {
+        return isDivisionLikeOperator() && DenominatorExpressionFactory.canThrowFor(leftType, rightType);
     }
 
     @Override
