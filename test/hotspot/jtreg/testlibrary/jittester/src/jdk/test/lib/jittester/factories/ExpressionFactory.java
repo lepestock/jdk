@@ -132,8 +132,12 @@ class ExpressionFactory extends SafeFactory<IRNode> {
             // terminal-vs-operator. The terminalRule weights decide which terminal is used.
             rule.add("terminal", terminalRule, groupedTerminalWeight);
         }
-        double operatorEnableProbability = Math.max(0.0,
-                (1.0 - ProductionParams.expressionStopPercent.value() / 100.0) * 0.6);
+        // Array-kernel RHS generation already asks for indexed arrays as terminals.
+        // Keep operators available so those terminals can appear as leaves.
+        double operatorEnableProbability = preferIterationIndexedArrayTerminal
+                ? 1.0
+                : Math.max(0.0,
+                        (1.0 - ProductionParams.expressionStopPercent.value() / 100.0) * 0.6);
         boolean operatorsEnabledLive = operatorLimit > 0 && complexityLimit > 0
                 && PseudoRandom.randomSilent() < operatorEnableProbability;
         boolean operatorsEnabled = GenomeChoice.bool(operatorsEnabledLive);
