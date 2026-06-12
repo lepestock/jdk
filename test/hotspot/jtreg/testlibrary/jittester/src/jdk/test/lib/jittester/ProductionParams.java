@@ -101,6 +101,7 @@ public class ProductionParams {
     public static Option<String> classesFile = null;
     public static Option<String> excludeMethodsFile = null;
     public static Option<String> intrinsicMethodsFile = null;
+    public static Option<String> methodArgumentConstraintsFile = null;
     public static Option<Integer> intrinsicCallWeightBonus = null;
     public static Option<Integer> magnetismLevel = null;
     public static Option<Integer> arrayProductionWeightBonus = null;
@@ -158,6 +159,7 @@ public class ProductionParams {
             "classes-file",
             "exclude-methods-file",
             "intrinsic-methods-file",
+            "method-argument-constraints-file",
             "testbase-dir",
             "temp-dir",
             "individual-sandboxes",
@@ -244,6 +246,10 @@ public class ProductionParams {
         excludeMethodsFile = optionResolver.addStringOption('r', "exclude-methods-file", "conf/exclude.methods.lst", "File to read excluded methods from");
         intrinsicMethodsFile = optionResolver.addStringOption("intrinsic-methods-file", "conf/intrinsics.lst",
                 "File with methods preferred for intrinsic-oriented call bias");
+        methodArgumentConstraintsFile = optionResolver.addStringOption(
+                "method-argument-constraints-file",
+                "conf/method-argument-constraints.lst",
+                "File with method argument generation constraints");
         intrinsicCallWeightBonus = optionResolver.addIntegerOption("intrinsic-call-weight-bonus", 0,
                 "Additional selection weight for calls marked intrinsic (0 disables bias)");
         magnetismLevel = optionResolver.addIntegerOption("magnetism-level", 0,

@@ -53,12 +53,21 @@ public class TypesParser {
 
     private List<MethodTemplate> methodsToExclude;
     private List<MethodTemplate> methodsIntrinsic;
+    private List<MethodArgumentConstraintTemplate> methodArgumentConstraints;
 
     private static final HashMap<Class<?>, Type> TYPE_CACHE = new HashMap<>();
 
     private static String trimComment(String source) {
         int commentStart = source.indexOf('#');
         return commentStart == -1 ? source : source.substring(0, commentStart);
+    }
+    private static String trimConstraintComment(String source) {
+        for (int i = 0; i < source.length(); i++) {
+            if (source.charAt(i) == '#' && (i == 0 || Character.isWhitespace(source.charAt(i - 1)))) {
+                return source.substring(0, i);
+            }
+        }
+        return source;
     }
     private static String normalizeMethodTemplate(String source) {
         int open = source.indexOf('(');
@@ -92,6 +101,7 @@ public class TypesParser {
         TypesParser theParser = new TypesParser();
         theParser.initMethodsToExclude(exMethodsFileName);
         theParser.initIntrinsicMethods(ProductionParams.intrinsicMethodsFile.value());
+        theParser.initMethodArgumentConstraints(ProductionParams.methodArgumentConstraintsFile.value());
         parseKlasses(klassesFileName)
             .stream()
             .filter(klass -> !TypeList.isReferenceType(getTypeKlass(klass)))
@@ -134,6 +144,7 @@ public class TypesParser {
                 }
                 FunctionInfo info = new FunctionInfo(name, typeKlass, returnType, 1, flags, paramList);
                 info.intrinsic = MethodTemplate.anyMatches(methodsIntrinsic, method);
+                MethodArgumentConstraintTemplate.applyAll(methodArgumentConstraints, method, info);
                 typeKlass.addSymbol(info);
             });
     }
@@ -324,6 +335,28 @@ public class TypesParser {
             }
         } else {
             methodsIntrinsic = new ArrayList<>();
+        }
+    }
+
+    private void initMethodArgumentConstraints(String methodsFileName) {
+        if (methodsFileName != null && !methodsFileName.isEmpty()) {
+            Path methodsFilePath = Paths.get(methodsFileName);
+            if (!Files.exists(methodsFilePath)) {
+                methodArgumentConstraints = new ArrayList<>();
+                return;
+            }
+            try {
+                methodArgumentConstraints = Files.lines(methodsFilePath)
+                    .map(TypesParser::trimConstraintComment)
+                    .map(String::trim)
+                    .filter(not(String::isEmpty))
+                    .map(MethodArgumentConstraintTemplate::parse)
+                    .collect(Collectors.toList());
+            } catch (IOException ex) {
+                throw new Error("Error reading method argument constraints file", ex);
+            }
+        } else {
+            methodArgumentConstraints = new ArrayList<>();
         }
     }
 }

@@ -1,0 +1,31 @@
+# Extra generation constraints for selected method arguments.
+#
+# Format:
+#   <method-template> -> arg#<source-visible-index>=<constraint>
+#
+# Method templates use the same descriptor syntax as exclude.methods.lst and
+# intrinsics.lst. Argument indexes are one-based and do not count the receiver
+# object of instance methods.
+
+java/lang/Math::divideExact(II) -> arg#2=nonzero
+java/lang/Math::divideExact(JJ) -> arg#2=nonzero
+java/lang/Math::floorDivExact(II) -> arg#2=nonzero
+java/lang/Math::floorDivExact(JJ) -> arg#2=nonzero
+java/lang/Math::ceilDivExact(II) -> arg#2=nonzero
+java/lang/Math::ceilDivExact(JJ) -> arg#2=nonzero
+
+java/lang/Math::floorDiv(II) -> arg#2=nonzero
+java/lang/Math::floorDiv(JI) -> arg#2=nonzero
+java/lang/Math::floorDiv(JJ) -> arg#2=nonzero
+java/lang/Math::floorMod(II) -> arg#2=nonzero
+java/lang/Math::floorMod(JI) -> arg#2=nonzero
+java/lang/Math::floorMod(JJ) -> arg#2=nonzero
+
+java/lang/Math::ceilDiv(II) -> arg#2=nonzero
+java/lang/Math::ceilDiv(JI) -> arg#2=nonzero
+java/lang/Math::ceilDiv(JJ) -> arg#2=nonzero
+
+java/lang/Integer::divideUnsigned(II) -> arg#2=nonzero
+java/lang/Integer::remainderUnsigned(II) -> arg#2=nonzero
+java/lang/Long::divideUnsigned(JJ) -> arg#2=nonzero
+java/lang/Long::remainderUnsigned(JJ) -> arg#2=nonzero
