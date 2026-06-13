@@ -24,6 +24,9 @@ java/lang/Math::floorMod(JJ) -> arg#2=nonzero
 java/lang/Math::ceilDiv(II) -> arg#2=nonzero
 java/lang/Math::ceilDiv(JI) -> arg#2=nonzero
 java/lang/Math::ceilDiv(JJ) -> arg#2=nonzero
+java/lang/Math::ceilMod(II) -> arg#2=nonzero
+java/lang/Math::ceilMod(JI) -> arg#2=nonzero
+java/lang/Math::ceilMod(JJ) -> arg#2=nonzero
 
 java/lang/Integer::divideUnsigned(II) -> arg#2=nonzero
 java/lang/Integer::remainderUnsigned(II) -> arg#2=nonzero
