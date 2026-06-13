@@ -32,7 +32,8 @@ package jdk.test.lib.jittester;
  */
 public enum MethodArgumentConstraint {
     NONE("none"),
-    NONZERO("nonzero");
+    NONZERO("nonzero"),
+    NONNEGATIVE("nonnegative");
 
     private final String configName;
 
