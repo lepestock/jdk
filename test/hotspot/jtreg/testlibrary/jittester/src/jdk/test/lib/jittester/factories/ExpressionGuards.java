@@ -21,37 +21,26 @@
  * questions.
  */
 
-package jdk.test.lib.jittester;
+package jdk.test.lib.jittester.factories;
 
-/**
- * Extra generation-domain requirements for method arguments.
- *
- * <p>These are deliberately separate from Java types: a denominator argument is
- * still an {@code int} or {@code long}, but it needs a smaller value-domain than
- * the declared type accepts.</p>
- */
-public enum MethodArgumentConstraint {
-    NONE("none"),
-    NONZERO("nonzero"),
-    NONNEGATIVE("nonnegative"),
-    SMALL_NONNEGATIVE("small-nonnegative"),
-    NONMIN("nonmin"),
-    NONMAX("nonmax"),
-    INT_RANGE("int-range"),
-    SMALL_INTEGRAL("small-integral");
+import jdk.test.lib.jittester.ProductionParams;
+import jdk.test.lib.jittester.utils.PseudoRandom;
 
-    private final String configName;
+final class ExpressionGuards {
+    private static final int BASIS_POINTS = 10_000;
 
-    MethodArgumentConstraint(String configName) {
-        this.configName = configName;
+    private ExpressionGuards() {
     }
 
-    static MethodArgumentConstraint parse(String value) {
-        for (MethodArgumentConstraint constraint : values()) {
-            if (constraint.configName.equals(value)) {
-                return constraint;
-            }
-        }
-        throw new IllegalArgumentException("Unknown method argument constraint: " + value);
+    static boolean shouldSkipGuard() {
+        return shouldSkipGuard(1);
+    }
+
+    static boolean shouldSkipGuard(int probabilityDivisor) {
+        int divisor = Math.max(1, probabilityDivisor);
+        int rawBasisPoints = Math.max(0, Math.min(BASIS_POINTS, ProductionParams.expressionGuardRawBp.value()));
+        int adjustedBasisPoints = rawBasisPoints / divisor;
+        return adjustedBasisPoints > 0
+                && PseudoRandom.randomNotNegative(BASIS_POINTS) < adjustedBasisPoints;
     }
 }

@@ -102,6 +102,7 @@ public class ProductionParams {
     public static Option<String> excludeMethodsFile = null;
     public static Option<String> intrinsicMethodsFile = null;
     public static Option<String> methodArgumentConstraintsFile = null;
+    public static Option<Integer> expressionGuardRawBp = null;
     public static Option<Integer> intrinsicCallWeightBonus = null;
     public static Option<Integer> magnetismLevel = null;
     public static Option<Integer> arrayProductionWeightBonus = null;
@@ -250,6 +251,10 @@ public class ProductionParams {
                 "method-argument-constraints-file",
                 "conf/method-argument-constraints.lst",
                 "File with method argument generation constraints");
+        expressionGuardRawBp = optionResolver.addIntegerOption(
+                "expression-guard-raw-bp",
+                20,
+                "Raw-expression probability for expression guards, in basis points; 20 means 0.20%");
         intrinsicCallWeightBonus = optionResolver.addIntegerOption("intrinsic-call-weight-bonus", 0,
                 "Additional selection weight for calls marked intrinsic (0 disables bias)");
         magnetismLevel = optionResolver.addIntegerOption("magnetism-level", 0,
