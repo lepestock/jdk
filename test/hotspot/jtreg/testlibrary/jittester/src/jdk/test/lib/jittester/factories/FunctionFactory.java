@@ -255,8 +255,8 @@ public class FunctionFactory extends SafeFactory<Function> {
         if (constraint == MethodArgumentConstraint.NONZERO && DenominatorExpressionFactory.canThrowFor(type, type)) {
             return builder.produceExpression(true);
         }
-        if (constraint == MethodArgumentConstraint.NONNEGATIVE && NonNegativeExpressionFactory.canApplyTo(type)) {
-            return builder.getNonNegativeExpressionFactory().produce();
+        if (ConstrainedIntegralExpressionFactory.canApplyTo(type, constraint)) {
+            return builder.getConstrainedIntegralExpressionFactory(constraint).produce();
         }
         return builder.getExpressionFactory().produce();
     }

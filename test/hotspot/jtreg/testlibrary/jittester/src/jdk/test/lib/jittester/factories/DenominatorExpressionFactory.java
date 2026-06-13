@@ -55,7 +55,7 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
  * Obvious safe shapes, such as non-zero integral literals, are kept as-is.</p>
  */
 class DenominatorExpressionFactory extends Factory<IRNode> {
-    private static final double RAW_INTEGRAL_DENOMINATOR_PROBABILITY = 0.01;
+    private static final int RAW_PROBABILITY_DIVISOR = 5;
     private static final double RARE_NONZERO_MASK_PROBABILITY = 0.10;
     private static final int[] COMMON_INT_NONZERO_MASKS = {
             1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 3, -3
@@ -89,7 +89,7 @@ class DenominatorExpressionFactory extends Factory<IRNode> {
 
     @Override
     public IRNode produce() throws ProductionFailedException {
-        boolean guardIntegralDenominator = !PseudoRandom.randomBoolean(RAW_INTEGRAL_DENOMINATOR_PROBABILITY);
+        boolean guardIntegralDenominator = !ExpressionGuards.shouldSkipGuard(RAW_PROBABILITY_DIVISOR);
         int rawOperatorLimit = guardIntegralDenominator ? Math.max(0, operatorLimit - 1) : operatorLimit;
         IRNode raw = new IRNodeBuilder()
                 .setComplexityLimit(complexityLimit)

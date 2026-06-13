@@ -7,12 +7,34 @@
 # intrinsics.lst. Argument indexes are one-based and do not count the receiver
 # object of instance methods.
 
-java/lang/Math::divideExact(II) -> arg#2=nonzero
-java/lang/Math::divideExact(JJ) -> arg#2=nonzero
-java/lang/Math::floorDivExact(II) -> arg#2=nonzero
-java/lang/Math::floorDivExact(JJ) -> arg#2=nonzero
-java/lang/Math::ceilDivExact(II) -> arg#2=nonzero
-java/lang/Math::ceilDivExact(JJ) -> arg#2=nonzero
+java/lang/Math::addExact(II) -> arg#1=small-integral, arg#2=small-integral
+java/lang/Math::addExact(JJ) -> arg#1=small-integral, arg#2=small-integral
+java/lang/Math::subtractExact(II) -> arg#1=small-integral, arg#2=small-integral
+java/lang/Math::subtractExact(JJ) -> arg#1=small-integral, arg#2=small-integral
+java/lang/Math::multiplyExact(II) -> arg#1=small-integral, arg#2=small-integral
+java/lang/Math::multiplyExact(JI) -> arg#1=small-integral, arg#2=small-integral
+java/lang/Math::multiplyExact(JJ) -> arg#1=small-integral, arg#2=small-integral
+
+java/lang/Math::unsignedMultiplyExact(II) -> arg#1=small-nonnegative, arg#2=small-nonnegative
+java/lang/Math::unsignedMultiplyExact(JI) -> arg#1=small-nonnegative, arg#2=small-nonnegative
+java/lang/Math::unsignedMultiplyExact(JJ) -> arg#1=small-nonnegative, arg#2=small-nonnegative
+
+java/lang/Math::divideExact(II) -> arg#1=nonmin, arg#2=nonzero
+java/lang/Math::divideExact(JJ) -> arg#1=nonmin, arg#2=nonzero
+java/lang/Math::floorDivExact(II) -> arg#1=nonmin, arg#2=nonzero
+java/lang/Math::floorDivExact(JJ) -> arg#1=nonmin, arg#2=nonzero
+java/lang/Math::ceilDivExact(II) -> arg#1=nonmin, arg#2=nonzero
+java/lang/Math::ceilDivExact(JJ) -> arg#1=nonmin, arg#2=nonzero
+
+java/lang/Math::incrementExact(I) -> arg#1=nonmax
+java/lang/Math::incrementExact(J) -> arg#1=nonmax
+java/lang/Math::decrementExact(I) -> arg#1=nonmin
+java/lang/Math::decrementExact(J) -> arg#1=nonmin
+java/lang/Math::negateExact(I) -> arg#1=nonmin
+java/lang/Math::negateExact(J) -> arg#1=nonmin
+java/lang/Math::absExact(I) -> arg#1=nonmin
+java/lang/Math::absExact(J) -> arg#1=nonmin
+java/lang/Math::toIntExact(J) -> arg#1=int-range
 
 java/lang/Math::floorDiv(II) -> arg#2=nonzero
 java/lang/Math::floorDiv(JI) -> arg#2=nonzero
@@ -28,10 +50,10 @@ java/lang/Math::ceilMod(II) -> arg#2=nonzero
 java/lang/Math::ceilMod(JI) -> arg#2=nonzero
 java/lang/Math::ceilMod(JJ) -> arg#2=nonzero
 
-java/lang/Math::powExact(II) -> arg#2=nonnegative
-java/lang/Math::powExact(JI) -> arg#2=nonnegative
-java/lang/Math::unsignedPowExact(II) -> arg#2=nonnegative
-java/lang/Math::unsignedPowExact(JI) -> arg#2=nonnegative
+java/lang/Math::powExact(II) -> arg#1=small-integral, arg#2=small-nonnegative
+java/lang/Math::powExact(JI) -> arg#1=small-integral, arg#2=small-nonnegative
+java/lang/Math::unsignedPowExact(II) -> arg#1=small-nonnegative, arg#2=small-nonnegative
+java/lang/Math::unsignedPowExact(JI) -> arg#1=small-nonnegative, arg#2=small-nonnegative
 
 java/lang/Integer::divideUnsigned(II) -> arg#2=nonzero
 java/lang/Integer::remainderUnsigned(II) -> arg#2=nonzero
