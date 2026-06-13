@@ -47,14 +47,28 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
  *
  * <p>Floating-point division by zero does not throw in Java, so floating
  * denominators are left unchanged. Integral denominators are usually guarded
- * with {@code raw | 1}: it evaluates the generated expression once, preserves
- * array/variable-heavy expression shapes, and guarantees a non-zero odd value.
+ * with {@code raw | smallMask}: it evaluates the generated expression once,
+ * preserves array/variable-heavy expression shapes, and guarantees a non-zero
+ * value. Small masks are strongly preferred to avoid inflating denominators.
  * A very small raw path is intentionally kept so generated tests still contain
  * rare unguarded division-like operations and can exercise exception behavior.
  * Obvious safe shapes, such as non-zero integral literals, are kept as-is.</p>
  */
 class DenominatorExpressionFactory extends Factory<IRNode> {
     private static final double RAW_INTEGRAL_DENOMINATOR_PROBABILITY = 0.01;
+    private static final double RARE_NONZERO_MASK_PROBABILITY = 0.10;
+    private static final int[] COMMON_INT_NONZERO_MASKS = {
+            1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 3, -3
+    };
+    private static final int[] RARE_INT_NONZERO_MASKS = {
+            5, -5, 7, -7, 10, -10, 15, -15, 31, -31
+    };
+    private static final long[] COMMON_LONG_NONZERO_MASKS = {
+            1L, 1L, 1L, 1L, 1L, 1L, -1L, -1L, -1L, -1L, 3L, -3L
+    };
+    private static final long[] RARE_LONG_NONZERO_MASKS = {
+            5L, -5L, 7L, -7L, 10L, -10L, 15L, -15L, 31L, -31L
+    };
 
     private final long complexityLimit;
     private final int operatorLimit;
@@ -90,10 +104,7 @@ class DenominatorExpressionFactory extends Factory<IRNode> {
             return raw;
         }
         Type guardType = guardType(raw.getResultType());
-        Literal one = guardType.equals(TypeList.LONG)
-                ? new Literal(1L, TypeList.LONG)
-                : new Literal(1, TypeList.INT);
-        return new BinaryOperator(OperatorKind.BIT_OR, guardType, raw, one);
+        return new BinaryOperator(OperatorKind.BIT_OR, guardType, raw, nonZeroMask(guardType));
     }
 
     static boolean canThrowFor(Type leftType, Type rightType) {
@@ -109,6 +120,16 @@ class DenominatorExpressionFactory extends Factory<IRNode> {
 
     private static Type guardType(Type type) {
         return TypeList.LONG.equals(TypeBoxingUtil.toPrimitiveType(type)) ? TypeList.LONG : TypeList.INT;
+    }
+
+    private static Literal nonZeroMask(Type guardType) {
+        boolean rareMask = PseudoRandom.randomBoolean(RARE_NONZERO_MASK_PROBABILITY);
+        if (guardType.equals(TypeList.LONG)) {
+            long[] masks = rareMask ? RARE_LONG_NONZERO_MASKS : COMMON_LONG_NONZERO_MASKS;
+            return new Literal(masks[PseudoRandom.randomNotNegative(masks.length)], TypeList.LONG);
+        }
+        int[] masks = rareMask ? RARE_INT_NONZERO_MASKS : COMMON_INT_NONZERO_MASKS;
+        return new Literal(masks[PseudoRandom.randomNotNegative(masks.length)], TypeList.INT);
     }
 
     private static boolean isDefinitelyNonZero(IRNode node) {

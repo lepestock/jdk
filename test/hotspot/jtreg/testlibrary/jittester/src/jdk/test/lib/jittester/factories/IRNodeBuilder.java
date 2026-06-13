@@ -433,6 +433,11 @@ public class IRNodeBuilder {
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
+    public Factory<IRNode> getNonNegativeExpressionFactory() throws ProductionFailedException {
+        return new NonNegativeExpressionFactory(getComplexityLimit(), getOperatorLimit(), getOwnerClass(),
+                getResultType(), getExceptionSafe(), getNoConsts());
+    }
+
     public Factory<FunctionDeclarationBlock> getFunctionDeclarationBlockFactory() {
         return new FunctionDeclarationBlockFactory(getOwnerClass(), getMemberFunctionsLimit(),
                 getMemberFunctionsArgLimit(), getLevel());
