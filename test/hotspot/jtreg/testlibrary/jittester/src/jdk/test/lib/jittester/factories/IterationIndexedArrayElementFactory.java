@@ -115,6 +115,35 @@ class IterationIndexedArrayElementFactory extends SafeFactory<IRNode> {
         return new CastOperator(elementType, element);
     }
 
+    boolean hasCandidates() {
+        String iterationVariable = GenerationState.currentFlowParams().iterationVariable();
+        if (iterationVariable == null || iterationVariable.isBlank()) {
+            return false;
+        }
+        Symbol iterationSymbol = SymbolTable.get(iterationVariable, VariableInfo.class);
+        if (!(iterationSymbol instanceof VariableInfo)) {
+            return false;
+        }
+        if (!TypeArray.isElementTypeAllowed(elementType)) {
+            return false;
+        }
+        for (Symbol symbol : candidateSymbols()) {
+            if (!(symbol instanceof VariableInfo varInfo)) {
+                continue;
+            }
+            if ((varInfo.flags & VariableInfo.INITIALIZED) == 0) {
+                continue;
+            }
+            if (varInfo.getArrayLength().isEmpty()) {
+                continue;
+            }
+            if (varInfo.isLocal() || varInfo.isStatic()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private List<Symbol> candidateSymbols() {
         if (!assignmentCompatible) {
             return new ArrayList<>(SymbolTable.get(new TypeArray(elementType, 1), VariableInfo.class));
