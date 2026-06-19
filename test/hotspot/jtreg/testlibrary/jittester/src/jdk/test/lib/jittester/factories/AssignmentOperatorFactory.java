@@ -25,7 +25,6 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 
-import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Operator;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -56,8 +55,9 @@ class AssignmentOperatorFactory extends Factory<Operator> {
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
         rule.add("simple_assign", builder.setOperatorKind(OperatorKind.ASSIGN).getBinaryOperatorFactory());
-        boolean hasVariableLValue = hasInitializedWritableVariableLValue(resultType);
-        if (hasVariableLValue && supportsCompoundArithmetic(resultType)) {
+        boolean hasLValue = AssignmentLValueFactory.hasCandidates(complexityLimit, operatorLimit,
+                ownerClass, resultType, exceptionSafe, noconsts);
+        if (hasLValue && supportsCompoundArithmetic(resultType)) {
             rule.add("compound_add", builder.setOperatorKind(OperatorKind.COMPOUND_ADD).getBinaryOperatorFactory());
             rule.add("compound_sub", builder.setOperatorKind(OperatorKind.COMPOUND_SUB).getBinaryOperatorFactory());
             rule.add("compound_mul", builder.setOperatorKind(OperatorKind.COMPOUND_MUL).getBinaryOperatorFactory());
@@ -70,12 +70,12 @@ class AssignmentOperatorFactory extends Factory<Operator> {
                         COMPOUND_DIVISION_LIKE_WEIGHT);
             }
         }
-        if (hasVariableLValue && supportsCompoundBitwise(resultType)) {
+        if (hasLValue && supportsCompoundBitwise(resultType)) {
             rule.add("compound_and", builder.setOperatorKind(OperatorKind.COMPOUND_AND).getBinaryOperatorFactory());
             rule.add("compound_or", builder.setOperatorKind(OperatorKind.COMPOUND_OR).getBinaryOperatorFactory());
             rule.add("compound_xor", builder.setOperatorKind(OperatorKind.COMPOUND_XOR).getBinaryOperatorFactory());
         }
-        if (hasVariableLValue && supportsShiftOrIncDec(resultType)) {
+        if (hasLValue && supportsShiftOrIncDec(resultType)) {
             rule.add("compound_shr", builder.setOperatorKind(OperatorKind.COMPOUND_SHR).getBinaryOperatorFactory());
             rule.add("compound_sar", builder.setOperatorKind(OperatorKind.COMPOUND_SAR).getBinaryOperatorFactory());
             rule.add("compound_shl", builder.setOperatorKind(OperatorKind.COMPOUND_SHL).getBinaryOperatorFactory());
@@ -86,20 +86,6 @@ class AssignmentOperatorFactory extends Factory<Operator> {
             rule.add("postfix_dec", builder.setOperatorKind(OperatorKind.POST_DEC).getUnaryOperatorFactory());
         }
         return rule;
-    }
-
-    private boolean hasInitializedWritableVariableLValue(Type type) {
-        Factory<? extends IRNode> variableFactory = new IRNodeBuilder()
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
-                .setOwnerKlass(ownerClass)
-                .setResultType(type)
-                .setExceptionSafe(exceptionSafe)
-                .setNoConsts(noconsts)
-                .setIsConstant(false)
-                .setIsInitialized(true)
-                .getVariableFactory();
-        return new ReadOnlyLocalLValueFactory(variableFactory, 1).hasCandidates(v -> true);
     }
 
     AssignmentOperatorFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
