@@ -110,13 +110,17 @@ class ExpressionFactory extends SafeFactory<IRNode> {
             if (supportsLiteral(resultType)) {
                 addTerminal("literal", literalFactory, terminalWeight, 1.0, groupTerminals);
             }
-            addTerminal("constant", constantFactory, terminalWeight, 1.0, groupTerminals);
+            if (hasVariableCandidates(constantFactory)) {
+                addTerminal("constant", constantFactory, terminalWeight, 1.0, groupTerminals);
+            }
         }
         Factory<? extends IRNode> variableFactory = builder
                 .setIsConstant(false)
                 .setIsInitialized(true)
                 .getVariableFactory();
-        addTerminal("variable", variableFactory, terminalWeight, 1.0, groupTerminals);
+        if (hasVariableCandidates(variableFactory)) {
+            addTerminal("variable", variableFactory, terminalWeight, 1.0, groupTerminals);
+        }
         if (preferIterationIndexedArrayTerminal) {
             Factory<? extends IRNode> iterationArrayTerminalFactory =
                     new IterationIndexedArrayElementFactory(ownerClass, resultType, true);
@@ -201,6 +205,10 @@ class ExpressionFactory extends SafeFactory<IRNode> {
             rule.add(name, factory, expressionWeight);
         }
         terminalRule.add(name, factory, terminalChoiceWeight);
+    }
+
+    private static boolean hasVariableCandidates(Factory<? extends IRNode> factory) {
+        return !(factory instanceof VariableCandidateSource source) || source.hasCandidates(v -> true);
     }
 
     private static boolean isArithmeticFriendlyResultType(Type resultType) {
