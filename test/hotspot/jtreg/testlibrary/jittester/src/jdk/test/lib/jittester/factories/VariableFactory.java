@@ -23,17 +23,22 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.function.Predicate;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Rule;
+import jdk.test.lib.jittester.Symbol;
+import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 
-class VariableFactory extends Factory<VariableBase> {
+class VariableFactory extends Factory<VariableBase> implements VariableCandidateSource {
     private final Rule<VariableBase> rule;
+    private final Type resultType;
+    private final int flags;
 
     VariableFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean constant, boolean initialized, boolean exceptionSafe, boolean noconsts) {
@@ -44,6 +49,8 @@ class VariableFactory extends Factory<VariableBase> {
         if (initialized) {
             flags |= VariableInfo.INITIALIZED;
         }
+        this.resultType = resultType;
+        this.flags = flags;
         rule = new Rule<>("variable");
         IRNodeBuilder b = new IRNodeBuilder().setResultType(resultType)
                 .setFlags(flags)
@@ -74,14 +81,57 @@ class VariableFactory extends Factory<VariableBase> {
             localWeight *= localScale;
         }
 
-        rule.add("non_static_member_variable", b.getNonStaticMemberVariableFactory(), nonStaticWeight);
-        rule.add("static_member_variable", b.getStaticMemberVariableFactory(), staticWeight);
-        rule.add("local_variable", b.getLocalVariableFactory(), localWeight);
+        if (hasCandidates(this::isNonStaticCandidate)) {
+            rule.add("non_static_member_variable", b.getNonStaticMemberVariableFactory(), nonStaticWeight);
+        }
+        if (hasCandidates(this::isStaticCandidate)) {
+            rule.add("static_member_variable", b.getStaticMemberVariableFactory(), staticWeight);
+        }
+        if (hasCandidates(this::isLocalCandidate)) {
+            rule.add("local_variable", b.getLocalVariableFactory(), localWeight);
+        }
     }
 
     @Override
     public VariableBase produce() throws ProductionFailedException {
+        if (!hasCandidates(v -> true)) {
+            throw new ProductionFailedException();
+        }
         return rule.produce();
+    }
+
+    @Override
+    public boolean hasCandidates(Predicate<VariableInfo> predicate) {
+        for (Symbol symbol : SymbolTable.get(resultType, VariableInfo.class)) {
+            VariableInfo varInfo = (VariableInfo) symbol;
+            if (isFactoryCandidate(varInfo) && predicate.test(varInfo)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isFactoryCandidate(VariableInfo varInfo) {
+        return matchesFlags(varInfo)
+                && (isNonStaticCandidate(varInfo) || isStaticCandidate(varInfo) || isLocalCandidate(varInfo));
+    }
+
+    private boolean isLocalCandidate(VariableInfo varInfo) {
+        return varInfo.isLocal()
+                && !(ThisVariableControl.isThisForbidden() && "this".equals(varInfo.name));
+    }
+
+    private boolean isStaticCandidate(VariableInfo varInfo) {
+        return varInfo.isStatic();
+    }
+
+    private boolean isNonStaticCandidate(VariableInfo varInfo) {
+        return !varInfo.isLocal() && !varInfo.isStatic();
+    }
+
+    private boolean matchesFlags(VariableInfo varInfo) {
+        return (varInfo.flags & VariableInfo.FINAL) == (flags & VariableInfo.FINAL)
+                && (varInfo.flags & VariableInfo.INITIALIZED) == (flags & VariableInfo.INITIALIZED);
     }
 
     private static double clamp01(double value) {

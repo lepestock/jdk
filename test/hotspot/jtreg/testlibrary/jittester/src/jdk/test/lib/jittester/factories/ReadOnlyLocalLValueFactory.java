@@ -23,15 +23,17 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.function.Predicate;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.VariableBase;
+import jdk.test.lib.jittester.VariableInfo;
 
 /**
  * Filters out local lvalues currently marked as read-only in FlowParams.
  */
-class ReadOnlyLocalLValueFactory extends Factory<IRNode> {
+class ReadOnlyLocalLValueFactory extends Factory<IRNode> implements VariableCandidateSource {
     private final Factory<? extends IRNode> delegate;
     private final int retries;
 
@@ -42,6 +44,10 @@ class ReadOnlyLocalLValueFactory extends Factory<IRNode> {
 
     @Override
     public IRNode produce() throws ProductionFailedException {
+        if (delegate instanceof VariableCandidateSource source
+                && !source.hasCandidates(this::isWritableCandidate)) {
+            throw new ProductionFailedException();
+        }
         ProductionFailedException lastFailure = null;
         for (int i = 0; i < retries; i++) {
             try {
@@ -61,5 +67,18 @@ class ReadOnlyLocalLValueFactory extends Factory<IRNode> {
             throw lastFailure;
         }
         throw new ProductionFailedException();
+    }
+
+    @Override
+    public boolean hasCandidates(Predicate<VariableInfo> predicate) {
+        if (delegate instanceof VariableCandidateSource source) {
+            return source.hasCandidates(varInfo -> isWritableCandidate(varInfo) && predicate.test(varInfo));
+        }
+        return true;
+    }
+
+    private boolean isWritableCandidate(VariableInfo varInfo) {
+        return !varInfo.isLocal()
+                || !GenerationState.currentFlowParams().isReadOnlyVar(varInfo.name);
     }
 }

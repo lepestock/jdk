@@ -23,6 +23,7 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.function.Predicate;
 import jdk.test.lib.util.Pair;
 import jdk.test.lib.jittester.arrays.ArrayElement;
 import jdk.test.lib.jittester.BinaryOperator;
@@ -97,30 +98,45 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         Rule<IRNode> rule = new Rule<>("assignment");
         if (inArrayKernel) {
             String iterationVariable = GenerationState.currentFlowParams().iterationVariable();
-            rule.add("initialized_nonconst_var",
+            ReadOnlyLocalLValueFactory initializedVarLValueFactory =
                     new ReadOnlyLocalLValueFactory(
                             new ExcludingLocalVariableLValueFactory(
                                     builder.setIsInitialized(true).getVariableFactory(),
                                     iterationVariable,
                                     LVALUE_PICK_RETRIES),
-                            LVALUE_PICK_RETRIES));
-            rule.add("uninitialized_nonconst_var",
+                            LVALUE_PICK_RETRIES);
+            if (initializedVarLValueFactory.hasCandidates(v -> true)) {
+                rule.add("initialized_nonconst_var", initializedVarLValueFactory);
+            }
+            ReadOnlyLocalLValueFactory uninitializedVarLValueFactory =
                     new ReadOnlyLocalLValueFactory(
                             new ExcludingLocalVariableLValueFactory(
                                     builder.setIsInitialized(false).getVariableFactory(),
                                     iterationVariable,
                                     LVALUE_PICK_RETRIES),
-                            LVALUE_PICK_RETRIES));
+                            LVALUE_PICK_RETRIES);
+            if (uninitializedVarLValueFactory.hasCandidates(v -> true)) {
+                rule.add("uninitialized_nonconst_var", uninitializedVarLValueFactory);
+            }
             // Inside array-kernel blocks, array lvalue indices must follow the kernel iterator.
-            rule.add("array_element_lvalue",
-                    new IterationIndexedArrayElementFactory((TypeKlass) ownerClass, leftOperandType), 5.0);
+            IterationIndexedArrayElementFactory arrayElementLValueFactory =
+                    new IterationIndexedArrayElementFactory((TypeKlass) ownerClass, leftOperandType);
+            if (arrayElementLValueFactory.hasCandidates()) {
+                rule.add("array_element_lvalue", arrayElementLValueFactory, 5.0);
+            }
         } else {
-            rule.add("initialized_nonconst_var",
+            ReadOnlyLocalLValueFactory initializedVarLValueFactory =
                     new ReadOnlyLocalLValueFactory(builder.setIsInitialized(true).getVariableFactory(),
-                            LVALUE_PICK_RETRIES));
-            rule.add("uninitialized_nonconst_var",
+                            LVALUE_PICK_RETRIES);
+            if (initializedVarLValueFactory.hasCandidates(v -> true)) {
+                rule.add("initialized_nonconst_var", initializedVarLValueFactory);
+            }
+            ReadOnlyLocalLValueFactory uninitializedVarLValueFactory =
                     new ReadOnlyLocalLValueFactory(builder.setIsInitialized(false).getVariableFactory(),
-                            LVALUE_PICK_RETRIES));
+                            LVALUE_PICK_RETRIES);
+            if (uninitializedVarLValueFactory.hasCandidates(v -> true)) {
+                rule.add("uninitialized_nonconst_var", uninitializedVarLValueFactory);
+            }
         }
         IRNode leftOperandValue = rule.produce();
         boolean preferIndexedArrayTerminal = inArrayKernel && leftOperandValue instanceof ArrayElement;
@@ -155,7 +171,8 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         return Math.max(1, Math.min(limit - 1, (int) Math.ceil(limit * (percent / 100.0))));
     }
 
-    private static final class ExcludingLocalVariableLValueFactory extends Factory<IRNode> {
+    private static final class ExcludingLocalVariableLValueFactory extends Factory<IRNode>
+            implements VariableCandidateSource {
         private final Factory<? extends IRNode> delegate;
         private final String forbiddenLocalName;
         private final int retries;
@@ -172,6 +189,10 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         public IRNode produce() throws ProductionFailedException {
             if (forbiddenLocalName == null || forbiddenLocalName.isBlank()) {
                 return delegate.produce();
+            }
+            if (delegate instanceof VariableCandidateSource source
+                    && !source.hasCandidates(this::isAllowedCandidate)) {
+                throw new ProductionFailedException();
             }
             ProductionFailedException lastFailure = null;
             for (int i = 0; i < retries; i++) {
@@ -191,6 +212,21 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
                 throw lastFailure;
             }
             throw new ProductionFailedException();
+        }
+
+        @Override
+        public boolean hasCandidates(Predicate<VariableInfo> predicate) {
+            if (forbiddenLocalName == null || forbiddenLocalName.isBlank()) {
+                return !(delegate instanceof VariableCandidateSource source) || source.hasCandidates(predicate);
+            }
+            if (delegate instanceof VariableCandidateSource source) {
+                return source.hasCandidates(varInfo -> isAllowedCandidate(varInfo) && predicate.test(varInfo));
+            }
+            return true;
+        }
+
+        private boolean isAllowedCandidate(VariableInfo varInfo) {
+            return !varInfo.isLocal() || !forbiddenLocalName.equals(varInfo.name);
         }
     }
 }
