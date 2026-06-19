@@ -28,6 +28,7 @@ import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class BitwiseOperatorFactory extends Factory<Operator> {
@@ -43,17 +44,29 @@ class BitwiseOperatorFactory extends Factory<Operator> {
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
         rule = new Rule<>("bitwise");
-        rule.add("and", builder.setOperatorKind(OperatorKind.BIT_AND).getBinaryOperatorFactory());
-        rule.add("or", builder.setOperatorKind(OperatorKind.BIT_OR).getBinaryOperatorFactory());
-        rule.add("xor", builder.setOperatorKind(OperatorKind.BIT_XOR).getBinaryOperatorFactory());
-        rule.add("not", builder.setOperatorKind(OperatorKind.BIT_NOT).getUnaryOperatorFactory());
-        rule.add("shl", builder.setOperatorKind(OperatorKind.SHL).getBinaryOperatorFactory());
-        rule.add("shr", builder.setOperatorKind(OperatorKind.SHR).getBinaryOperatorFactory());
-        rule.add("sar", builder.setOperatorKind(OperatorKind.SAR).getBinaryOperatorFactory());
+        if (supportsBinaryBitwise(resultType)) {
+            rule.add("and", builder.setOperatorKind(OperatorKind.BIT_AND).getBinaryOperatorFactory());
+            rule.add("or", builder.setOperatorKind(OperatorKind.BIT_OR).getBinaryOperatorFactory());
+            rule.add("xor", builder.setOperatorKind(OperatorKind.BIT_XOR).getBinaryOperatorFactory());
+        }
+        if (supportsShiftOrNot(resultType)) {
+            rule.add("not", builder.setOperatorKind(OperatorKind.BIT_NOT).getUnaryOperatorFactory());
+            rule.add("shl", builder.setOperatorKind(OperatorKind.SHL).getBinaryOperatorFactory());
+            rule.add("shr", builder.setOperatorKind(OperatorKind.SHR).getBinaryOperatorFactory());
+            rule.add("sar", builder.setOperatorKind(OperatorKind.SAR).getBinaryOperatorFactory());
+        }
     }
 
     @Override
     public Operator produce() throws ProductionFailedException {
         return rule.produce();
+    }
+
+    private static boolean supportsBinaryBitwise(Type type) {
+        return type.equals(TypeList.INT) || type.equals(TypeList.LONG) || type.equals(TypeList.BOOLEAN);
+    }
+
+    private static boolean supportsShiftOrNot(Type type) {
+        return type.equals(TypeList.INT) || type.equals(TypeList.LONG);
     }
 }

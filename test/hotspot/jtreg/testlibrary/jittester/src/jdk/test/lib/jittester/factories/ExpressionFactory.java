@@ -107,7 +107,9 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                     .setIsInitialized(true)
                     //.setVariableType(resultType)
                     .getVariableFactory();
-            addTerminal("literal", literalFactory, terminalWeight, 1.0, groupTerminals);
+            if (supportsLiteral(resultType)) {
+                addTerminal("literal", literalFactory, terminalWeight, 1.0, groupTerminals);
+            }
             addTerminal("constant", constantFactory, terminalWeight, 1.0, groupTerminals);
         }
         Factory<? extends IRNode> variableFactory = builder
@@ -154,15 +156,23 @@ class ExpressionFactory extends SafeFactory<IRNode> {
             final double arithmeticWeight = numericResultType ? NUMERIC_ARITHMETIC_WEIGHT : ARITHMETIC_WEIGHT;
             final double assignmentWeight = numericResultType ? NUMERIC_ASSIGNMENT_WEIGHT : 1.0;
             rule.add("cast", builder.getCastOperatorFactory(), castWeight);
-            rule.add("arithmetic", builder.getArithmeticOperatorFactory(), arithmeticWeight);
-            rule.add("logic", builder.getLogicOperatorFactory());
-            rule.add("bitwise", new BitwiseOperatorFactory(complexityLimit, operatorLimit, ownerClass,
-                    resultType, exceptionSafe, noconsts));
+            if (supportsArithmetic(resultType)) {
+                rule.add("arithmetic", builder.getArithmeticOperatorFactory(), arithmeticWeight);
+            }
+            if (supportsLogic(resultType)) {
+                rule.add("logic", builder.getLogicOperatorFactory());
+            }
+            if (supportsBitwise(resultType)) {
+                rule.add("bitwise", new BitwiseOperatorFactory(complexityLimit, operatorLimit, ownerClass,
+                        resultType, exceptionSafe, noconsts));
+            }
             rule.add("assignment", builder.getAssignmentOperatorFactory(), assignmentWeight);
             rule.add("ternary", builder.getTernaryOperatorFactory());
             double functionWeight = ProductionParams.nondeterminism.value() > 0 ? 1.2 : 0.1;
             rule.add("function", builder.getFunctionFactory(), functionWeight);
-            rule.add("str_plus", builder.setOperatorKind(OperatorKind.STRADD).getBinaryOperatorFactory());
+            if (supportsStringPlus(resultType)) {
+                rule.add("str_plus", builder.setOperatorKind(OperatorKind.STRADD).getBinaryOperatorFactory());
+            }
             if (!ProductionParams.disableArrays.value() && !exceptionSafe) {
                 //rule.add("array_creation", builder.getArrayCreationFactory());
                 double baseArrayWeight = 1.0
@@ -171,10 +181,10 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                         GenerationState.currentFlowParams().arrayElementExpressionWeightPercent());
                 double arrayExtractionWeight = scaleWeight(baseArrayWeight,
                         GenerationState.currentFlowParams().arrayExtractionExpressionWeightPercent());
-                if (arrayElementWeight > 0.0) {
+                if (arrayElementWeight > 0.0 && supportsArrayElement(resultType)) {
                     rule.add("array_element", builder.getArrayElementFactory(), arrayElementWeight);
                 }
-                if (arrayExtractionWeight > 0.0) {
+                if (arrayExtractionWeight > 0.0 && supportsArrayExtraction(resultType)) {
                     rule.add("array_extraction", builder.getArrayExtractionFactory(), arrayExtractionWeight);
                 }
             }
@@ -199,6 +209,32 @@ class ExpressionFactory extends SafeFactory<IRNode> {
 
     private static boolean isReferenceTerminalType(Type resultType) {
         return resultType instanceof TypeKlass && !resultType.equals(TypeList.STRING);
+    }
+
+    private static boolean supportsArithmetic(Type type) {
+        return TypeBoxingUtil.isArithmeticResultType(type);
+    }
+
+    private static boolean supportsLogic(Type type) {
+        return type.equals(TypeList.BOOLEAN);
+    }
+
+    private static boolean supportsBitwise(Type type) {
+        return type.equals(TypeList.INT) || type.equals(TypeList.LONG) || type.equals(TypeList.BOOLEAN);
+    }
+
+    private static boolean supportsStringPlus(Type type) {
+        return type.equals(TypeList.STRING);
+    }
+
+    private static boolean supportsArrayElement(Type type) {
+        return !(type instanceof TypeArray) && TypeArray.isElementTypeAllowed(type);
+    }
+
+    private static boolean supportsArrayExtraction(Type type) {
+        return type instanceof TypeArray arrayType
+                && TypeArray.isElementTypeAllowed(arrayType.type)
+                && arrayType.dimensions < ProductionParams.dimensionsLimit.value();
     }
 
     @Override

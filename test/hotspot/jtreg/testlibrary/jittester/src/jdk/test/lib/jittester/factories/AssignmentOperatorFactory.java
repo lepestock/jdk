@@ -34,6 +34,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 class AssignmentOperatorFactory extends Factory<Operator> {
     private static final double COMPOUND_DIVISION_LIKE_WEIGHT = 0.05;
@@ -54,28 +55,34 @@ class AssignmentOperatorFactory extends Factory<Operator> {
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
         rule.add("simple_assign", builder.setOperatorKind(OperatorKind.ASSIGN).getBinaryOperatorFactory());
-        rule.add("compound_add", builder.setOperatorKind(OperatorKind.COMPOUND_ADD).getBinaryOperatorFactory());
-        rule.add("compound_sub", builder.setOperatorKind(OperatorKind.COMPOUND_SUB).getBinaryOperatorFactory());
-        rule.add("compound_mul", builder.setOperatorKind(OperatorKind.COMPOUND_MUL).getBinaryOperatorFactory());
-        if (!exceptionSafe) {
-            // Keep division-like compound assignments available but rare; denominator
-            // guarding handles most generated cases, while a small raw tail remains.
-            rule.add("compound_div", builder.setOperatorKind(OperatorKind.COMPOUND_DIV).getBinaryOperatorFactory(),
-                    COMPOUND_DIVISION_LIKE_WEIGHT);
-            rule.add("compound_mod", builder.setOperatorKind(OperatorKind.COMPOUND_MOD).getBinaryOperatorFactory(),
-                    COMPOUND_DIVISION_LIKE_WEIGHT);
+        if (supportsCompoundArithmetic(resultType)) {
+            rule.add("compound_add", builder.setOperatorKind(OperatorKind.COMPOUND_ADD).getBinaryOperatorFactory());
+            rule.add("compound_sub", builder.setOperatorKind(OperatorKind.COMPOUND_SUB).getBinaryOperatorFactory());
+            rule.add("compound_mul", builder.setOperatorKind(OperatorKind.COMPOUND_MUL).getBinaryOperatorFactory());
+            if (!exceptionSafe) {
+                // Keep division-like compound assignments available but rare; denominator
+                // guarding handles most generated cases, while a small raw tail remains.
+                rule.add("compound_div", builder.setOperatorKind(OperatorKind.COMPOUND_DIV).getBinaryOperatorFactory(),
+                        COMPOUND_DIVISION_LIKE_WEIGHT);
+                rule.add("compound_mod", builder.setOperatorKind(OperatorKind.COMPOUND_MOD).getBinaryOperatorFactory(),
+                        COMPOUND_DIVISION_LIKE_WEIGHT);
+            }
         }
-        rule.add("compound_and", builder.setOperatorKind(OperatorKind.COMPOUND_AND).getBinaryOperatorFactory());
-        rule.add("compound_or", builder.setOperatorKind(OperatorKind.COMPOUND_OR).getBinaryOperatorFactory());
-        rule.add("compound_xor", builder.setOperatorKind(OperatorKind.COMPOUND_XOR).getBinaryOperatorFactory());
-        rule.add("compound_shr", builder.setOperatorKind(OperatorKind.COMPOUND_SHR).getBinaryOperatorFactory());
-        rule.add("compound_sar", builder.setOperatorKind(OperatorKind.COMPOUND_SAR).getBinaryOperatorFactory());
-        rule.add("compound_shl", builder.setOperatorKind(OperatorKind.COMPOUND_SHL).getBinaryOperatorFactory());
+        if (supportsCompoundBitwise(resultType)) {
+            rule.add("compound_and", builder.setOperatorKind(OperatorKind.COMPOUND_AND).getBinaryOperatorFactory());
+            rule.add("compound_or", builder.setOperatorKind(OperatorKind.COMPOUND_OR).getBinaryOperatorFactory());
+            rule.add("compound_xor", builder.setOperatorKind(OperatorKind.COMPOUND_XOR).getBinaryOperatorFactory());
+        }
+        if (supportsShiftOrIncDec(resultType)) {
+            rule.add("compound_shr", builder.setOperatorKind(OperatorKind.COMPOUND_SHR).getBinaryOperatorFactory());
+            rule.add("compound_sar", builder.setOperatorKind(OperatorKind.COMPOUND_SAR).getBinaryOperatorFactory());
+            rule.add("compound_shl", builder.setOperatorKind(OperatorKind.COMPOUND_SHL).getBinaryOperatorFactory());
 
-        rule.add("prefix_inc", builder.setOperatorKind(OperatorKind.PRE_INC).getUnaryOperatorFactory());
-        rule.add("prefix_dec", builder.setOperatorKind(OperatorKind.PRE_DEC).getUnaryOperatorFactory());
-        rule.add("postfix_inc", builder.setOperatorKind(OperatorKind.POST_INC).getUnaryOperatorFactory());
-        rule.add("postfix_dec", builder.setOperatorKind(OperatorKind.POST_DEC).getUnaryOperatorFactory());
+            rule.add("prefix_inc", builder.setOperatorKind(OperatorKind.PRE_INC).getUnaryOperatorFactory());
+            rule.add("prefix_dec", builder.setOperatorKind(OperatorKind.PRE_DEC).getUnaryOperatorFactory());
+            rule.add("postfix_inc", builder.setOperatorKind(OperatorKind.POST_INC).getUnaryOperatorFactory());
+            rule.add("postfix_dec", builder.setOperatorKind(OperatorKind.POST_DEC).getUnaryOperatorFactory());
+        }
         return rule;
     }
 
@@ -112,5 +119,17 @@ class AssignmentOperatorFactory extends Factory<Operator> {
             return fillRule(resultType).produce();
         }
         throw new ProductionFailedException();
+    }
+
+    private static boolean supportsCompoundArithmetic(Type type) {
+        return TypeBoxingUtil.isPrimitiveNumeric(type);
+    }
+
+    private static boolean supportsCompoundBitwise(Type type) {
+        return TypeList.isBuiltInInt(type);
+    }
+
+    private static boolean supportsShiftOrIncDec(Type type) {
+        return TypeList.isBuiltInInt(type) && !type.equals(TypeList.BOOLEAN);
     }
 }
