@@ -21,7 +21,7 @@
  * questions.
  */
 
-package jdk.test.lib.jittester.arrays;
+package jdk.test.lib.jittester.collections;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,21 +37,28 @@ import jdk.test.lib.jittester.visitors.Visitor;
 Array extraction produces and array with N dimentions from an array with M
 dimentions, where N < M.
  */
-public class ArrayExtraction extends IRNode {
+public class CollectionExtraction extends IRNode {
+    private final IndexedStorageKind storageKind;
     private final List<Byte> dims;
-    public ArrayExtraction(IRNode array, ArrayList<IRNode> dimensionExpressions) {
+
+    public CollectionExtraction(IRNode array, ArrayList<IRNode> dimensionExpressions) {
+        this(array, dimensionExpressions, IndexedStorageKind.ARRAY);
+    }
+
+    public CollectionExtraction(IRNode array, ArrayList<IRNode> dimensionExpressions, IndexedStorageKind storageKind) {
         super(array.getResultType());
+        this.storageKind = storageKind;
         addChild(array);
         addChildren(dimensionExpressions);
-        if (array instanceof ArrayCreation) {
+        if (array instanceof CollectionCreation) {
             dims = new ArrayList<>();
-            ArrayCreation ac = (ArrayCreation) array;
+            CollectionCreation ac = (CollectionCreation) array;
             for (int i = dimensionExpressions.size(); i < ac.getDimensionsCount(); ++i) {
                 dims.add(ac.getDimensionSize(i));
             }
-        } else if (array instanceof ArrayExtraction) {
+        } else if (array instanceof CollectionExtraction) {
             dims = new ArrayList<>();
-            ArrayExtraction ae = (ArrayExtraction) array;
+            CollectionExtraction ae = (CollectionExtraction) array;
             for (int i = dimensionExpressions.size(); i < ae.getDimsNumber(); ++i) {
                 dims.add(ae.getDim(i));
             }
@@ -86,5 +93,9 @@ public class ArrayExtraction extends IRNode {
 
     public int getDimsNumber() {
         return dims.size();
+    }
+
+    public IndexedStorageKind getStorageKind() {
+        return storageKind;
     }
 }

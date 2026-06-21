@@ -74,10 +74,10 @@ import jdk.test.lib.jittester.VariableDeclaration;
 import jdk.test.lib.jittester.VariableDeclarationBlock;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.VariableInitialization;
-import jdk.test.lib.jittester.arrays.ArrayCreation;
-import jdk.test.lib.jittester.arrays.ArrayElement;
-import jdk.test.lib.jittester.arrays.ArrayExtraction;
-import jdk.test.lib.jittester.arrays.ArrayInitializer;
+import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.collections.CollectionElement;
+import jdk.test.lib.jittester.collections.CollectionExtraction;
+import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -126,7 +126,7 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
     }
 
     @Override
-    public byte[] visit(ArrayCreation node) {
+    public byte[] visit(CollectionCreation node) {
         int dimensions = node.getDimensionsCount();
         TypeArray arrayType = node.getArrayType();
         Type basicType = arrayType.type;
@@ -160,7 +160,7 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
     }
 
     @Override
-    public byte[] visit(ArrayElement node) {
+    public byte[] visit(CollectionElement node) {
         node.getChild(0).accept(this);
         int dimensions = node.getChildren().size() - 1;
         Type resultType = node.getResultType();
@@ -190,7 +190,7 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
     }
 
     @Override
-    public byte[] visit(ArrayExtraction node) {
+    public byte[] visit(CollectionExtraction node) {
         node.getChild(0).accept(this);
         int dimensions = node.getChildren().size() - 1;
         Type resultType = node.getResultType();
@@ -220,7 +220,7 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
     }
 
     @Override
-    public byte[] visit(ArrayInitializer node) {
+    public byte[] visit(CollectionInitializer node) {
         TypeArray arrayType = node.getArrayType();
         Type elementType = arrayType.type;
         int size = node.getChildren().size();

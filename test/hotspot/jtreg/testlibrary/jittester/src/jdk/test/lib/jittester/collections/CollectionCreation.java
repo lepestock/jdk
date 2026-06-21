@@ -21,7 +21,7 @@
  * questions.
  */
 
-package jdk.test.lib.jittester.arrays;
+package jdk.test.lib.jittester.collections;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,15 +32,22 @@ import jdk.test.lib.jittester.VariableDeclaration;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.visitors.Visitor;
 
-public class ArrayCreation extends IRNode {
+public class CollectionCreation extends IRNode {
     private final VariableDeclaration variable;
     private final TypeArray array;
+    private final IndexedStorageKind storageKind;
     private final List<Byte> dims;
 
-    public ArrayCreation(VariableDeclaration var, TypeArray array, ArrayList<IRNode> dimensionSizeExpressions) {
+    public CollectionCreation(VariableDeclaration var, TypeArray array, ArrayList<IRNode> dimensionSizeExpressions) {
+        this(var, array, dimensionSizeExpressions, IndexedStorageKind.ARRAY);
+    }
+
+    public CollectionCreation(VariableDeclaration var, TypeArray array, ArrayList<IRNode> dimensionSizeExpressions,
+                         IndexedStorageKind storageKind) {
         super(array);
         this.variable = var;
         this.array = array;
+        this.storageKind = storageKind;
         addChildren(dimensionSizeExpressions);
         this.dims = dimensionSizeExpressions.stream()
                 .map(d -> {
@@ -74,5 +81,9 @@ public class ArrayCreation extends IRNode {
 
     public VariableDeclaration getVariable() {
         return variable;
+    }
+
+    public IndexedStorageKind getStorageKind() {
+        return storageKind;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,41 +21,38 @@
  * questions.
  */
 
-package jdk.test.lib.jittester.arrays;
+package jdk.test.lib.jittester.collections;
 
-import java.util.ArrayList;
+import java.util.List;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.visitors.Visitor;
 
-public class ArrayElement extends IRNode {
-    public static final long UNSET_EXPRESSION_GENE_SEED = Long.MIN_VALUE;
-    private long expressionGeneSeed = UNSET_EXPRESSION_GENE_SEED;
+public class CollectionInitializer extends IRNode {
+    private final TypeArray arrayType;
+    private final IndexedStorageKind storageKind;
 
-    public ArrayElement(IRNode array, ArrayList<IRNode> dimensionExpressions) {
-        super(((TypeArray) array.getResultType()).type);
-        addChild(array);
-        addChildren(dimensionExpressions);
+    public CollectionInitializer(TypeArray arrayType, List<IRNode> elements) {
+        this(arrayType, elements, IndexedStorageKind.ARRAY);
+    }
+
+    public CollectionInitializer(TypeArray arrayType, List<IRNode> elements, IndexedStorageKind storageKind) {
+        super(arrayType);
+        this.arrayType = arrayType;
+        this.storageKind = storageKind;
+        addChildren(elements);
+    }
+
+    public TypeArray getArrayType() {
+        return arrayType;
+    }
+
+    public IndexedStorageKind getStorageKind() {
+        return storageKind;
     }
 
     @Override
-    public<T> T accept(Visitor<T> v) {
+    public <T> T accept(Visitor<T> v) {
         return v.visit(this);
-    }
-
-    public void setExpressionGeneSeed(long seed) {
-        this.expressionGeneSeed = seed;
-    }
-
-    public boolean hasExpressionGeneSeed() {
-        return expressionGeneSeed != UNSET_EXPRESSION_GENE_SEED;
-    }
-
-    public long getExpressionGeneSeed() {
-        return expressionGeneSeed;
-    }
-
-    public String getExpressionGeneToken() {
-        return hasExpressionGeneSeed() ? "E" + expressionGeneSeed : "E<unset>";
     }
 }

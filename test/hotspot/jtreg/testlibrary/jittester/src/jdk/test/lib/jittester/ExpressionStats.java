@@ -29,9 +29,9 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
-import jdk.test.lib.jittester.arrays.ArrayCreation;
-import jdk.test.lib.jittester.arrays.ArrayElement;
-import jdk.test.lib.jittester.arrays.ArrayExtraction;
+import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.collections.CollectionElement;
+import jdk.test.lib.jittester.collections.CollectionExtraction;
 import jdk.test.lib.jittester.functions.Function;
 import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
 
@@ -332,9 +332,9 @@ public final class ExpressionStats {
                 || node instanceof Function
                 || node instanceof CastOperator
                 || node instanceof TernaryOperator
-                || node instanceof ArrayCreation
-                || node instanceof ArrayElement
-                || node instanceof ArrayExtraction;
+                || node instanceof CollectionCreation
+                || node instanceof CollectionElement
+                || node instanceof CollectionExtraction;
     }
 
     private static String findEnclosingBlockGeneToken(IRNode node) {

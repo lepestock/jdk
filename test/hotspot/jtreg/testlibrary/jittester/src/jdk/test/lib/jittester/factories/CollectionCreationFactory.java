@@ -32,12 +32,12 @@ import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableDeclaration;
-import jdk.test.lib.jittester.arrays.ArrayCreation;
+import jdk.test.lib.jittester.collections.CollectionCreation;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
-class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
+class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
     private final long complexityLimit;
     private final int operatorLimit;
     private final Type resultType;
@@ -45,7 +45,7 @@ class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
     private final boolean noconsts;
     private final TypeKlass ownerClass;
 
-    ArrayCreationFactory(long complexityLimit, int operatorLimit,
+    CollectionCreationFactory(long complexityLimit, int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
         this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
@@ -56,7 +56,7 @@ class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
     }
 
     @Override
-    protected ArrayCreation sproduce() throws ProductionFailedException {
+    protected CollectionCreation sproduce() throws ProductionFailedException {
         if (resultType instanceof TypeArray) {
             TypeArray arrayResultType = (TypeArray) resultType;
             if (arrayResultType.type.equals(TypeList.VOID)) {
@@ -93,7 +93,7 @@ class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
                     .setIsStatic(false)
                     .getVariableDeclarationFactory()
                     .produce();
-            return new ArrayCreation(var, arrayResultType, dims);
+            return new CollectionCreation(var, arrayResultType, dims);
         }
         throw new ProductionFailedException();
     }

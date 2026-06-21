@@ -60,10 +60,10 @@ import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableDeclaration;
 import jdk.test.lib.jittester.VariableDeclarationBlock;
 import jdk.test.lib.jittester.VariableInitialization;
-import jdk.test.lib.jittester.arrays.ArrayCreation;
-import jdk.test.lib.jittester.arrays.ArrayElement;
-import jdk.test.lib.jittester.arrays.ArrayExtraction;
-import jdk.test.lib.jittester.arrays.ArrayInitializer;
+import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.collections.CollectionElement;
+import jdk.test.lib.jittester.collections.CollectionExtraction;
+import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -139,23 +139,23 @@ public class IRNodeBuilder {
                 getOwnerClass(), getResultType(), getExceptionSafe(), getNoConsts());
     }
 
-    public Factory<ArrayCreation> getArrayCreationFactory() {
-        return new ArrayCreationFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+    public Factory<CollectionCreation> getCollectionCreationFactory() {
+        return new CollectionCreationFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
-    public Factory<ArrayElement> getArrayElementFactory() {
-        return new ArrayElementFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+    public Factory<CollectionElement> getCollectionElementFactory() {
+        return new CollectionElementFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
-    public Factory<ArrayExtraction> getArrayExtractionFactory() {
-        return new ArrayExtractionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+    public Factory<CollectionExtraction> getCollectionExtractionFactory() {
+        return new CollectionExtractionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
-    public Factory<ArrayInitializer> getArrayInitializerFactory() {
-        return new ArrayInitializerFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+    public Factory<CollectionInitializer> getCollectionInitializerFactory() {
+        return new CollectionInitializerFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
@@ -286,8 +286,8 @@ public class IRNodeBuilder {
                 flowParams().operatorLimit());
         arrayKernelIterationVariable.ifPresent(flowBuilder::withIterationVariable);
         inArrayKernel.ifPresent(flowBuilder::withInArrayKernel);
-        arrayElementExpressionWeightPercent.ifPresent(flowBuilder::withArrayElementExpressionWeightPercent);
-        arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withArrayExtractionExpressionWeightPercent);
+        arrayElementExpressionWeightPercent.ifPresent(flowBuilder::withCollectionElementExpressionWeightPercent);
+        arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withCollectionExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
@@ -323,8 +323,8 @@ public class IRNodeBuilder {
         if (clearFixedOperandType) {
             flowBuilder.clearFixedOperandType();
         }
-        arrayElementExpressionWeightPercent.ifPresent(flowBuilder::withArrayElementExpressionWeightPercent);
-        arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withArrayExtractionExpressionWeightPercent);
+        arrayElementExpressionWeightPercent.ifPresent(flowBuilder::withCollectionElementExpressionWeightPercent);
+        arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withCollectionExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
@@ -794,12 +794,12 @@ public class IRNodeBuilder {
         return this;
     }
 
-    public IRNodeBuilder withArrayElementExpressionWeightPercent(int value) {
+    public IRNodeBuilder withCollectionElementExpressionWeightPercent(int value) {
         arrayElementExpressionWeightPercent = Optional.of(value);
         return this;
     }
 
-    public IRNodeBuilder withArrayExtractionExpressionWeightPercent(int value) {
+    public IRNodeBuilder withCollectionExtractionExpressionWeightPercent(int value) {
         arrayExtractionExpressionWeightPercent = Optional.of(value);
         return this;
     }

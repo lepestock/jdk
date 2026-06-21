@@ -35,7 +35,7 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableInfo;
-import jdk.test.lib.jittester.arrays.ArrayElement;
+import jdk.test.lib.jittester.collections.CollectionElement;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
@@ -59,7 +59,7 @@ public final class ArrayAssignmentDiagnostics {
 
     public void attach(Snapshot snapshot, IRNode assignmentNode, OperatorKind opKind,
             IRNode leftOperand, IRNode rightOperand) {
-        if (snapshot == null || !snapshot.enabled || !(leftOperand instanceof ArrayElement)) {
+        if (snapshot == null || !snapshot.enabled || !(leftOperand instanceof CollectionElement)) {
             return;
         }
         SourceDiagnostics.attach(assignmentNode, snapshot.render(opKind, leftOperand, rightOperand));
@@ -119,7 +119,7 @@ public final class ArrayAssignmentDiagnostics {
         if (node instanceof CastOperator castOperator) {
             node = castOperator.getChild(0);
         }
-        if (!(node instanceof ArrayElement arrayElement)) {
+        if (!(node instanceof CollectionElement arrayElement)) {
             return null;
         }
         IRNode arrayNode = arrayElement.getChild(0);

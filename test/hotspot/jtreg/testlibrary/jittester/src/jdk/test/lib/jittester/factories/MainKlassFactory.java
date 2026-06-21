@@ -94,7 +94,7 @@ class MainKlassFactory extends Factory<MainKlass> {
                     .getFunctionDefinitionBlockFactory()
                     .produce();
         }
-        functionDefinitions = ensureMainClassStaticArrayInitializer(builder, functionDefinitions);
+        functionDefinitions = ensureMainClassStaticCollectionInitializer(builder, functionDefinitions);
         IRNode testFunction = builder.setResultType(TypeList.VOID)
                 .withComplexityLimit(complexityLimit)
                 .withStatementLimit(statementsInTestFunctionLimit)
@@ -116,7 +116,7 @@ class MainKlassFactory extends Factory<MainKlass> {
                 functionDefinitions, testFunction, printVariables);
     }
 
-    private IRNode ensureMainClassStaticArrayInitializer(IRNodeBuilder builder, IRNode memberFunctions)
+    private IRNode ensureMainClassStaticCollectionInitializer(IRNodeBuilder builder, IRNode memberFunctions)
             throws ProductionFailedException {
         if (!hasPendingStaticArrayInitialization()) {
             return memberFunctions;

@@ -37,7 +37,7 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
-import jdk.test.lib.jittester.arrays.ArrayElement;
+import jdk.test.lib.jittester.collections.CollectionElement;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -71,7 +71,7 @@ class AssignmentLValueFactory extends Factory<IRNode> {
         if (variableFactory.hasCandidates(v -> true)) {
             rule.add("variable_lvalue", variableFactory);
         }
-        ArrayElementLValueFactory arrayElementFactory = new ArrayElementLValueFactory(ownerClass, resultType);
+        CollectionElementLValueFactory arrayElementFactory = new CollectionElementLValueFactory(ownerClass, resultType);
         if (arrayElementFactory.hasCandidates()) {
             rule.add("array_element_lvalue", arrayElementFactory, ARRAY_ELEMENT_LVALUE_WEIGHT);
         }
@@ -85,7 +85,7 @@ class AssignmentLValueFactory extends Factory<IRNode> {
             Type resultType, boolean exceptionSafe, boolean noconsts) {
         return variableLValueFactory(complexityLimit, operatorLimit, ownerClass,
                 resultType, exceptionSafe, noconsts).hasCandidates(v -> true)
-                || new ArrayElementLValueFactory(ownerClass, resultType).hasCandidates();
+                || new CollectionElementLValueFactory(ownerClass, resultType).hasCandidates();
     }
 
     private static ReadOnlyLocalLValueFactory variableLValueFactory(long complexityLimit, int operatorLimit,
@@ -103,11 +103,11 @@ class AssignmentLValueFactory extends Factory<IRNode> {
                 LVALUE_PICK_RETRIES);
     }
 
-    private static final class ArrayElementLValueFactory extends SafeFactory<IRNode> {
+    private static final class CollectionElementLValueFactory extends SafeFactory<IRNode> {
         private final TypeKlass ownerClass;
         private final Type elementType;
 
-        ArrayElementLValueFactory(TypeKlass ownerClass, Type elementType) {
+        CollectionElementLValueFactory(TypeKlass ownerClass, Type elementType) {
             this.ownerClass = ownerClass;
             this.elementType = elementType;
         }
@@ -124,7 +124,7 @@ class AssignmentLValueFactory extends Factory<IRNode> {
                     : new StaticMemberVariable(ownerClass, arrayInfo);
             ArrayList<IRNode> indexes = new ArrayList<>(1);
             indexes.add(indexExpression(arrayInfo));
-            return new ArrayElement(baseArray, indexes);
+            return new CollectionElement(baseArray, indexes);
         }
 
         boolean hasCandidates() {
@@ -133,7 +133,7 @@ class AssignmentLValueFactory extends Factory<IRNode> {
 
         private ArrayList<VariableInfo> candidates() {
             ArrayList<VariableInfo> result = new ArrayList<>();
-            if (!ProductionParams.arrayKernelArrayElementLValues.value()
+            if (!ProductionParams.arrayKernelCollectionElementLValues.value()
                     || !GenerationState.currentFlowParams().inArrayKernel()
                     || !TypeArray.isElementTypeAllowed(elementType)) {
                 return result;

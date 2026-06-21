@@ -286,12 +286,12 @@ public final class FlowParams {
             return this;
         }
 
-        public Builder withArrayElementExpressionWeightPercent(int value) {
+        public Builder withCollectionElementExpressionWeightPercent(int value) {
             this.arrayElementExpressionWeightPercent = normalizePercent(value);
             return this;
         }
 
-        public Builder withArrayExtractionExpressionWeightPercent(int value) {
+        public Builder withCollectionExtractionExpressionWeightPercent(int value) {
             this.arrayExtractionExpressionWeightPercent = normalizePercent(value);
             return this;
         }

@@ -29,11 +29,11 @@ import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Type;
-import jdk.test.lib.jittester.arrays.ArrayInitializer;
+import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 
-class ArrayInitializerFactory extends SafeFactory<ArrayInitializer> {
+class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
     private final long complexityLimit;
     private final int operatorLimit;
     private final TypeKlass ownerClass;
@@ -41,7 +41,7 @@ class ArrayInitializerFactory extends SafeFactory<ArrayInitializer> {
     private final boolean exceptionSafe;
     private final boolean noConsts;
 
-    ArrayInitializerFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    CollectionInitializerFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noConsts) {
         this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
@@ -52,7 +52,7 @@ class ArrayInitializerFactory extends SafeFactory<ArrayInitializer> {
     }
 
     @Override
-    protected ArrayInitializer sproduce() throws ProductionFailedException {
+    protected CollectionInitializer sproduce() throws ProductionFailedException {
         if (!(resultType instanceof TypeArray arrayType) || arrayType.dimensions != 1) {
             throw new ProductionFailedException();
         }
@@ -74,7 +74,7 @@ class ArrayInitializerFactory extends SafeFactory<ArrayInitializer> {
         for (int i = 0; i < elementCount; i++) {
             elements.add(produceElement(elementBuilder));
         }
-        return new ArrayInitializer(arrayType, elements);
+        return new CollectionInitializer(arrayType, elements);
     }
 
     private int chooseElementCount(Type elementType) {
