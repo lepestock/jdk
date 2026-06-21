@@ -27,23 +27,29 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public enum IndexedStorageKind {
-    ARRAY;
+    ARRAY,
+    LIST;
 
     public String access(String receiver, List<String> indexes) {
         return switch (this) {
             case ARRAY -> receiver + arrayIndexes(indexes);
+            case LIST -> receiver + ".get(" + indexes.get(0) + ")";
         };
     }
 
-    public String creation(String elementType, List<String> sizes) {
+    public String creation(String elementType, List<String> sizes, String defaultValue) {
         return switch (this) {
             case ARRAY -> "new " + elementType + arrayIndexes(sizes);
+            case LIST -> "new java.util.ArrayList<" + elementType + ">("
+                    + "java.util.Collections.nCopies(" + sizes.get(0) + ", " + defaultValue + "))";
         };
     }
 
     public String initializer(String elementType, List<String> elements) {
         return switch (this) {
             case ARRAY -> "new " + elementType + "[] { " + String.join(", ", elements) + " }";
+            case LIST -> "new java.util.ArrayList<" + elementType + ">(java.util.Arrays.asList("
+                    + String.join(", ", elements) + "))";
         };
     }
 

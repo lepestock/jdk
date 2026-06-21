@@ -35,6 +35,7 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.visitors.Visitor;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -49,14 +50,20 @@ public class TypeArray extends TypeKlass {
     }
     public final Type type;
     public final int dimensions;
+    private final IndexedStorageKind storageKind;
     private List<Byte> dims = new ArrayList<>();
 
     public TypeArray(Type type, int dimensions) {
+        this(type, dimensions, IndexedStorageKind.ARRAY);
+    }
+
+    public TypeArray(Type type, int dimensions, IndexedStorageKind storageKind) {
         super("Array", TypeKlass.FINAL);
         addParent(TypeList.OBJECT.getName());
         setParent(TypeList.OBJECT);
         this.type = type;
         this.dimensions = dimensions;
+        this.storageKind = storageKind;
     }
 
     public String getName() {
@@ -194,5 +201,9 @@ public class TypeArray extends TypeKlass {
 
     public int getDimensions() {
         return dimensions;
+    }
+
+    public IndexedStorageKind getStorageKind() {
+        return storageKind;
     }
 }

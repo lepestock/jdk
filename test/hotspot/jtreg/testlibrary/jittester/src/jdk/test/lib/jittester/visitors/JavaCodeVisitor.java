@@ -67,6 +67,7 @@ import jdk.test.lib.jittester.collections.CollectionCreation;
 import jdk.test.lib.jittester.collections.CollectionElement;
 import jdk.test.lib.jittester.collections.CollectionExtraction;
 import jdk.test.lib.jittester.collections.CollectionInitializer;
+import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -239,7 +240,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(CollectionCreation node) {
         Type arrayElemType = node.getArrayType().type;
-        String type = arrayElemType.accept(this);
+        String type = collectionElementTypeName(node.getStorageKind(), arrayElemType);
         String name = node.getVariable().getName();
         List<String> sizes = node.getChildren().stream()
                 .map(p -> p.accept(this))
@@ -250,9 +251,10 @@ public class JavaCodeVisitor implements Visitor<String> {
                 .append(PrintingUtils.align(node.getParent().getLevel()))
                 .append(name)
                 .append(" = ")
-                .append(node.getStorageKind().creation(type, sizes))
+                .append(node.getStorageKind().creation(type, sizes,
+                        defaultCollectionElementValue(node.getStorageKind(), arrayElemType)))
                 .append(";\n");
-        if (!TypeList.isBuiltIn(arrayElemType)) {
+        if (node.getStorageKind() == IndexedStorageKind.ARRAY && !TypeList.isBuiltIn(arrayElemType)) {
             code.append(PrintingUtils.align(node.getParent().getLevel()))
                 .append("java.util.Arrays.fill(")
                 .append(name)
@@ -333,7 +335,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(CollectionInitializer node) {
         TypeArray arrayType = node.getArrayType();
-        String elementType = arrayType.type.accept(this);
+        String elementType = collectionElementTypeName(node.getStorageKind(), arrayType.type);
         List<String> elements = node.getChildren().stream()
                 .map(c -> c.accept(this))
                 .toList();
@@ -354,10 +356,23 @@ public class JavaCodeVisitor implements Visitor<String> {
         if (left == null || right == null) {
             return "null";
         }
+        if (node.getOperationKind() == OperatorKind.ASSIGN
+                && left instanceof CollectionElement collectionElement
+                && collectionElement.getStorageKind() == IndexedStorageKind.LIST) {
+            return collectionSetExpression(collectionElement, right);
+        }
         String expression = expressionToJavaCode(node, left, Operator.Order.LEFT)
                 + " " + operatorToJaveCode(node.getOperationKind()) + " "
                 + expressionToJavaCode(node, right, Operator.Order.RIGHT);
         return boxPrimitiveOperatorResultIfNeeded(node, expression);
+    }
+
+    private String collectionSetExpression(CollectionElement node, IRNode value) {
+        IRNode collection = node.getChild(0);
+        String receiver = indexedReceiver(collection);
+        String index = node.getChild(1).accept(this);
+        String valueExpression = expressionToJavaCode((Operator) node.getParent(), value, Operator.Order.RIGHT);
+        return receiver + ".set(" + index + ", " + valueExpression + ")";
     }
 
     @Override
@@ -1290,10 +1305,22 @@ public class JavaCodeVisitor implements Visitor<String> {
 
             cases += node.getChild(i + caseBlockIdx).accept(this)+ "\n";
         }
-        return "switch (" + node.getChild(0).accept(this)+ ")\n"
+        return "switch (" + switchSelectorExpression(node.getChild(0)) + ")\n"
                + PrintingUtils.align(level) + openBraceSuffixWithGene(node.getChild(caseBlockIdx))
                + cases
                + PrintingUtils.align(level) + closeBraceSuffixWithGene(node.getChild(caseBlockIdx));
+    }
+
+    private String switchSelectorExpression(IRNode selector) {
+        Type primitiveType = TypeBoxingUtil.toPrimitiveType(selector.getResultType());
+        if (primitiveType == null
+                || !(primitiveType.equals(TypeList.CHAR)
+                        || primitiveType.equals(TypeList.BYTE)
+                        || primitiveType.equals(TypeList.SHORT)
+                        || primitiveType.equals(TypeList.INT))) {
+            return selector.accept(this);
+        }
+        return "(int)(" + selector.accept(this) + ")";
     }
 
     @Override
@@ -1316,11 +1343,57 @@ public class JavaCodeVisitor implements Visitor<String> {
 
     @Override
     public String visit(TypeArray node) {
+        if (node.getStorageKind() == IndexedStorageKind.LIST) {
+            return "java.util.ArrayList<" + collectionElementTypeName(node.getStorageKind(), node.getType()) + ">";
+        }
         String r = node.getType().accept(this);
         for (int i = 0; i < node.getDimensions(); i++) {
             r += "[]";
         }
         return r;
+    }
+
+    private String collectionElementTypeName(IndexedStorageKind storageKind, Type elementType) {
+        if (storageKind != IndexedStorageKind.LIST) {
+            return elementType.accept(this);
+        }
+        Type wrapper = TypeBoxingUtil.toWrapperType(elementType);
+        return wrapper == null ? elementType.accept(this) : wrapper.accept(this);
+    }
+
+    private String defaultCollectionElementValue(IndexedStorageKind storageKind, Type elementType) {
+        if (storageKind != IndexedStorageKind.LIST) {
+            return "";
+        }
+        Type primitiveType = TypeBoxingUtil.toPrimitiveType(elementType);
+        if (primitiveType != null) {
+            if (primitiveType.equals(TypeList.BOOLEAN)) {
+                return "false";
+            }
+            if (primitiveType.equals(TypeList.BYTE)) {
+                return "(byte) 0";
+            }
+            if (primitiveType.equals(TypeList.SHORT)) {
+                return "(short) 0";
+            }
+            if (primitiveType.equals(TypeList.CHAR)) {
+                return "(char) 0";
+            }
+            if (primitiveType.equals(TypeList.LONG)) {
+                return "0L";
+            }
+            if (primitiveType.equals(TypeList.FLOAT)) {
+                return "0.0F";
+            }
+            if (primitiveType.equals(TypeList.DOUBLE)) {
+                return "0.0D";
+            }
+            return "0";
+        }
+        if (elementType.equals(TypeList.STRING)) {
+            return "\"\"";
+        }
+        return "new " + elementType.accept(this) + "()";
     }
 
     @Override

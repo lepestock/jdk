@@ -120,7 +120,8 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
             }
             // Inside array-kernel blocks, array lvalue indices must follow the kernel iterator.
             IterationIndexedCollectionElementFactory arrayElementLValueFactory =
-                    new IterationIndexedCollectionElementFactory((TypeKlass) ownerClass, leftOperandType);
+                    new IterationIndexedCollectionElementFactory((TypeKlass) ownerClass, leftOperandType,
+                            true, opKind != OperatorKind.ASSIGN);
             if (arrayElementLValueFactory.hasCandidates()) {
                 rule.add("array_element_lvalue", arrayElementLValueFactory, 5.0);
             }

@@ -36,6 +36,7 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.collections.CollectionCreation;
 import jdk.test.lib.jittester.collections.CollectionElement;
 import jdk.test.lib.jittester.collections.CollectionExtraction;
+import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.Genome;
@@ -113,11 +114,18 @@ class CollectionElementFactory extends SafeFactory<CollectionElement> {
                 perDimensionExpressions.add(new Literal((byte)PseudoRandom.randomNotNegative(boundedLimit), TypeList.BYTE));
             }
         }
-        CollectionElement produced = new CollectionElement(arrayReturningExpression, perDimensionExpressions);
+        CollectionElement produced = new CollectionElement(arrayReturningExpression, perDimensionExpressions,
+                storageKind(arrayReturningExpression));
         Long expressionScopeSeed = Genome.getCurrentExpressionScopeSeed();
         if (expressionScopeSeed != null) {
             produced.setExpressionGeneSeed(expressionScopeSeed);
         }
         return produced;
+    }
+
+    private static IndexedStorageKind storageKind(IRNode node) {
+        return node.getResultType() instanceof TypeArray arrayType
+                ? arrayType.getStorageKind()
+                : IndexedStorageKind.ARRAY;
     }
 }

@@ -96,6 +96,6 @@ class VariableDeclarationFactory extends Factory<VariableDeclaration> {
         }
         // Keep field arrays 1D for now: this path is tuned for stable initialization/use,
         // and multi-dimensional declarations here tend to produce brittle behavior.
-        return new TypeArray(elementType, 1);
+        return CollectionCreationFactory.withSelectedStorageKind(new TypeArray(elementType, 1));
     }
 }

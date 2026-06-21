@@ -33,6 +33,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableDeclaration;
 import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -64,6 +65,8 @@ class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
             } else if (!TypeArray.isElementTypeAllowed(arrayResultType.type)) {
                 throw new ProductionFailedException();
             }
+            arrayResultType = withSelectedStorageKind(arrayResultType);
+            IndexedStorageKind storageKind = arrayResultType.getStorageKind();
             IRNodeBuilder builder = new IRNodeBuilder()
                     .withComplexityLimit(complexityLimit)
                     .setOwnerKlass(ownerClass)
@@ -93,8 +96,28 @@ class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
                     .setIsStatic(false)
                     .getVariableDeclarationFactory()
                     .produce();
-            return new CollectionCreation(var, arrayResultType, dims);
+            return new CollectionCreation(var, arrayResultType, dims, storageKind);
         }
         throw new ProductionFailedException();
+    }
+
+    static TypeArray withSelectedStorageKind(TypeArray arrayType) {
+        IndexedStorageKind storageKind = selectStorageKind(arrayType);
+        return storageKind == arrayType.getStorageKind()
+                ? arrayType
+                : new TypeArray(arrayType.type, arrayType.dimensions, storageKind);
+    }
+
+    static IndexedStorageKind selectStorageKind(TypeArray arrayType) {
+        if (arrayType.getStorageKind() != IndexedStorageKind.ARRAY) {
+            return arrayType.getStorageKind();
+        }
+        if (arrayType.dimensions != 1) {
+            return IndexedStorageKind.ARRAY;
+        }
+        int percent = Math.max(0, Math.min(100, ProductionParams.listStoragePercent.value()));
+        return PseudoRandom.randomBoolean(percent / 100.0)
+                ? IndexedStorageKind.LIST
+                : IndexedStorageKind.ARRAY;
     }
 }
