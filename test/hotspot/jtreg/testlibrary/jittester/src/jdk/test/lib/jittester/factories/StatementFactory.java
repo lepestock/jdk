@@ -59,14 +59,14 @@ class StatementFactory extends Factory<Statement> {
                 .setResultType(pickStatementResultType());
         double arrayWeight = 1.0
                 + Math.max(0, ProductionParams.arrayProductionWeightBonus.value()) / 100.0;
-        rule.add("array_creation", builder.getArrayCreationFactory(), arrayWeight);
+        rule.add("array_creation", builder.getCollectionCreationFactory(), arrayWeight);
         rule.add("assignment", builder.getAssignmentOperatorFactory());
 //        rule.add("function", builder.getFunctionFactory(), 0.1);
     }
 
     private static Type pickStatementResultType() {
         if (GenerationState.currentFlowParams().inArrayKernel()) {
-            Type arrayElementType = pickKernelArrayElementType();
+            Type arrayElementType = pickKernelCollectionElementType();
             if (arrayElementType != null) {
                 return arrayElementType;
             }
@@ -82,7 +82,7 @@ class StatementFactory extends Factory<Statement> {
         return PseudoRandom.randomElement(TypeList.getAll());
     }
 
-    private static Type pickKernelArrayElementType() {
+    private static Type pickKernelCollectionElementType() {
         ArrayList<Type> candidates = new ArrayList<>();
         for (Symbol symbol : SymbolTable.getAllCombined(VariableInfo.class)) {
             if (!(symbol instanceof VariableInfo varInfo)) {

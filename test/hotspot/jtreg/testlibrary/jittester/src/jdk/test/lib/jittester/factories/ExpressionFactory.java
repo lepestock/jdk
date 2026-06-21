@@ -123,7 +123,7 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         }
         if (preferIterationIndexedArrayTerminal) {
             Factory<? extends IRNode> iterationArrayTerminalFactory =
-                    new IterationIndexedArrayElementFactory(ownerClass, resultType, true);
+                    new IterationIndexedCollectionElementFactory(ownerClass, resultType, true);
             terminalRule.add("iteration_indexed_array_terminal", iterationArrayTerminalFactory,
                     ITERATION_INDEXED_ARRAY_TERMINAL_WEIGHT);
         }
@@ -178,18 +178,18 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                 rule.add("str_plus", builder.setOperatorKind(OperatorKind.STRADD).getBinaryOperatorFactory());
             }
             if (!ProductionParams.disableArrays.value() && !exceptionSafe) {
-                //rule.add("array_creation", builder.getArrayCreationFactory());
+                //rule.add("array_creation", builder.getCollectionCreationFactory());
                 double baseArrayWeight = 1.0
                         + Math.max(0, ProductionParams.arrayProductionWeightBonus.value()) / 100.0;
                 double arrayElementWeight = scaleWeight(baseArrayWeight,
                         GenerationState.currentFlowParams().arrayElementExpressionWeightPercent());
                 double arrayExtractionWeight = scaleWeight(baseArrayWeight,
                         GenerationState.currentFlowParams().arrayExtractionExpressionWeightPercent());
-                if (arrayElementWeight > 0.0 && supportsArrayElement(resultType)) {
-                    rule.add("array_element", builder.getArrayElementFactory(), arrayElementWeight);
+                if (arrayElementWeight > 0.0 && supportsCollectionElement(resultType)) {
+                    rule.add("array_element", builder.getCollectionElementFactory(), arrayElementWeight);
                 }
-                if (arrayExtractionWeight > 0.0 && supportsArrayExtraction(resultType)) {
-                    rule.add("array_extraction", builder.getArrayExtractionFactory(), arrayExtractionWeight);
+                if (arrayExtractionWeight > 0.0 && supportsCollectionExtraction(resultType)) {
+                    rule.add("array_extraction", builder.getCollectionExtractionFactory(), arrayExtractionWeight);
                 }
             }
         }
@@ -235,11 +235,11 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         return type.equals(TypeList.STRING);
     }
 
-    private static boolean supportsArrayElement(Type type) {
+    private static boolean supportsCollectionElement(Type type) {
         return !(type instanceof TypeArray) && TypeArray.isElementTypeAllowed(type);
     }
 
-    private static boolean supportsArrayExtraction(Type type) {
+    private static boolean supportsCollectionExtraction(Type type) {
         return type instanceof TypeArray arrayType
                 && TypeArray.isElementTypeAllowed(arrayType.type)
                 && arrayType.dimensions < ProductionParams.dimensionsLimit.value();

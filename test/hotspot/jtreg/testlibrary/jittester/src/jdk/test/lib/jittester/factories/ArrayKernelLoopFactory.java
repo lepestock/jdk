@@ -124,8 +124,8 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
                     .withArrayKernelVariable(iterationVariable)
                     .withInArrayKernel(true)
                     // Generic array expression roots tend to collapse kernel RHS into simple loads.
-                    .withArrayElementExpressionWeightPercent(KERNEL_ARRAY_ELEMENT_EXPRESSION_WEIGHT_PERCENT)
-                    .withArrayExtractionExpressionWeightPercent(KERNEL_ARRAY_EXTRACTION_EXPRESSION_WEIGHT_PERCENT)
+                    .withCollectionElementExpressionWeightPercent(KERNEL_ARRAY_ELEMENT_EXPRESSION_WEIGHT_PERCENT)
+                    .withCollectionExtractionExpressionWeightPercent(KERNEL_ARRAY_EXTRACTION_EXPRESSION_WEIGHT_PERCENT)
                     .withMoreReadOnlyVars(iterationVariable)
                     .withMoreIterationVariables(iterationVariable)
                     .produceBlock();

@@ -33,15 +33,15 @@ import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
-import jdk.test.lib.jittester.arrays.ArrayCreation;
-import jdk.test.lib.jittester.arrays.ArrayElement;
-import jdk.test.lib.jittester.arrays.ArrayExtraction;
+import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.collections.CollectionElement;
+import jdk.test.lib.jittester.collections.CollectionExtraction;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
-class ArrayElementFactory extends SafeFactory<ArrayElement> {
+class CollectionElementFactory extends SafeFactory<CollectionElement> {
     private final long complexityLimit;
     private final int operatorLimit;
     private final Type resultType;
@@ -49,7 +49,7 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
     private final boolean exceptionSafe;
     private final boolean noconsts;
 
-    ArrayElementFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    CollectionElementFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
         this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
@@ -60,7 +60,7 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
     }
 
     @Override
-    protected ArrayElement sproduce() throws ProductionFailedException {
+    protected CollectionElement sproduce() throws ProductionFailedException {
         if (resultType instanceof TypeArray) {
             throw new ProductionFailedException();
         }
@@ -101,11 +101,11 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
                 perDimensionExpressions.add(bounded);
             } else {
                 byte dimLimit = 0;
-                if (arrayReturningExpression instanceof ArrayCreation) {
-                    ArrayCreation arrayCreation = (ArrayCreation) arrayReturningExpression;
+                if (arrayReturningExpression instanceof CollectionCreation) {
+                    CollectionCreation arrayCreation = (CollectionCreation) arrayReturningExpression;
                     dimLimit = arrayCreation.getDimensionSize(i);
-                } else if (arrayReturningExpression instanceof ArrayExtraction) {
-                    ArrayExtraction arrayExtraction = (ArrayExtraction) arrayReturningExpression;
+                } else if (arrayReturningExpression instanceof CollectionExtraction) {
+                    CollectionExtraction arrayExtraction = (CollectionExtraction) arrayReturningExpression;
                     if (i < arrayExtraction.getDimsNumber())
                         dimLimit = arrayExtraction.getDim(i);
                 }
@@ -113,7 +113,7 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
                 perDimensionExpressions.add(new Literal((byte)PseudoRandom.randomNotNegative(boundedLimit), TypeList.BYTE));
             }
         }
-        ArrayElement produced = new ArrayElement(arrayReturningExpression, perDimensionExpressions);
+        CollectionElement produced = new CollectionElement(arrayReturningExpression, perDimensionExpressions);
         Long expressionScopeSeed = Genome.getCurrentExpressionScopeSeed();
         if (expressionScopeSeed != null) {
             produced.setExpressionGeneSeed(expressionScopeSeed);

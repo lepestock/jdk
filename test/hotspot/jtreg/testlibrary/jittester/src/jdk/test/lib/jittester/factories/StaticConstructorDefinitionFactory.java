@@ -36,7 +36,7 @@ import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
-import jdk.test.lib.jittester.arrays.ArrayInitializer;
+import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.functions.StaticConstructorDefinition;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
@@ -86,14 +86,14 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
         } finally {
             SymbolTable.pop();
         }
-        return new StaticConstructorDefinition(prependStaticArrayInitializers(body));
+        return new StaticConstructorDefinition(prependStaticCollectionInitializers(body));
     }
 
-    private IRNode prependStaticArrayInitializers(IRNode originalBody) {
+    private IRNode prependStaticCollectionInitializers(IRNode originalBody) {
         if (!(originalBody instanceof Block blockBody)) {
             return originalBody;
         }
-        List<IRNode> prelude = buildStaticArrayInitializers();
+        List<IRNode> prelude = buildStaticCollectionInitializers();
         if (prelude.isEmpty()) {
             return originalBody;
         }
@@ -103,15 +103,15 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
         return new Block(ownerClass, TypeList.VOID, merged, blockBody.getLevel(), blockBody.getBlockGene());
     }
 
-    private List<IRNode> buildStaticArrayInitializers() {
+    private List<IRNode> buildStaticCollectionInitializers() {
         List<IRNode> statements = new ArrayList<>();
         for (Symbol symbol : SymbolTable.getAllCombined(ownerClass, VariableInfo.class)) {
             VariableInfo variableInfo = (VariableInfo) symbol;
-            if (!needsStaticArrayInitializer(variableInfo)) {
+            if (!needsStaticCollectionInitializer(variableInfo)) {
                 continue;
             }
             try {
-                statements.add(createStaticArrayInitializerStatement(variableInfo));
+                statements.add(createStaticCollectionInitializerStatement(variableInfo));
             } catch (ProductionFailedException ignored) {
                 // Keep generation resilient: if initializer creation fails, keep previous behavior.
             }
@@ -119,13 +119,13 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
         return statements;
     }
 
-    private static boolean needsStaticArrayInitializer(VariableInfo variableInfo) {
+    private static boolean needsStaticCollectionInitializer(VariableInfo variableInfo) {
         return variableInfo.isStatic()
                 && variableInfo.type instanceof TypeArray
                 && (variableInfo.flags & VariableInfo.INITIALIZED) == 0;
     }
 
-    private Statement createStaticArrayInitializerStatement(VariableInfo variableInfo)
+    private Statement createStaticCollectionInitializerStatement(VariableInfo variableInfo)
             throws ProductionFailedException {
         TypeArray arrayType = (TypeArray) variableInfo.type;
         IRNodeBuilder initBuilder = new IRNodeBuilder()
@@ -135,7 +135,7 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
                 .setResultType(arrayType)
                 .setExceptionSafe(true)
                 .setNoConsts(false);
-        ArrayInitializer initializer = initBuilder.getArrayInitializerFactory().produce();
+        CollectionInitializer initializer = initBuilder.getCollectionInitializerFactory().produce();
         variableInfo.flags |= VariableInfo.INITIALIZED;
         StaticMemberVariable target = new StaticMemberVariable(ownerClass, variableInfo);
         return new Statement(new BinaryOperator(OperatorKind.ASSIGN, arrayType, target, initializer), true);

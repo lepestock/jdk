@@ -63,10 +63,10 @@ import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableDeclaration;
 import jdk.test.lib.jittester.VariableDeclarationBlock;
 import jdk.test.lib.jittester.VariableInfo;
-import jdk.test.lib.jittester.arrays.ArrayCreation;
-import jdk.test.lib.jittester.arrays.ArrayElement;
-import jdk.test.lib.jittester.arrays.ArrayExtraction;
-import jdk.test.lib.jittester.arrays.ArrayInitializer;
+import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.collections.CollectionElement;
+import jdk.test.lib.jittester.collections.CollectionExtraction;
+import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -237,21 +237,21 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     @Override
-    public String visit(ArrayCreation node) {
+    public String visit(CollectionCreation node) {
         Type arrayElemType = node.getArrayType().type;
         String type = arrayElemType.accept(this);
         String name = node.getVariable().getName();
+        List<String> sizes = node.getChildren().stream()
+                .map(p -> p.accept(this))
+                .toList();
         StringBuilder code = new StringBuilder()
                 .append(node.getVariable().accept(this))
                 .append(";\n")
                 .append(PrintingUtils.align(node.getParent().getLevel()))
                 .append(name)
-                .append(" = new ")
-                .append(type);
-        code.append(node.getChildren().stream()
-                .map(p -> p.accept(this))
-                .collect(Collectors.joining("][", "[", "]")));
-        code.append(";\n");
+                .append(" = ")
+                .append(node.getStorageKind().creation(type, sizes))
+                .append(";\n");
         if (!TypeList.isBuiltIn(arrayElemType)) {
             code.append(PrintingUtils.align(node.getParent().getLevel()))
                 .append("java.util.Arrays.fill(")
@@ -264,31 +264,26 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     @Override
-    public String visit(ArrayElement node) {
+    public String visit(CollectionElement node) {
         IRNode array = node.getChild(0);
-        StringBuilder arrayExpr = new StringBuilder();
-        if (array instanceof VariableBase || array instanceof Function) {
-            arrayExpr.append(array.accept(this));
-        } else {
-            arrayExpr.append("(")
-                .append(array.accept(this))
-                .append(")");
-        }
-        String indices = node.getChildren().stream()
+        String receiver = indexedReceiver(array);
+        List<String> indexes = node.getChildren().stream()
                 .skip(1)
                 .map(c -> c.accept(this))
-                .collect(Collectors.joining("][", "[", "]"));
-        if (isAssignmentLValueArrayElement(node)) {
-            return arrayExpr + indices;
+                .toList();
+        String access = node.getStorageKind().access(receiver, indexes);
+        if (isAssignmentLValueCollectionElement(node)) {
+            return access;
         }
         if (!ProductionParams.pulsemap.value()
+                || !node.getStorageKind().supportsPulseArrayRead()
                 || node.getChildren().size() < 2
                 || !(array.getResultType() instanceof TypeArray)) {
-            return arrayExpr + indices;
+            return access;
         }
         String method = pulseArrayReadMethodName((TypeArray) array.getResultType());
         if (method == null) {
-            return arrayExpr + indices;
+            return access;
         }
         String genePayload = "";
         if (node.hasExpressionGeneSeed()) {
@@ -303,11 +298,11 @@ public class JavaCodeVisitor implements Visitor<String> {
                 ? ""
                 : tailIndices.stream().collect(Collectors.joining("][", "[", "]"));
         return "jdk.test.lib.jittester.pulse.Pulse." + method
-                + "(" + arrayExpr + ", " + indexExpr + ", \"" + genePayload + "\")"
+                + "(" + receiver + ", " + indexExpr + ", \"" + genePayload + "\")"
                 + suffix;
     }
 
-    private static boolean isAssignmentLValueArrayElement(ArrayElement node) {
+    private static boolean isAssignmentLValueCollectionElement(CollectionElement node) {
         IRNode parent = node.getParent();
         if (!(parent instanceof BinaryOperator binOp)) {
             return false;
@@ -325,31 +320,31 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     @Override
-    public String visit(ArrayExtraction node) {
+    public String visit(CollectionExtraction node) {
         IRNode array = node.getChild(0);
-        StringBuilder code = new StringBuilder();
-        if (array instanceof VariableBase || array instanceof Function) {
-            code.append(array.accept(this));
-        } else {
-            code.append("(")
-                .append(array.accept(this))
-                .append(")");
-        }
-        code.append(node.getChildren().stream()
+        String receiver = indexedReceiver(array);
+        List<String> indexes = node.getChildren().stream()
                 .skip(1)
                 .map(c -> c.accept(this))
-                .collect(Collectors.joining("][", "[", "]")));
-        return code.toString();
+                .toList();
+        return node.getStorageKind().access(receiver, indexes);
     }
 
     @Override
-    public String visit(ArrayInitializer node) {
+    public String visit(CollectionInitializer node) {
         TypeArray arrayType = node.getArrayType();
         String elementType = arrayType.type.accept(this);
-        String elements = node.getChildren().stream()
+        List<String> elements = node.getChildren().stream()
                 .map(c -> c.accept(this))
-                .collect(Collectors.joining(", "));
-        return "new " + elementType + "[] { " + elements + " }";
+                .toList();
+        return node.getStorageKind().initializer(elementType, elements);
+    }
+
+    private String indexedReceiver(IRNode node) {
+        if (node instanceof VariableBase || node instanceof Function) {
+            return node.accept(this);
+        }
+        return "(" + node.accept(this) + ")";
     }
 
     @Override

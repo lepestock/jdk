@@ -21,28 +21,37 @@
  * questions.
  */
 
-package jdk.test.lib.jittester.arrays;
+package jdk.test.lib.jittester.collections;
 
 import java.util.List;
-import jdk.test.lib.jittester.IRNode;
-import jdk.test.lib.jittester.types.TypeArray;
-import jdk.test.lib.jittester.visitors.Visitor;
+import java.util.stream.Collectors;
 
-public class ArrayInitializer extends IRNode {
-    private final TypeArray arrayType;
+public enum IndexedStorageKind {
+    ARRAY;
 
-    public ArrayInitializer(TypeArray arrayType, List<IRNode> elements) {
-        super(arrayType);
-        this.arrayType = arrayType;
-        addChildren(elements);
+    public String access(String receiver, List<String> indexes) {
+        return switch (this) {
+            case ARRAY -> receiver + arrayIndexes(indexes);
+        };
     }
 
-    public TypeArray getArrayType() {
-        return arrayType;
+    public String creation(String elementType, List<String> sizes) {
+        return switch (this) {
+            case ARRAY -> "new " + elementType + arrayIndexes(sizes);
+        };
     }
 
-    @Override
-    public <T> T accept(Visitor<T> v) {
-        return v.visit(this);
+    public String initializer(String elementType, List<String> elements) {
+        return switch (this) {
+            case ARRAY -> "new " + elementType + "[] { " + String.join(", ", elements) + " }";
+        };
+    }
+
+    public boolean supportsPulseArrayRead() {
+        return this == ARRAY;
+    }
+
+    private static String arrayIndexes(List<String> indexes) {
+        return indexes.stream().collect(Collectors.joining("][", "[", "]"));
     }
 }

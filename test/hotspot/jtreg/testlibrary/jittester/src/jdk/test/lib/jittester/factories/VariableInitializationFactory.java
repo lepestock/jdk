@@ -100,7 +100,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                                     .setResultType(resultType)
                                     .setExceptionSafe(exceptionSafe)
                                     .setNoConsts(noConstsForInitExpr)
-                                    .getArrayInitializerFactory()
+                                    .getCollectionInitializerFactory()
                                     .produce();
                         } else {
                         IRNodeBuilder exprBuilder = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
@@ -184,7 +184,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
     private Type pickInitializationType() throws ProductionFailedException {
         if (!isLocal && !ProductionParams.disableArrays.value()
                 && PseudoRandom.randomBoolean(fieldArrayInitProbability())) {
-            return new TypeArray(pickArrayElementType(), 1);
+            return new TypeArray(pickCollectionElementType(), 1);
         }
         if (PseudoRandom.randomBoolean(NUMERIC_INIT_TYPE_PREFERENCE)) {
             List<Type> numericPreferred = new ArrayList<>();
@@ -210,7 +210,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         return Math.max(0.0, Math.min(1.0, FIELD_ARRAY_INIT_BASE_PROBABILITY * bonusScale));
     }
 
-    private Type pickArrayElementType() throws ProductionFailedException {
+    private Type pickCollectionElementType() throws ProductionFailedException {
         LinkedList<Type> types = new LinkedList<>(TypeArray.filterAllowedElementTypes(TypeList.getAll()));
         if (types.isEmpty()) {
             throw new ProductionFailedException();

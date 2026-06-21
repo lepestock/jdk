@@ -27,10 +27,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import jdk.test.lib.jittester.arrays.ArrayCreation;
-import jdk.test.lib.jittester.arrays.ArrayElement;
-import jdk.test.lib.jittester.arrays.ArrayExtraction;
-import jdk.test.lib.jittester.arrays.ArrayInitializer;
+import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.collections.CollectionElement;
+import jdk.test.lib.jittester.collections.CollectionExtraction;
+import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
@@ -81,10 +81,10 @@ public class Formatter {
         return switch (nodde) {
             case null -> "null";
             case ArgumentDeclaration node -> VISITOR.visit(node);
-            case ArrayCreation node -> VISITOR.visit(node);
-            case ArrayElement node -> VISITOR.visit(node);
-            case ArrayExtraction node -> VISITOR.visit(node);
-            case ArrayInitializer node -> VISITOR.visit(node);
+            case CollectionCreation node -> VISITOR.visit(node);
+            case CollectionElement node -> VISITOR.visit(node);
+            case CollectionExtraction node -> VISITOR.visit(node);
+            case CollectionInitializer node -> VISITOR.visit(node);
             case BinaryOperator node -> VISITOR.visit(node);
             case Block node -> VISITOR.visit(node);
             case Break node -> VISITOR.visit(node);

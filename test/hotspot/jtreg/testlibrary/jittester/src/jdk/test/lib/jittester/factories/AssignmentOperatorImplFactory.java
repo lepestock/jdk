@@ -25,7 +25,7 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.function.Predicate;
 import jdk.test.lib.util.Pair;
-import jdk.test.lib.jittester.arrays.ArrayElement;
+import jdk.test.lib.jittester.collections.CollectionElement;
 import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
@@ -119,8 +119,8 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
                 rule.add("uninitialized_nonconst_var", uninitializedVarLValueFactory);
             }
             // Inside array-kernel blocks, array lvalue indices must follow the kernel iterator.
-            IterationIndexedArrayElementFactory arrayElementLValueFactory =
-                    new IterationIndexedArrayElementFactory((TypeKlass) ownerClass, leftOperandType);
+            IterationIndexedCollectionElementFactory arrayElementLValueFactory =
+                    new IterationIndexedCollectionElementFactory((TypeKlass) ownerClass, leftOperandType);
             if (arrayElementLValueFactory.hasCandidates()) {
                 rule.add("array_element_lvalue", arrayElementLValueFactory, 5.0);
             }
@@ -139,7 +139,7 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
             }
         }
         IRNode leftOperandValue = rule.produce();
-        boolean preferIndexedArrayTerminal = inArrayKernel && leftOperandValue instanceof ArrayElement;
+        boolean preferIndexedArrayTerminal = inArrayKernel && leftOperandValue instanceof CollectionElement;
         Type effectiveRightOperandType = preferIndexedArrayTerminal ? leftOperandType : rightOperandType;
         ArrayAssignmentDiagnostics.Snapshot diagnosticSnapshot =
                 ARRAY_ASSIGNMENT_DIAGNOSTICS.snapshot(leftOperandType, effectiveRightOperandType);

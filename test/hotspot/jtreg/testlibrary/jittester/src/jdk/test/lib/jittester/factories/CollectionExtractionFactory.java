@@ -30,13 +30,13 @@ import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
-import jdk.test.lib.jittester.arrays.ArrayCreation;
-import jdk.test.lib.jittester.arrays.ArrayExtraction;
+import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.collections.CollectionExtraction;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
-class ArrayExtractionFactory extends SafeFactory<ArrayExtraction> {
+class CollectionExtractionFactory extends SafeFactory<CollectionExtraction> {
     private final long complexityLimit;
     private final int operatorLimit;
     private final Type resultType;
@@ -44,7 +44,7 @@ class ArrayExtractionFactory extends SafeFactory<ArrayExtraction> {
     private final boolean exceptionSafe;
     private final boolean noconsts;
 
-    ArrayExtractionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    CollectionExtractionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
         this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
@@ -55,7 +55,7 @@ class ArrayExtractionFactory extends SafeFactory<ArrayExtraction> {
     }
 
     @Override
-    public ArrayExtraction sproduce() throws ProductionFailedException {
+    public CollectionExtraction sproduce() throws ProductionFailedException {
         if (resultType instanceof TypeArray) {
             TypeArray arrayType = (TypeArray) resultType;
             if (!TypeArray.isElementTypeAllowed(arrayType.type)) {
@@ -89,18 +89,18 @@ class ArrayExtractionFactory extends SafeFactory<ArrayExtraction> {
                                 .produce());
                     } else {
                         byte dimLimit = 0;
-                        if (arrayReturningExpression instanceof ArrayCreation) {
-                            ArrayCreation arratCreation = (ArrayCreation) arrayReturningExpression;
+                        if (arrayReturningExpression instanceof CollectionCreation) {
+                            CollectionCreation arratCreation = (CollectionCreation) arrayReturningExpression;
                             dimLimit = arratCreation.getDimensionSize(i);
-                        } else if (arrayReturningExpression instanceof ArrayExtraction) {
-                            ArrayExtraction arrayExtraction = (ArrayExtraction) arrayReturningExpression;
+                        } else if (arrayReturningExpression instanceof CollectionExtraction) {
+                            CollectionExtraction arrayExtraction = (CollectionExtraction) arrayReturningExpression;
                             if (i < arrayExtraction.getDimsNumber())
                                 dimLimit = arrayExtraction.getDim(i);
                         }
                         perDimensionExpression.add(new Literal((byte)PseudoRandom.randomNotNegative(dimLimit), TypeList.BYTE));
                     }
                 }
-                return new ArrayExtraction(arrayReturningExpression, perDimensionExpression);
+                return new CollectionExtraction(arrayReturningExpression, perDimensionExpression);
             }
         }
         throw new ProductionFailedException();

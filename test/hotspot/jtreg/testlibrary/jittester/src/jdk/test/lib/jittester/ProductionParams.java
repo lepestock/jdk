@@ -108,7 +108,7 @@ public class ProductionParams {
     public static Option<Integer> arrayProductionWeightBonus = null;
     public static Option<Integer> arrayKernelBodyComplexityPercent = null;
     public static Option<Integer> arrayKernelBodyStatementPercent = null;
-    public static Option<Boolean> arrayKernelArrayElementLValues = null;
+    public static Option<Boolean> arrayKernelCollectionElementLValues = null;
     public static Option<Boolean> embedPrinterClass = null;
     public static Option<Boolean> pulsemap = null;
     public static Option<Boolean> disableFixedTreeExceptionGuards = null;
@@ -266,7 +266,7 @@ public class ProductionParams {
                 "Percent of parent complexity budget used for array-kernel body generation");
         arrayKernelBodyStatementPercent = optionResolver.addIntegerOption("array-kernel-body-statement-percent", 50,
                 "Percent of parent statement budget used for array-kernel body generation");
-        arrayKernelArrayElementLValues = optionResolver.addBooleanOption(null,
+        arrayKernelCollectionElementLValues = optionResolver.addBooleanOption(null,
                 "array-kernel-array-element-lvalues",
                 false,
                 "Allow array elements as LValues for compound assignments and inc/dec inside array kernels");

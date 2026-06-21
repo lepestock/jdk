@@ -34,7 +34,7 @@ import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
-import jdk.test.lib.jittester.arrays.ArrayElement;
+import jdk.test.lib.jittester.collections.CollectionElement;
 import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
@@ -46,16 +46,16 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
  * The array base is intentionally simple (local/static variable) to keep this
  * deterministic and avoid extra factory complexity in kernel-map contexts.
  */
-class IterationIndexedArrayElementFactory extends SafeFactory<IRNode> {
+class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
     private final TypeKlass ownerClass;
     private final Type elementType;
     private final boolean assignmentCompatible;
 
-    IterationIndexedArrayElementFactory(TypeKlass ownerClass, Type elementType) {
+    IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType) {
         this(ownerClass, elementType, false);
     }
 
-    IterationIndexedArrayElementFactory(TypeKlass ownerClass, Type elementType,
+    IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType,
             boolean assignmentCompatible) {
         this.ownerClass = ownerClass;
         this.elementType = elementType;
@@ -108,7 +108,7 @@ class IterationIndexedArrayElementFactory extends SafeFactory<IRNode> {
         ArrayList<IRNode> indexes = new ArrayList<>(1);
         // Array candidates here carry known generation-time lengths. Kernel loops keep iterator in-range.
         indexes.add(new LocalVariable(iterationInfo));
-        ArrayElement element = new ArrayElement(baseArray, indexes);
+        CollectionElement element = new CollectionElement(baseArray, indexes);
         if (element.getResultType().equals(elementType)) {
             return element;
         }
