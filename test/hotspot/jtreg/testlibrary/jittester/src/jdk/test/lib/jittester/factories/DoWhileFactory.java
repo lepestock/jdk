@@ -92,12 +92,12 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
             IRNodeBuilder builder = new IRNodeBuilder()
                     .setOwnerKlass(ownerClass)
                     .setResultType(returnType)
-                    .setOperatorLimit(operatorLimit);
+                    .withOperatorLimit(operatorLimit);
             loop.initialization = builder.getCounterInitializerFactory(0).produce();
             Block header;
             try {
-                header = builder.setComplexityLimit(headerComplLimit)
-                        .setStatementLimit(headerStatementLimit)
+                header = builder.withComplexityLimit(headerComplLimit)
+                        .withStatementLimit(headerStatementLimit)
                         .setLevel(level - 1)
                         .setSubBlock(true)
                         .setCanHaveBreaks(false)
@@ -112,7 +112,7 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
             LocalVariable counter = new LocalVariable(loop.initialization.getVariableInfo());
             String iterationVariable = counter.getVariableInfo().name;
             Literal limiter = new Literal((int) thisLoopIterLimit, TypeList.INT);
-            Factory<LoopingCondition> lcFactory = builder.setComplexityLimit(condComplLimit)
+            Factory<LoopingCondition> lcFactory = builder.withComplexityLimit(condComplLimit)
                     .setLocalVariable(counter)
                     .getLoopingConditionFactory(limiter);
             if (false && SEED == 99649021304063L) {
@@ -136,8 +136,8 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
                 loop.condition = lcFactory.produce();
                 Logger.disableTrace();
                 try {
-                    body1 = builder.setComplexityLimit(body1ComplLimit)
-                            .setStatementLimit(body1StatementLimit)
+                    body1 = builder.withComplexityLimit(body1ComplLimit)
+                            .withStatementLimit(body1StatementLimit)
                             .setLevel(level)
                             .setSubBlock(true)
                             .setCanHaveBreaks(true)
@@ -155,8 +155,8 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
                                           .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
                                           .produce();
                 try {
-                    body2 = builder.setComplexityLimit(body2ComplLimit)
-                            .setStatementLimit(body2StatementLimit)
+                    body2 = builder.withComplexityLimit(body2ComplLimit)
+                            .withStatementLimit(body2StatementLimit)
                             .setLevel(level)
                             .setSubBlock(true)
                             .setCanHaveBreaks(true)

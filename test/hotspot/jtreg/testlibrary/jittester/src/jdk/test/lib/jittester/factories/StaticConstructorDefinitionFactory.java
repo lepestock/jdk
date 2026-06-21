@@ -70,9 +70,9 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
                 body = new IRNodeBuilder()
                         .setOwnerKlass(ownerClass)
                         .setResultType(TypeList.VOID)
-                        .setComplexityLimit(complLimit)
-                        .setStatementLimit(statementLimit)
-                        .setOperatorLimit(operatorLimit)
+                        .withComplexityLimit(complLimit)
+                        .withStatementLimit(statementLimit)
+                        .withOperatorLimit(operatorLimit)
                         .setLevel(level)
                         .setSubBlock(true)
                         .setCanHaveBreaks(false)
@@ -130,8 +130,8 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
         TypeArray arrayType = (TypeArray) variableInfo.type;
         IRNodeBuilder initBuilder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
-                .setComplexityLimit(Math.max(1L, complexityLimit / 8))
-                .setOperatorLimit(Math.max(1, operatorLimit / 8))
+                .withComplexityLimit(Math.max(1L, complexityLimit / 8))
+                .withOperatorLimit(Math.max(1, operatorLimit / 8))
                 .setResultType(arrayType)
                 .setExceptionSafe(true)
                 .setNoConsts(false);

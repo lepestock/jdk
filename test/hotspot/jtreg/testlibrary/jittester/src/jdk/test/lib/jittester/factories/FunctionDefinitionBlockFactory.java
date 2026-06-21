@@ -67,9 +67,9 @@ class FunctionDefinitionBlockFactory extends Factory<FunctionDefinitionBlock> {
         if (memFunLimit > 0) {
             long memFunCompl = complexityLimit / memFunLimit;
             IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                    .setComplexityLimit(memFunCompl)
-                    .setStatementLimit(statementLimit)
-                    .setOperatorLimit(operatorLimit)
+                    .withComplexityLimit(memFunCompl)
+                    .withStatementLimit(statementLimit)
+                    .withOperatorLimit(operatorLimit)
                     .setMemberFunctionsArgLimit(memberFunctionsArgLimit)
                     .setLevel(level);
             for (int i = 0; i < memFunLimit; i++) {

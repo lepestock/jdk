@@ -94,9 +94,9 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
                 ThisVariableControl.pushForbidThis();
                 try {
                     body = builder.setResultType(TypeList.VOID)
-                            .setComplexityLimit(blockComplLimit)
-                            .setStatementLimit(statementLimit)
-                            .setOperatorLimit(operatorLimit)
+                            .withComplexityLimit(blockComplLimit)
+                            .withStatementLimit(statementLimit)
+                            .withOperatorLimit(operatorLimit)
                             .setLevel(level)
                             .setSubBlock(true)
                             .getBlockFactory()

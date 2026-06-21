@@ -91,8 +91,8 @@ class AssignmentLValueFactory extends Factory<IRNode> {
     private static ReadOnlyLocalLValueFactory variableLValueFactory(long complexityLimit, int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
         return new ReadOnlyLocalLValueFactory(new IRNodeBuilder()
-                .setComplexityLimit(Math.max(1L, complexityLimit))
-                .setOperatorLimit(Math.max(1, operatorLimit))
+                .withComplexityLimit(Math.max(1L, complexityLimit))
+                .withOperatorLimit(Math.max(1, operatorLimit))
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

@@ -51,8 +51,8 @@ class StatementFactory extends Factory<Statement> {
         this.needSemicolon = needSemicolon;
         rule = new Rule<>("statement");
         IRNodeBuilder builder = new IRNodeBuilder()
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts)

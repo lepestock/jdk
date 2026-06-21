@@ -59,13 +59,13 @@ class KlassFactory extends AbstractKlassFactory<Klass> {
     @Override
     protected IRNode produceVariableDeclarations(IRNodeBuilder builder, long complexity)
             throws ProductionFailedException {
-        return builder.setComplexityLimit(complexity).getVariableDeclarationBlockFactory().produce();
+        return builder.withComplexityLimit(complexity).getVariableDeclarationBlockFactory().produce();
     }
 
     @Override
     protected IRNode produceFunctionDefinitions(IRNodeBuilder builder, long complexity, int memberLimit)
             throws ProductionFailedException {
-        return builder.setComplexityLimit(complexity)
+        return builder.withComplexityLimit(complexity)
                 .setMemberFunctionsLimit(memberLimit)
                 .setFlags(FunctionInfo.NONE)
                 .getFunctionDefinitionBlockFactory()

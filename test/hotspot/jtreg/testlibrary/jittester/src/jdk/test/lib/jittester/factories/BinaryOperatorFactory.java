@@ -62,14 +62,13 @@ abstract class BinaryOperatorFactory extends OperatorFactory<BinaryOperator> {
         IRNodeBuilder builder = new IRNodeBuilder().setExceptionSafe(exceptionSafe)
                 .setOwnerKlass((TypeKlass) ownerClass)
                 .setNoConsts(!swap && noconsts);
-        IRNode leftExpr = builder.setComplexityLimit(leftComplLimit)
-                .setOperatorLimit(leftOpLimit)
-                .setResultType(leftType)
-                .getExpressionFactory()
-                .produce();
-        IRNode rightExpr = builder.setComplexityLimit(rightComplLimit)
-                .setOperatorLimit(rightOpLimit)
-                .setResultType(rightType)
+        IRNode leftExpr = builder.setResultType(leftType)
+                .withComplexityLimit(leftComplLimit)
+                .withOperatorLimit(leftOpLimit)
+                .produceExpression();
+        IRNode rightExpr = builder.setResultType(rightType)
+                .withComplexityLimit(rightComplLimit)
+                .withOperatorLimit(rightOpLimit)
                 .produceExpression(needsSafeDenominator(leftType, rightType));
         return new BinaryOperator(opKind, resultType, leftExpr, rightExpr);
     }

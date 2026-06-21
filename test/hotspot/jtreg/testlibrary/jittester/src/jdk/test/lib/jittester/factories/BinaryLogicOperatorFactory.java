@@ -62,8 +62,8 @@ public class BinaryLogicOperatorFactory extends BinaryOperatorFactory {
         boolean swap = PseudoRandom.randomBoolean();
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)
                 .setExceptionSafe(exceptionSafe);
-        IRNode leftOperand = builder.setComplexityLimit(leftComplLimit)
-                .setOperatorLimit(leftOpLimit)
+        IRNode leftOperand = builder.withComplexityLimit(leftComplLimit)
+                .withOperatorLimit(leftOpLimit)
                 .setResultType(leftType)
                 .setNoConsts(swap && noconsts)
                 .getExpressionFactory()
@@ -72,8 +72,8 @@ public class BinaryLogicOperatorFactory extends BinaryOperatorFactory {
         SymbolTable.push();
         IRNode rightOperand;
         try {
-            rightOperand = builder.setComplexityLimit(rightComplLimit)
-                    .setOperatorLimit(rightOpLimit)
+            rightOperand = builder.withComplexityLimit(rightComplLimit)
+                    .withOperatorLimit(rightOpLimit)
                     .setResultType(rightType)
                     .setNoConsts(!swap && noconsts)
                     .getExpressionFactory()

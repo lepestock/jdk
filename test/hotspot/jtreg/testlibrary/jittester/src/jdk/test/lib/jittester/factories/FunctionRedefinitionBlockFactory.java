@@ -58,9 +58,9 @@ class FunctionRedefinitionBlockFactory extends Factory<FunctionRedefinitionBlock
         if (functionSet.size() > 0) {
             long funcComplexity = complexityLimit / functionSet.size();
             IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                    .setComplexityLimit(funcComplexity)
-                    .setStatementLimit(statementLimit)
-                    .setOperatorLimit(operatorLimit)
+                    .withComplexityLimit(funcComplexity)
+                    .withStatementLimit(statementLimit)
+                    .withOperatorLimit(operatorLimit)
                     .setLevel(level);
             for (Symbol symbol : functionSet) {
                 FunctionInfo functionInfo = (FunctionInfo) symbol;

@@ -75,8 +75,8 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         this.resultType = resultType;
         this.noConsts = noconsts;
         IRNodeBuilder builder = new IRNodeBuilder()
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

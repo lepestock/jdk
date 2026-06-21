@@ -36,6 +36,7 @@ import java.util.Set;
  */
 public final class FlowParams {
     private final FlowParams prev;
+    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final String iterationVariable;
@@ -47,7 +48,7 @@ public final class FlowParams {
     private final Set<String> readOnlyVars;
     private final Set<String> iterationVariables;
 
-    private FlowParams(FlowParams prev, int statementLimit, int operatorLimit,
+    private FlowParams(FlowParams prev, long complexityLimit, int statementLimit, int operatorLimit,
                        String iterationVariable, boolean inArrayKernel,
                        boolean preferIterationIndexedArrayTerminal,
                        Type fixedOperandType,
@@ -56,6 +57,7 @@ public final class FlowParams {
                        Set<String> readOnlyVars,
                        Set<String> iterationVariables) {
         this.prev = prev;
+        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.iterationVariable = iterationVariable;
@@ -70,8 +72,9 @@ public final class FlowParams {
 
     public static FlowParams fromProductionParams() {
         return new FlowParams(null,
-                normalizeLimit(ProductionParams.statementLimit.value()),
-                normalizeLimit(ProductionParams.operatorLimit.value()),
+                ProductionParams.complexityLimit.value(),
+                ProductionParams.statementLimit.value(),
+                ProductionParams.operatorLimit.value(),
                 null,
                 false,
                 false,
@@ -80,6 +83,10 @@ public final class FlowParams {
                 100,
                 Collections.emptySet(),
                 Collections.emptySet());
+    }
+
+    public long complexityLimit() {
+        return complexityLimit;
     }
 
     public int statementLimit() {
@@ -140,6 +147,14 @@ public final class FlowParams {
         return new Builder(this).withStatementLimit(value);
     }
 
+    public Builder withComplexityLimit(long value) {
+        return new Builder(this).withComplexityLimit(value);
+    }
+
+    public Builder withLimits(long complexityLimit, int statementLimit, int operatorLimit) {
+        return new Builder(this).withLimits(complexityLimit, statementLimit, operatorLimit);
+    }
+
     public Builder withOperatorLimit(int value) {
         return new Builder(this).withOperatorLimit(value);
     }
@@ -150,6 +165,7 @@ public final class FlowParams {
 
     public Builder withProductionParamsLimits() {
         return new Builder(this)
+                .withComplexityLimit(ProductionParams.complexityLimit.value())
                 .withStatementLimit(ProductionParams.statementLimit.value())
                 .withOperatorLimit(ProductionParams.operatorLimit.value());
     }
@@ -163,7 +179,8 @@ public final class FlowParams {
     }
 
     public String dumpSnapshot() {
-        return "FlowParams{statementLimit=" + statementLimit
+        return "FlowParams{complexityLimit=" + complexityLimit
+                + ", statementLimit=" + statementLimit
                 + ", operatorLimit=" + operatorLimit
                 + ", iterationVariable=" + (iterationVariable == null ? "<none>" : iterationVariable)
                 + ", inArrayKernel=" + inArrayKernel
@@ -187,16 +204,13 @@ public final class FlowParams {
         return depth;
     }
 
-    private static int normalizeLimit(int value) {
-        return Math.max(1, value);
-    }
-
     private static int normalizePercent(int value) {
         return Math.max(0, value);
     }
 
     public static final class Builder {
         private final FlowParams base;
+        private long complexityLimit;
         private int statementLimit;
         private int operatorLimit;
         private String iterationVariable;
@@ -213,6 +227,7 @@ public final class FlowParams {
                 throw new IllegalArgumentException("FlowParams builder base must not be null");
             }
             this.base = base;
+            this.complexityLimit = base.complexityLimit;
             this.statementLimit = base.statementLimit;
             this.operatorLimit = base.operatorLimit;
             this.iterationVariable = base.iterationVariable;
@@ -225,13 +240,24 @@ public final class FlowParams {
             this.iterationVariables = new LinkedHashSet<>(base.iterationVariables);
         }
 
+        public Builder withComplexityLimit(long value) {
+            this.complexityLimit = value;
+            return this;
+        }
+
+        public Builder withLimits(long complexityLimit, int statementLimit, int operatorLimit) {
+            return withComplexityLimit(complexityLimit)
+                    .withStatementLimit(statementLimit)
+                    .withOperatorLimit(operatorLimit);
+        }
+
         public Builder withStatementLimit(int value) {
-            this.statementLimit = normalizeLimit(value);
+            this.statementLimit = value;
             return this;
         }
 
         public Builder withOperatorLimit(int value) {
-            this.operatorLimit = normalizeLimit(value);
+            this.operatorLimit = value;
             return this;
         }
 
@@ -295,7 +321,7 @@ public final class FlowParams {
         }
 
         public FlowParams advance() {
-            return new FlowParams(base, statementLimit, operatorLimit, iterationVariable,
+            return new FlowParams(base, complexityLimit, statementLimit, operatorLimit, iterationVariable,
                     inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
                     arrayElementExpressionWeightPercent, arrayExtractionExpressionWeightPercent,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),

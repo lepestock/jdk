@@ -60,8 +60,8 @@ class DeclarationFactory extends Factory<Declaration> {
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setResultType(TypeList.VOID)
                 .setIsLocal(isLocal)
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setIsLocal(isLocal)
                 .setExceptionSafe(exceptionSafe);
         if (!isConstant) {

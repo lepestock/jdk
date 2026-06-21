@@ -67,8 +67,8 @@ class LoopingConditionFactory extends Factory<LoopingCondition> {
         IRNode rightExpression = null;
         Factory<IRNode> exprFactory = new IRNodeBuilder()
                 .setResultType(TypeList.BOOLEAN)
-                .setComplexityLimit((complexityLimit - 1) / 2)
-                .setOperatorLimit((operatorLimit - 1) / 2)
+                .withComplexityLimit((complexityLimit - 1) / 2)
+                .withOperatorLimit((operatorLimit - 1) / 2)
                 .setOwnerKlass(ownerClass)
                 .setExceptionSafe(false)
                 .setNoConsts(false)

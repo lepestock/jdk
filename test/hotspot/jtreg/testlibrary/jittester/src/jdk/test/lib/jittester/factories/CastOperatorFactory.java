@@ -72,8 +72,8 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
             boolean merged = false;
             try {
                 Factory<IRNode> expressionFactory = new IRNodeBuilder()
-                        .setComplexityLimit(complexityLimit - 1)
-                        .setOperatorLimit(operatorLimit - 1)
+                        .withComplexityLimit(complexityLimit - 1)
+                        .withOperatorLimit(operatorLimit - 1)
                         .setOwnerKlass((TypeKlass) ownerClass)
                         .setExceptionSafe(exceptionSafe)
                         .setNoConsts(noconsts)
@@ -96,8 +96,8 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
             boolean merged = false;
             try {
                 Factory<IRNode> expressionFactory = new IRNodeBuilder()
-                        .setComplexityLimit(complexityLimit - 1)
-                        .setOperatorLimit(operatorLimit - 1)
+                        .withComplexityLimit(complexityLimit - 1)
+                        .withOperatorLimit(operatorLimit - 1)
                         .setOwnerKlass((TypeKlass) ownerClass)
                         .setExceptionSafe(exceptionSafe)
                         .setNoConsts(noconsts)

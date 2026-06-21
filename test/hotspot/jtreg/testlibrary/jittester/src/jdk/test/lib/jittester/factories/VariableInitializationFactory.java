@@ -72,8 +72,8 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         long effectiveComplexityLimit = Math.max(1, complexityLimit);
         int scopeDepth = Math.max(1, SymbolTable.getScopeDepth());
         boolean noConstsForInitExpr = shouldDisallowConstsByDepth(scopeDepth);
-        IRNodeBuilder b = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
-                .setOperatorLimit(effectiveOperatorLimit)
+        IRNodeBuilder b = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
+                .withOperatorLimit(effectiveOperatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)
@@ -94,8 +94,8 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                     // Prefer non-literal initializer expressions; fall back to literal when expression fails.
                     try {
                         if (resultType instanceof TypeArray) {
-                            init = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
-                                    .setOperatorLimit(effectiveOperatorLimit)
+                            init = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
+                                    .withOperatorLimit(effectiveOperatorLimit)
                                     .setOwnerKlass(ownerClass)
                                     .setResultType(resultType)
                                     .setExceptionSafe(exceptionSafe)
@@ -103,8 +103,8 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                                     .getArrayInitializerFactory()
                                     .produce();
                         } else {
-                        IRNodeBuilder exprBuilder = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
-                                .setOperatorLimit(effectiveOperatorLimit)
+                        IRNodeBuilder exprBuilder = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
+                                .withOperatorLimit(effectiveOperatorLimit)
                                 .setOwnerKlass(ownerClass)
                                 .setResultType(resultType)
                                 .setExceptionSafe(exceptionSafe)
@@ -117,8 +117,8 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                         }
                     } catch (ProductionFailedException ignored) {
                         try {
-                            init = new IRNodeBuilder().setComplexityLimit(effectiveComplexityLimit)
-                                    .setOperatorLimit(effectiveOperatorLimit)
+                            init = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
+                                    .withOperatorLimit(effectiveOperatorLimit)
                                     .setOwnerKlass(ownerClass)
                                     .setResultType(resultType)
                                     .setExceptionSafe(exceptionSafe)

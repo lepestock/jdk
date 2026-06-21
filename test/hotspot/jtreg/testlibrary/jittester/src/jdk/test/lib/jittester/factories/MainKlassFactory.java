@@ -77,27 +77,27 @@ class MainKlassFactory extends Factory<MainKlass> {
                 VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED));
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(thisKlass)
-                .setOperatorLimit(operatorLimit)
+                .withOperatorLimit(operatorLimit)
                 .setMemberFunctionsLimit(memberFunctionsLimit)
                 .setMemberFunctionsArgLimit(memberFunctionsArgLimit)
-                .setStatementLimit(statementsInFunctionLimit)
+                .withStatementLimit(statementsInFunctionLimit)
                 .setLevel(1)
                 .setExceptionSafe(true);
         IRNode variableDeclarations = builder
-                .setComplexityLimit((long) (complexityLimit * 0.08))
+                .withComplexityLimit((long) (complexityLimit * 0.08))
                 .getVariableDeclarationBlockFactory().produce();
         IRNode functionDefinitions = null;
         if (!ProductionParams.disableFunctions.value()) {
             functionDefinitions = builder
-                    .setComplexityLimit((long) (complexityLimit * 0.01 * PseudoRandom.random()))
+                    .withComplexityLimit((long) (complexityLimit * 0.01 * PseudoRandom.random()))
                     .setFlags(FunctionInfo.NONRECURSIVE)
                     .getFunctionDefinitionBlockFactory()
                     .produce();
         }
         functionDefinitions = ensureMainClassStaticArrayInitializer(builder, functionDefinitions);
         IRNode testFunction = builder.setResultType(TypeList.VOID)
-                .setComplexityLimit(complexityLimit)
-                .setStatementLimit(statementsInTestFunctionLimit)
+                .withComplexityLimit(complexityLimit)
+                .withStatementLimit(statementsInTestFunctionLimit)
                 .getBlockFactory()
                 .produce();
         SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
@@ -182,8 +182,8 @@ class MainKlassFactory extends Factory<MainKlass> {
                 Type retType = randomLeaf.getResultType();
                 IRNode newBlock = builder.setOwnerKlass(owner)
                         .setResultType(retType)
-                        .setComplexityLimit(complexityLimit)
-                        .setStatementLimit(statementsInFunctionLimit)
+                        .withComplexityLimit(complexityLimit)
+                        .withStatementLimit(statementsInFunctionLimit)
                         .setLevel(newLevel)
                         .getBlockFactory()
                         .produce();

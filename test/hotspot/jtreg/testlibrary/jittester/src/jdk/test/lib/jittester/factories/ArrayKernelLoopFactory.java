@@ -81,9 +81,9 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
                 .setResultType(returnType)
-                .setComplexityLimit(complexityLimit)
-                .setStatementLimit(statementLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withStatementLimit(statementLimit)
+                .withOperatorLimit(operatorLimit)
                 .setLevel(level)
                 .setSubBlock(true)
                 .setCanHaveBreaks(false)
@@ -113,8 +113,8 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
             int kernelBodyStatementLimit = (int) scaleLimit(statementLimit,
                     ProductionParams.arrayKernelBodyStatementPercent.value());
             Block body1 = builder
-                    .setComplexityLimit(kernelBodyComplexityLimit)
-                    .setStatementLimit(kernelBodyStatementLimit)
+                    .withComplexityLimit(kernelBodyComplexityLimit)
+                    .withStatementLimit(kernelBodyStatementLimit)
                     .setLevel(level)
                     .setSubBlock(true)
                     .setCanHaveBreaks(true)

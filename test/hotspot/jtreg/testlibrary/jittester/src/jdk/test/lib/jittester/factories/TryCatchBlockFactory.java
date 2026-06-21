@@ -72,7 +72,7 @@ class TryCatchBlockFactory extends Factory<TryCatchBlock> {
         List<Type> uncheckedThrowables = getUncheckedThrowables();
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setResultType(returnType)
-                .setOperatorLimit(operatorLimit)
+                .withOperatorLimit(operatorLimit)
                 .setLevel(level)
                 .setSubBlock(subBlock)
                 .setCanHaveReturn(canHaveReturn)
@@ -113,8 +113,8 @@ class TryCatchBlockFactory extends Factory<TryCatchBlock> {
                 * complexityLimit);
         int actualStatementLim = (int) (weight * PseudoRandom.random()
                 * statementLimit);
-        return builder.setStatementLimit(actualStatementLim)
-                .setComplexityLimit(actualComplexityLim)
+        return builder.withStatementLimit(actualStatementLim)
+                .withComplexityLimit(actualComplexityLim)
                 .getBlockFactory()
                 .produce();
     }

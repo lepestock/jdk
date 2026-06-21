@@ -90,9 +90,9 @@ class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
             IRNodeBuilder builder = new IRNodeBuilder()
                     .setOwnerKlass(ownerClass)
                     .setResultType(functionInfo.type)
-                    .setStatementLimit(statementLimit)
-                    .setOperatorLimit(operatorLimit);
-            body = builder.setComplexityLimit(blockComplLimit)
+                    .withStatementLimit(statementLimit)
+                    .withOperatorLimit(operatorLimit);
+            body = builder.withComplexityLimit(blockComplLimit)
                     .setLevel(level)
                     .setSubBlock(true)
                     .setCanHaveBreaks(false)
@@ -101,7 +101,7 @@ class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
                     .getBlockFactory()
                     .produce();
             if (!functionInfo.type.equals(TypeList.VOID)) {
-                returnNode = builder.setComplexityLimit(complexityLimit - blockComplLimit)
+                returnNode = builder.withComplexityLimit(complexityLimit - blockComplLimit)
                         .setExceptionSafe(false)
                         .getReturnFactory()
                         .produce();

@@ -91,8 +91,8 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts)
-                .setComplexityLimit(leftComplexityLimit)
-                .setOperatorLimit(leftOperatorLimit)
+                .withComplexityLimit(leftComplexityLimit)
+                .withOperatorLimit(leftOperatorLimit)
                 .setResultType(leftOperandType)
                 .setIsConstant(false);
         Rule<IRNode> rule = new Rule<>("assignment");
@@ -143,8 +143,8 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         Type effectiveRightOperandType = preferIndexedArrayTerminal ? leftOperandType : rightOperandType;
         ArrayAssignmentDiagnostics.Snapshot diagnosticSnapshot =
                 ARRAY_ASSIGNMENT_DIAGNOSTICS.snapshot(leftOperandType, effectiveRightOperandType);
-        IRNode rightOperandValue = builder.setComplexityLimit(rightComplexityLimit)
-                .setOperatorLimit(rightOperatorLimit)
+        IRNode rightOperandValue = builder.withComplexityLimit(rightComplexityLimit)
+                .withOperatorLimit(rightOperatorLimit)
                 .setResultType(effectiveRightOperandType)
                 .withPreferIterationIndexedArrayTerminal(preferIndexedArrayTerminal)
                 .setFixedOperandType(preferIndexedArrayTerminal ? leftOperandType : null)

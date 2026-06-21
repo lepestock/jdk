@@ -63,13 +63,13 @@ class ValueKlassFactory extends AbstractKlassFactory<ValueKlass> {
     @Override
     protected IRNode produceVariableDeclarations(IRNodeBuilder builder, long complexity)
             throws ProductionFailedException {
-        return builder.setComplexityLimit(complexity).getConstantVariableDeclarationBlockFactory().produce();
+        return builder.withComplexityLimit(complexity).getConstantVariableDeclarationBlockFactory().produce();
     }
 
     @Override
     protected IRNode produceFunctionDefinitions(IRNodeBuilder builder, long complexity, int memberLimit)
             throws ProductionFailedException {
-        return builder.setComplexityLimit(complexity)
+        return builder.withComplexityLimit(complexity)
                 .setMemberFunctionsLimit(memberLimit)
                 .setFlags(FunctionInfo.NONE)
                 .setIsSynchronizedAllowed(false)

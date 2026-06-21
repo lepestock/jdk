@@ -61,7 +61,7 @@ public class IRTreeGenerator {
         if (!ProductionParams.disableClasses.value()) {
             long privateClassComlexity = (long) (complexityLimit * PseudoRandom.random());
             try {
-                privateClasses = builder.setComplexityLimit(privateClassComlexity)
+                privateClasses = builder.withComplexityLimit(privateClassComlexity)
                         .getClassDefinitionBlockFactory()
                         .produce();
             } catch (ProductionFailedException ex) {
@@ -71,7 +71,7 @@ public class IRTreeGenerator {
         long mainClassComplexity = (long) (complexityLimit * PseudoRandom.random());
         IRNode mainClass = null;
         try {
-            mainClass = builder.setComplexityLimit(mainClassComplexity)
+            mainClass = builder.withComplexityLimit(mainClassComplexity)
                     .getMainKlassFactory()
                     .produce();
             TypeKlass aClass = new TypeKlass(name);

@@ -71,7 +71,7 @@ class SwitchFactory extends SafeFactory<Switch> {
             PseudoRandom.shuffle(switchTypes);
             IRNodeBuilder builder = new IRNodeBuilder()
                     .setOwnerKlass(ownerClass)
-                    .setOperatorLimit(operatorLimit)
+                    .withOperatorLimit(operatorLimit)
                     .setSubBlock(false)
                     .setCanHaveBreaks(true)
                     .setCanHaveContinues(false)
@@ -88,7 +88,7 @@ class SwitchFactory extends SafeFactory<Switch> {
                     currentComplexityLimit = (long) (PseudoRandom.random()
                             * (complexityLimit - accumulatedComplexity));
                     boolean noConstsForSwitchExpr = shouldDisallowConstsByDepth(level + 1);
-                    IRNode switchExp = builder.setComplexityLimit(currentComplexityLimit)
+                    IRNode switchExp = builder.withComplexityLimit(currentComplexityLimit)
                             .setResultType(type)
                             .setExceptionSafe(false)
                             .setNoConsts(noConstsForSwitchExpr)
@@ -102,8 +102,8 @@ class SwitchFactory extends SafeFactory<Switch> {
                         currentComplexityLimit = (long) (PseudoRandom.random()
                                 * (complexityLimit - accumulatedComplexity));
                         caseConsts.add(new Nothing());
-                        caseBlocks.add(builder.setComplexityLimit(currentComplexityLimit)
-                                .setStatementLimit(currentStatementsLimit)
+                        caseBlocks.add(builder.withComplexityLimit(currentComplexityLimit)
+                                .withStatementLimit(currentStatementsLimit)
                                 .setLevel(level + 1)
                                 .setCanHaveReturn(false)
                                 .setCanHaveBreaks(false)
@@ -147,8 +147,8 @@ class SwitchFactory extends SafeFactory<Switch> {
                             }
                         }
                         Rule<IRNode> rule = new Rule<>("case_block");
-                        rule.add("block", builder.setComplexityLimit(currentComplexityLimit)
-                                .setStatementLimit(currentStatementsLimit)
+                        rule.add("block", builder.withComplexityLimit(currentComplexityLimit)
+                                .withStatementLimit(currentStatementsLimit)
                                 .setLevel(level)
                                 .setCanHaveReturn(false)
                                 .setCanHaveBreaks(false)

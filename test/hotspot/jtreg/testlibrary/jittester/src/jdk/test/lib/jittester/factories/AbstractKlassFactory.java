@@ -153,20 +153,20 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                     .setExceptionSafe(true);
             try {
                 builder.setLevel(level + 1)
-                        .setOperatorLimit(operatorLimit)
-                        .setStatementLimit(statementsInFunctionLimit)
+                        .withOperatorLimit(operatorLimit)
+                        .withStatementLimit(statementsInFunctionLimit)
                         .setMemberFunctionsArgLimit(memberFunctionsArgLimit);
                 variableDeclarations = produceVariableDeclarations(builder,
                         (long) (complexityLimit * 0.001 * PseudoRandom.random()));
 
                 if (!ProductionParams.disableFunctions.value()) {
                     abstractFunctionsRedefinitions = builder
-                            .setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
+                            .withComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
                             .setLevel(level + 1)
                             .getFunctionRedefinitionBlockFactory(abstractSet)
                             .produce();
                     overridenFunctionsRedefinitions = builder
-                            .setComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
+                            .withComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
                             .getFunctionRedefinitionBlockFactory(overrideSet)
                             .produce();
 
@@ -218,7 +218,7 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
 
     protected IRNode produceFunctionDefinitions(IRNodeBuilder builder, long complexity, int memberLimit)
             throws ProductionFailedException {
-        return builder.setComplexityLimit(complexity)
+        return builder.withComplexityLimit(complexity)
                 .setMemberFunctionsLimit(memberLimit)
                 .setFlags(FunctionInfo.NONE)
                 .getFunctionDefinitionBlockFactory()
@@ -228,10 +228,10 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
     protected IRNode produceConstructorDefinitions(IRNodeBuilder builder, VariableInfo thizzVariable)
             throws ProductionFailedException {
         return builder
-                .setComplexityLimit((long) (complexityLimit * 0.2 * PseudoRandom.random()))
+                .withComplexityLimit((long) (complexityLimit * 0.2 * PseudoRandom.random()))
                 .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2 * PseudoRandom.random()))
-                .setStatementLimit(statementsInFunctionLimit)
-                .setOperatorLimit(operatorLimit)
+                .withStatementLimit(statementsInFunctionLimit)
+                .withOperatorLimit(operatorLimit)
                 .setLevel(level + 1)
                 .getConstructorDefinitionBlockFactory()
                 .produce();

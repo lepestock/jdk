@@ -65,7 +65,7 @@ class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
                 throw new ProductionFailedException();
             }
             IRNodeBuilder builder = new IRNodeBuilder()
-                    .setComplexityLimit(complexityLimit)
+                    .withComplexityLimit(complexityLimit)
                     .setOwnerKlass(ownerClass)
                     .setResultType(TypeList.BYTE)
                     .setExceptionSafe(exceptionSafe)
@@ -74,7 +74,7 @@ class ArrayCreationFactory extends SafeFactory<ArrayCreation> {
             ArrayList<IRNode> dims = new ArrayList<>(arrayResultType.dimensions);
             for (int i = 0; i < arrayResultType.dimensions; i++) {
                 if (PseudoRandom.randomBoolean(chanceExpression)) {
-                    dims.add(builder.setOperatorLimit((int) (PseudoRandom.random()
+                    dims.add(builder.withOperatorLimit((int) (PseudoRandom.random()
                                 * operatorLimit / arrayResultType.dimensions))
                             .getExpressionFactory()
                             .produce());
