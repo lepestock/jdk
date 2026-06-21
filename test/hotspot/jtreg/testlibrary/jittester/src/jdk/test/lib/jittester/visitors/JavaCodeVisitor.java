@@ -593,8 +593,10 @@ public class JavaCodeVisitor implements Visitor<String> {
 
     @Override
     public String visit(CastOperator node) {
+        IRNode operand = node.getChild(0);
         return "(" + node.getResultType().accept(this)+ ")"
-                + expressionToJavaCode(node, node.getChild(0), Operator.Order.LEFT);
+                + primitiveCastOperandExpression(node.getResultType(), operand,
+                        expressionToJavaCode(node, operand, Operator.Order.LEFT));
     }
 
     @Override
@@ -1323,6 +1325,18 @@ public class JavaCodeVisitor implements Visitor<String> {
         return "(int)(" + selector.accept(this) + ")";
     }
 
+    private String primitiveCastOperandExpression(Type castType, IRNode operand, String expression) {
+        if (TypeBoxingUtil.toPrimitiveType(castType) == null || !sourceExpressionIsBoxedListElement(operand)) {
+            return expression;
+        }
+        return unboxedValueExpression(operand.getResultType(), expression);
+    }
+
+    private boolean sourceExpressionIsBoxedListElement(IRNode node) {
+        return node instanceof CollectionElement collectionElement
+                && collectionElement.getStorageKind() == IndexedStorageKind.LIST;
+    }
+
     @Override
     public String visit(TernaryOperator node) {
         IRNode conditionalExp = node.getChild(TernaryOperator.TernaryPart.CONDITION.ordinal());
@@ -1394,6 +1408,38 @@ public class JavaCodeVisitor implements Visitor<String> {
             return "\"\"";
         }
         return "new " + elementType.accept(this) + "()";
+    }
+
+    private String unboxedValueExpression(Type resultType, String expression) {
+        Type primitiveType = TypeBoxingUtil.toPrimitiveType(resultType);
+        if (primitiveType == null) {
+            return expression;
+        }
+        if (primitiveType.equals(TypeList.BOOLEAN)) {
+            return expression + ".booleanValue()";
+        }
+        if (primitiveType.equals(TypeList.BYTE)) {
+            return expression + ".byteValue()";
+        }
+        if (primitiveType.equals(TypeList.SHORT)) {
+            return expression + ".shortValue()";
+        }
+        if (primitiveType.equals(TypeList.CHAR)) {
+            return expression + ".charValue()";
+        }
+        if (primitiveType.equals(TypeList.INT)) {
+            return expression + ".intValue()";
+        }
+        if (primitiveType.equals(TypeList.LONG)) {
+            return expression + ".longValue()";
+        }
+        if (primitiveType.equals(TypeList.FLOAT)) {
+            return expression + ".floatValue()";
+        }
+        if (primitiveType.equals(TypeList.DOUBLE)) {
+            return expression + ".doubleValue()";
+        }
+        return expression;
     }
 
     @Override

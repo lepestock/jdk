@@ -33,9 +33,8 @@ import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
-import jdk.test.lib.jittester.collections.CollectionCreation;
+import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.collections.CollectionElement;
-import jdk.test.lib.jittester.collections.CollectionExtraction;
 import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
@@ -68,21 +67,21 @@ class CollectionElementFactory extends SafeFactory<CollectionElement> {
         if (!TypeArray.isElementTypeAllowed(resultType)) {
             throw new ProductionFailedException();
         }
-        long arrayComplexityLimit = (long) (complexityLimit * 0.5 * PseudoRandom.random());
-        int arrayOperatorLimit = (int) (operatorLimit * 0.5 * PseudoRandom.random());
         int dimensionsCount = PseudoRandom.randomNotZero(ProductionParams.dimensionsLimit.value());
-        long complexityPerDimension = (long) ((complexityLimit - arrayComplexityLimit)
+        long complexityPerDimension = (long) ((complexityLimit - 1)
                 * PseudoRandom.random()) / dimensionsCount;
-        int operatorLimitPerDimension = (int) ((operatorLimit - arrayOperatorLimit - dimensionsCount)
+        int operatorLimitPerDimension = (int) ((operatorLimit - dimensionsCount)
                 * PseudoRandom.random()) / dimensionsCount;
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
-        IRNode arrayReturningExpression = builder
-                .withComplexityLimit(arrayComplexityLimit)
-                .withOperatorLimit(arrayOperatorLimit)
+        VariableBase collectionVariable = builder
+                .withComplexityLimit(1)
+                .withOperatorLimit(0)
                 .setResultType(new TypeArray(resultType, dimensionsCount))
-                .getExpressionFactory()
+                .setIsConstant(false)
+                .setIsInitialized(true)
+                .getVariableFactory()
                 .produce();
         Factory<IRNode> expressionFactory = builder
                 .withComplexityLimit(complexityPerDimension)
@@ -102,20 +101,15 @@ class CollectionElementFactory extends SafeFactory<CollectionElement> {
                 perDimensionExpressions.add(bounded);
             } else {
                 byte dimLimit = 0;
-                if (arrayReturningExpression instanceof CollectionCreation) {
-                    CollectionCreation arrayCreation = (CollectionCreation) arrayReturningExpression;
-                    dimLimit = arrayCreation.getDimensionSize(i);
-                } else if (arrayReturningExpression instanceof CollectionExtraction) {
-                    CollectionExtraction arrayExtraction = (CollectionExtraction) arrayReturningExpression;
-                    if (i < arrayExtraction.getDimsNumber())
-                        dimLimit = arrayExtraction.getDim(i);
+                if (collectionVariable.getVariableInfo().getArrayLength().isPresent()) {
+                    dimLimit = (byte) collectionVariable.getVariableInfo().getArrayLength().getAsInt();
                 }
                 int boundedLimit = dimLimit > 0 ? dimLimit : preferredSize;
                 perDimensionExpressions.add(new Literal((byte)PseudoRandom.randomNotNegative(boundedLimit), TypeList.BYTE));
             }
         }
-        CollectionElement produced = new CollectionElement(arrayReturningExpression, perDimensionExpressions,
-                storageKind(arrayReturningExpression));
+        CollectionElement produced = new CollectionElement(collectionVariable, perDimensionExpressions,
+                storageKind(collectionVariable));
         Long expressionScopeSeed = Genome.getCurrentExpressionScopeSeed();
         if (expressionScopeSeed != null) {
             produced.setExpressionGeneSeed(expressionScopeSeed);
