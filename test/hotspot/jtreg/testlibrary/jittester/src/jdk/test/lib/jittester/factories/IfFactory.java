@@ -64,8 +64,8 @@ class IfFactory extends SafeFactory<If> {
             long conditionComplLimit = (long) (0.01 * PseudoRandom.random() * (complexityLimit - 1));
             IRNodeBuilder builder = new IRNodeBuilder()
                     .setOwnerKlass(ownerClass)
-                    .setOperatorLimit(operatorLimit);
-            IRNode condition = builder.setComplexityLimit(conditionComplLimit)
+                    .withOperatorLimit(operatorLimit);
+            IRNode condition = builder.withComplexityLimit(conditionComplLimit)
                     .setResultType(TypeList.BOOLEAN)
                     .setExceptionSafe(false)
                     .setNoConsts(false)
@@ -87,8 +87,8 @@ class IfFactory extends SafeFactory<If> {
                 Block thenBlock;
                 builder.setResultType(returnType)
                         .setLevel(level)
-                        .setComplexityLimit(ifBlockComplLimit)
-                        .setStatementLimit(ifBlockLimit);
+                        .withComplexityLimit(ifBlockComplLimit)
+                        .withStatementLimit(ifBlockLimit);
                 if (controlDeviation == If.IfPart.THEN) {
                     thenBlock = builder.setSubBlock(false)
                             .setCanHaveBreaks(canHaveBreaks)
@@ -107,8 +107,8 @@ class IfFactory extends SafeFactory<If> {
                 // setChild(If.IfPart.THEN.ordinal(), thenBlock);
                 Block elseBlock = null;
                 if (elseBlockLimit > 0 && elseBlockComplLimit > 0) {
-                    builder.setComplexityLimit(elseBlockComplLimit)
-                            .setStatementLimit(elseBlockLimit);
+                    builder.withComplexityLimit(elseBlockComplLimit)
+                            .withStatementLimit(elseBlockLimit);
                     if (controlDeviation == If.IfPart.ELSE) {
                         elseBlock = builder.setSubBlock(false)
                             .setCanHaveBreaks(canHaveBreaks)

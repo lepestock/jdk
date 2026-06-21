@@ -68,8 +68,8 @@ class CompoundBitwiseAssignmentOperatorFactory extends BinaryOperatorFactory {
                 .setNoConsts(noconsts);
         IRNode leftExpr = new AssignmentLValueFactory(leftComplexityLimit, leftOperatorLimit,
                 (TypeKlass) ownerClass, leftType, exceptionSafe, noconsts).produce();
-        IRNode rightExpr = builder.setComplexityLimit(rightComplexityLimit)
-                .setOperatorLimit(rightOperatorLimit)
+        IRNode rightExpr = builder.withComplexityLimit(rightComplexityLimit)
+                .withOperatorLimit(rightOperatorLimit)
                 .setResultType(rightType)
                 .getExpressionFactory()
                 .produce();

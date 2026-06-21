@@ -61,8 +61,8 @@ class BitwiseInversionOperatorFactory extends UnaryOperatorFactory {
 
     @Override
     protected UnaryOperator generateProduction(Type resultType) throws ProductionFailedException {
-        return new UnaryOperator(opKind, new IRNodeBuilder().setComplexityLimit(complexityLimit - 1)
-                .setOperatorLimit(operatorLimit - 1)
+        return new UnaryOperator(opKind, new IRNodeBuilder().withComplexityLimit(complexityLimit - 1)
+                .withOperatorLimit(operatorLimit - 1)
                 .setOwnerKlass((TypeKlass) ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

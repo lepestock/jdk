@@ -123,9 +123,9 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
             try {
                 body = builder.setOwnerKlass(ownerClass)
                         .setResultType(resType)
-                        .setComplexityLimit(blockComplLimit)
-                        .setStatementLimit(statementLimit)
-                        .setOperatorLimit(operatorLimit)
+                        .withComplexityLimit(blockComplLimit)
+                        .withStatementLimit(statementLimit)
+                        .withOperatorLimit(operatorLimit)
                         .setLevel(level)
                         .setSubBlock(true)
                         .setCanHaveBreaks(false)
@@ -139,7 +139,7 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
                 }
             }
             if (!resType.equals(TypeList.VOID)) {
-                returnNode = builder.setComplexityLimit(complexityLimit - blockComplLimit)
+                returnNode = builder.withComplexityLimit(complexityLimit - blockComplLimit)
                         .setExceptionSafe(false)
                         .getReturnFactory()
                         .produce();

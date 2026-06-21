@@ -101,8 +101,8 @@ class ConstrainedIntegralExpressionFactory extends Factory<IRNode> {
     @Override
     public IRNode produce() throws ProductionFailedException {
         IRNode raw = new IRNodeBuilder()
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(Math.max(0, operatorLimit - 1))
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(Math.max(0, operatorLimit - 1))
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

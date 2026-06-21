@@ -65,8 +65,8 @@ class ArrayInitializerFactory extends SafeFactory<ArrayInitializer> {
         int perElemOps = Math.max(1, operatorLimit / Math.max(1, elementCount));
         IRNodeBuilder elementBuilder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
-                .setComplexityLimit(perElemComplexity)
-                .setOperatorLimit(perElemOps)
+                .withComplexityLimit(perElemComplexity)
+                .withOperatorLimit(perElemOps)
                 .setResultType(elementType)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noConsts);

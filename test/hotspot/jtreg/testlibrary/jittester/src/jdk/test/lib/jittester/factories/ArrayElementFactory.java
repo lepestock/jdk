@@ -78,14 +78,14 @@ class ArrayElementFactory extends SafeFactory<ArrayElement> {
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
         IRNode arrayReturningExpression = builder
-                .setComplexityLimit(arrayComplexityLimit)
-                .setOperatorLimit(arrayOperatorLimit)
+                .withComplexityLimit(arrayComplexityLimit)
+                .withOperatorLimit(arrayOperatorLimit)
                 .setResultType(new TypeArray(resultType, dimensionsCount))
                 .getExpressionFactory()
                 .produce();
         Factory<IRNode> expressionFactory = builder
-                .setComplexityLimit(complexityPerDimension)
-                .setOperatorLimit(operatorLimitPerDimension)
+                .withComplexityLimit(complexityPerDimension)
+                .withOperatorLimit(operatorLimitPerDimension)
                 .setResultType(TypeList.BYTE)
                 .getExpressionFactory();
         double chanceExpression = ProductionParams.chanceExpressionIndex.value() / 100.;

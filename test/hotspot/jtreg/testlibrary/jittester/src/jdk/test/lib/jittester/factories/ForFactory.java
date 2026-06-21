@@ -73,7 +73,7 @@ class ForFactory extends SafeFactory<For> {
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
                 .setResultType(returnType)
-                .setOperatorLimit(operatorLimit)
+                .withOperatorLimit(operatorLimit)
                 .setSemicolon(false)
                 .setExceptionSafe(false)
                 .setNoConsts(false);
@@ -106,8 +106,8 @@ class ForFactory extends SafeFactory<For> {
         loop.initialization = builder.getCounterInitializerFactory(0).produce();
         Block header;
         try {
-            header = builder.setComplexityLimit(headerComplLimit)
-                    .setStatementLimit(headerStatementLimit)
+            header = builder.withComplexityLimit(headerComplLimit)
+                    .withStatementLimit(headerStatementLimit)
                     .setLevel(level - 1)
                     .setSubBlock(true)
                     .setCanHaveBreaks(false)
@@ -122,7 +122,7 @@ class ForFactory extends SafeFactory<For> {
         IRNode statement1;
         try {
             Rule<IRNode> rule = new Rule<>("statement1");
-            builder.setComplexityLimit(statement1ComplLimit);
+            builder.withComplexityLimit(statement1ComplLimit);
             rule.add("assignment", builder.getAssignmentOperatorFactory());
             rule.add("function", builder.getFunctionFactory(), 0.1);
             rule.add("initialization", builder.setIsConstant(false)
@@ -147,13 +147,13 @@ class ForFactory extends SafeFactory<For> {
                 .advance());
         try {
             if (SEED == 131299968015990L) Logger.enableTrace();
-            loop.condition = builder.setComplexityLimit(condComplLimit)
+            loop.condition = builder.withComplexityLimit(condComplLimit)
                     .setLocalVariable(counter)
                     .getLoopingConditionFactory(limiter)
                     .produce();
             if (SEED == 131299968015990L) Logger.disableTrace();
             try {
-                statement2 = builder.setComplexityLimit(statement2ComplLimit)
+                statement2 = builder.withComplexityLimit(statement2ComplLimit)
                         .getAssignmentOperatorFactory().produce();
             } catch (ProductionFailedException e) {
                 statement2 = new Nothing();
@@ -166,8 +166,8 @@ class ForFactory extends SafeFactory<For> {
                         " :condition " + formattedCondition);
             }
             try {
-                body1 = builder.setComplexityLimit(body1ComplLimit)
-                        .setStatementLimit(body1StatementLimit)
+                body1 = builder.withComplexityLimit(body1ComplLimit)
+                        .withStatementLimit(body1StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)
                         .setCanHaveBreaks(true)
@@ -185,8 +185,8 @@ class ForFactory extends SafeFactory<For> {
                                       .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
                                       .produce();
             try {
-                body2 = builder.setComplexityLimit(body2ComplLimit)
-                        .setStatementLimit(body2StatementLimit)
+                body2 = builder.withComplexityLimit(body2ComplLimit)
+                        .withStatementLimit(body2StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)
                         .setCanHaveBreaks(true)
@@ -199,8 +199,8 @@ class ForFactory extends SafeFactory<For> {
                 body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
             }
             try {
-                body3 = builder.setComplexityLimit(body3ComplLimit)
-                        .setStatementLimit(body3StatementLimit)
+                body3 = builder.withComplexityLimit(body3ComplLimit)
+                        .withStatementLimit(body3StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)
                         .setCanHaveBreaks(true)

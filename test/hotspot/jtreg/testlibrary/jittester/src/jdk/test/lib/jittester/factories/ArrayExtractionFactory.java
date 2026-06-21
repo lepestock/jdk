@@ -70,8 +70,8 @@ class ArrayExtractionFactory extends SafeFactory<ArrayExtraction> {
                         .setExceptionSafe(exceptionSafe)
                         .setNoConsts(noconsts);
                 IRNode arrayReturningExpression = builder
-                        .setComplexityLimit(arrayComplLimit)
-                        .setOperatorLimit(arrayOpLimit)
+                        .withComplexityLimit(arrayComplLimit)
+                        .withOperatorLimit(arrayOpLimit)
                         .setResultType(new TypeArray(arrayType.type, arrayType.dimensions + delta))
                         .getExpressionFactory().produce();
                 ArrayList<IRNode> perDimensionExpression = new ArrayList<>(delta);
@@ -83,8 +83,8 @@ class ArrayExtractionFactory extends SafeFactory<ArrayExtraction> {
                 for (int i = 0; i < delta; i++) {
                     if (PseudoRandom.randomBoolean(chanceExpression)) {
                         perDimensionExpression.add(builder.setResultType(TypeList.BYTE)
-                                .setComplexityLimit(dimComplLimit)
-                                .setOperatorLimit(dimOpLimit)
+                                .withComplexityLimit(dimComplLimit)
+                                .withOperatorLimit(dimOpLimit)
                                 .getExpressionFactory()
                                 .produce());
                     } else {

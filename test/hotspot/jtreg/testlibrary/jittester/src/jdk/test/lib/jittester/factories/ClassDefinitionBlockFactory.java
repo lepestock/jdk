@@ -71,9 +71,9 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
             long classCompl = complexityLimit / limit;
             IRNodeBuilder builder = new IRNodeBuilder().setLevel(level)
                     .setMemberFunctionsArgLimit(memberFunctionsArgLimit)
-                    .setStatementLimit(statementLimit)
-                    .setOperatorLimit(operatorLimit)
-                    .setComplexityLimit(classCompl);
+                    .withStatementLimit(statementLimit)
+                    .withOperatorLimit(operatorLimit)
+                    .withComplexityLimit(classCompl);
             for (int i = 0; i < limit; i++) {
                 try {
                     Rule<IRNode> rule = new Rule<>("class");
@@ -131,9 +131,9 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                 IRNodeBuilder b = new IRNodeBuilder()
                         .setOwnerKlass(owner)
                         .setResultType(retType)
-                        .setComplexityLimit(complexityLimit)
-                        .setStatementLimit(statementLimit)
-                        .setOperatorLimit(operatorLimit)
+                        .withComplexityLimit(complexityLimit)
+                        .withStatementLimit(statementLimit)
+                        .withOperatorLimit(operatorLimit)
                         .setLevel(newLevel);
                 IRNode newBlock = b.getBlockFactory().produce();
                 List<IRNode> siblings = randomLeaf.getChildren();

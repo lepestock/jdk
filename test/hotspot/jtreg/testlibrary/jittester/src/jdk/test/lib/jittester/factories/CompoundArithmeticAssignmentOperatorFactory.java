@@ -66,8 +66,8 @@ class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory 
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
-        IRNode rightExpr = builder.setComplexityLimit(rightComplexityLimit)
-                .setOperatorLimit(rightOperatorLimit)
+        IRNode rightExpr = builder.withComplexityLimit(rightComplexityLimit)
+                .withOperatorLimit(rightOperatorLimit)
                 .setResultType(rightType)
                 .produceExpression(needsSafeDenominator(leftType, rightType));
         IRNode selectedLeft = new AssignmentLValueFactory(leftComplexityLimit, leftOperatorLimit,

@@ -36,8 +36,8 @@ class ThrowFactory extends SafeFactory<Throw> {
     ThrowFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe) {
         IRNodeBuilder b = new IRNodeBuilder()
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

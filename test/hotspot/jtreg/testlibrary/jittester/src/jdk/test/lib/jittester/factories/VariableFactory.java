@@ -54,8 +54,8 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
         rule = new Rule<>("variable");
         IRNodeBuilder b = new IRNodeBuilder().setResultType(resultType)
                 .setFlags(flags)
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe);
         double nonStaticWeight = 1.0;

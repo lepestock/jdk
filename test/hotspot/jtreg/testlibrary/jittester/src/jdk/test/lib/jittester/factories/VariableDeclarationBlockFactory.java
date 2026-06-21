@@ -64,8 +64,8 @@ class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> 
         int limit = Math.max(floor, randomPart);
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setIsLocal(false)
                 .setExceptionSafe(exceptionSafe);
         Factory<Declaration> declFactory = constantsOnly

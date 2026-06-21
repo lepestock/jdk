@@ -92,8 +92,8 @@ class DenominatorExpressionFactory extends Factory<IRNode> {
         boolean guardIntegralDenominator = !ExpressionGuards.shouldSkipGuard(RAW_PROBABILITY_DIVISOR);
         int rawOperatorLimit = guardIntegralDenominator ? Math.max(0, operatorLimit - 1) : operatorLimit;
         IRNode raw = new IRNodeBuilder()
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(rawOperatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(rawOperatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

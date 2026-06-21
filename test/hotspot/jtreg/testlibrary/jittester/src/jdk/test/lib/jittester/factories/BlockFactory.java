@@ -142,7 +142,7 @@ class BlockFactory extends Factory<Block> {
                 Gene blockGene = decideBlockGene(blockRngInSeed, statementDecisionSeeds);
                 Genome.recordCurrentBlockGene(blockGene);
                 IRNodeBuilder builder = new IRNodeBuilder()
-                        .setOperatorLimit(effectiveOperatorLimit)
+                        .withOperatorLimit(effectiveOperatorLimit)
                         .setOwnerKlass(ownerClass)
                         .setResultType(returnType)
                         .setCanHaveReturn(canHaveReturn)
@@ -165,7 +165,7 @@ class BlockFactory extends Factory<Block> {
                         Genome.recordCurrentScopeGene('S', statementScopeSeed);
                         pushStatementContext(blockDepth, attemptedStatements, plannedStatementAttempts);
                         Throwable statementThrowable = null;
-                        builder.setComplexityLimit(LOCAL_COMPLEXITY_LIMIT);
+                        builder.withComplexityLimit(LOCAL_COMPLEXITY_LIMIT);
                         rule = new Rule<>("block");
                         rule.add("statement", builder.getStatementFactory(), 8);
                         if (!ProductionParams.disableVarsInBlock.value()) {
@@ -176,7 +176,7 @@ class BlockFactory extends Factory<Block> {
                         if (effectiveStatementLimit > 1 && allowNestedControlFlow) {
                             int childStatementLimit = Math.max(1,
                                     (int) Math.ceil(effectiveStatementLimit * CHILD_STATEMENT_LIMIT_FACTOR));
-                            builder.setStatementLimit(childStatementLimit).setLevel(level + 1);
+                            builder.withStatementLimit(childStatementLimit).setLevel(level + 1);
                             boolean inArrayKernelContext = GenerationState.currentFlowParams().inArrayKernel();
                             if (!inArrayKernelContext) {
                                 rule.add("array_kernel", builder
@@ -262,7 +262,7 @@ class BlockFactory extends Factory<Block> {
                         rule.add("continue", builder.getContinueFactory());
                     }
                     if (canHaveReturn && !subBlock && !returnType.equals(TypeList.VOID)) {
-                        rule.add("return", builder.setComplexityLimit(LOCAL_COMPLEXITY_LIMIT)
+                        rule.add("return", builder.withComplexityLimit(LOCAL_COMPLEXITY_LIMIT)
                                 .getReturnFactory());
                     }
                     if (canHaveThrow && !subBlock) {
@@ -274,8 +274,8 @@ class BlockFactory extends Factory<Block> {
                             rtException = throwTypes.iterator().next();
                         }
                         rule.add("throw", builder.setResultType(rtException)
-                                .setComplexityLimit(Math.max(LOCAL_COMPLEXITY_LIMIT, 5))
-                                .setOperatorLimit(Math.max(effectiveOperatorLimit, 5))
+                                .withComplexityLimit(Math.max(LOCAL_COMPLEXITY_LIMIT, 5))
+                                .withOperatorLimit(Math.max(effectiveOperatorLimit, 5))
                                 .getThrowFactory());
 
                                 // Throws leave huge chunks of code unexecuted, hence the 30% adjustment.

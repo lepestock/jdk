@@ -46,8 +46,8 @@ class ReturnFactory extends SafeFactory<Return> {
 
     @Override
     protected Return sproduce() throws ProductionFailedException {
-        return new Return(new IRNodeBuilder().setComplexityLimit(complexityLimit - 1)
-                .setOperatorLimit(operatorLimit - 1)
+        return new Return(new IRNodeBuilder().withComplexityLimit(complexityLimit - 1)
+                .withOperatorLimit(operatorLimit - 1)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

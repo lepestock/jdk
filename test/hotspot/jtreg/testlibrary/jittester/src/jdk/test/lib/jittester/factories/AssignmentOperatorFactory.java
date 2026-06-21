@@ -48,8 +48,8 @@ class AssignmentOperatorFactory extends Factory<Operator> {
     private Rule<Operator> fillRule(Type resultType) throws ProductionFailedException {
         Rule<Operator> rule = new Rule<>("assignment");
         IRNodeBuilder builder = new IRNodeBuilder()
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

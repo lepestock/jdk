@@ -63,8 +63,8 @@ class UnaryPlusMinusOperatorFactory extends UnaryOperatorFactory {
     @Override
     protected UnaryOperator generateProduction(Type type) throws ProductionFailedException {
         return new UnaryOperator(opKind, resultType, new IRNodeBuilder()
-                .setComplexityLimit(complexityLimit)
-                .setOperatorLimit(operatorLimit)
+                .withComplexityLimit(complexityLimit)
+                .withOperatorLimit(operatorLimit)
                 .setOwnerKlass((TypeKlass) ownerClass)
                 .setResultType(type)
                 .setExceptionSafe(exceptionSafe)

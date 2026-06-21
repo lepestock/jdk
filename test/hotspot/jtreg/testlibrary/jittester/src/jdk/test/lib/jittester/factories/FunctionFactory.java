@@ -192,8 +192,8 @@ public class FunctionFactory extends SafeFactory<Function> {
                             long argComp = (complexityLimit - 1 - functionInfo.complexity) / functionInfo.argTypes.size();
                             int argumentOperatorLimit = (operatorLimit - 1) / functionInfo.argTypes.size();
                             IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                                    .setComplexityLimit(argComp)
-                                    .setOperatorLimit(argumentOperatorLimit)
+                                    .withComplexityLimit(argComp)
+                                    .withOperatorLimit(argumentOperatorLimit)
                                     .setExceptionSafe(exceptionSafe)
                                     .setNoConsts(noconsts);
                             for (int argIndex = 0; argIndex < functionInfo.argTypes.size(); argIndex++) {

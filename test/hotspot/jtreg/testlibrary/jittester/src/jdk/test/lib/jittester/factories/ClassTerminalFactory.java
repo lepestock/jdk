@@ -220,8 +220,8 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
                     (complexityLimit - 1 - constructorInfo.complexity) / constructorInfo.argTypes.size());
             int argOperatorLimit = Math.max(1, (operatorLimit - 1) / constructorInfo.argTypes.size());
             IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                    .setComplexityLimit(argComplexityLimit)
-                    .setOperatorLimit(argOperatorLimit)
+                    .withComplexityLimit(argComplexityLimit)
+                    .withOperatorLimit(argOperatorLimit)
                     .setExceptionSafe(exceptionSafe)
                     .setNoConsts(noConsts);
             for (VariableInfo argType : constructorInfo.argTypes) {
@@ -282,8 +282,8 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
                     return new StaticMemberVariable(ownerClass, varInfo);
                 }
                 IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                        .setComplexityLimit(Math.max(1L, complexityLimit - 1))
-                        .setOperatorLimit(Math.max(1, operatorLimit - 1))
+                        .withComplexityLimit(Math.max(1L, complexityLimit - 1))
+                        .withOperatorLimit(Math.max(1, operatorLimit - 1))
                         .setResultType(varInfo.owner)
                         .setExceptionSafe(exceptionSafe)
                         .setNoConsts(noConsts);

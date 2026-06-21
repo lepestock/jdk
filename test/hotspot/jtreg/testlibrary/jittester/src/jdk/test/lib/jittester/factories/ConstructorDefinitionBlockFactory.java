@@ -61,13 +61,13 @@ class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlo
     public ConstructorDefinitionBlock produce() throws ProductionFailedException {
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
-                .setStatementLimit(statementLimit)
-                .setOperatorLimit(operatorLimit)
+                .withStatementLimit(statementLimit)
+                .withOperatorLimit(operatorLimit)
                 .setLevel(level);
         ArrayList<IRNode> content = new ArrayList<>();
         Logger.log(ownerClass, "Point 1", content);
         int memFunLimit = PseudoRandom.randomNotZero(memberFunctionsLimit);
-        builder.setComplexityLimit(complexityLimit / memFunLimit);
+        builder.withComplexityLimit(complexityLimit / memFunLimit);
         boolean mustEmitStaticConstructor = hasPendingStaticArrayInitialization();
         if (!ProductionParams.disableStatic.value()
                 && (mustEmitStaticConstructor || PseudoRandom.randomBoolean())) {

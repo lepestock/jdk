@@ -81,8 +81,8 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                 variables = new ArrayList<>();
                 variables.add(selected);
             }
-            IRNodeBuilder builder = new IRNodeBuilder().setComplexityLimit(complexityLimit)
-                    .setOperatorLimit(operatorLimit)
+            IRNodeBuilder builder = new IRNodeBuilder().withComplexityLimit(complexityLimit)
+                    .withOperatorLimit(operatorLimit)
                     .setOwnerKlass((TypeKlass) ownerClass)
                     .setExceptionSafe(exceptionSafe)
                     .setNoConsts(false);

@@ -58,8 +58,8 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         }
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe);
-        IRNode conditionalExp = builder.setComplexityLimit(condComplLimit)
-                .setOperatorLimit(condOpLimit)
+        IRNode conditionalExp = builder.withComplexityLimit(condComplLimit)
+                .withOperatorLimit(condOpLimit)
                 .setResultType(TypeList.BOOLEAN)
                 .setNoConsts(noconsts)
                 .getExpressionFactory()
@@ -69,8 +69,8 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         SymbolTable.push();
         try {
             if (seed == 18218056952499L) Logger.enableTrace();
-            leftExp = builder.setComplexityLimit(leftComplLimit)
-                    .setOperatorLimit(leftOpLimit)
+            leftExp = builder.withComplexityLimit(leftComplLimit)
+                    .withOperatorLimit(leftOpLimit)
                     .setResultType(resultType)
                     .setNoConsts(false)
                     .getExpressionFactory()
@@ -82,8 +82,8 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         IRNode rightExp;
         SymbolTable.push();
         try {
-            rightExp = builder.setComplexityLimit(rightComplLimit)
-                    .setOperatorLimit(rightOpLimit)
+            rightExp = builder.withComplexityLimit(rightComplLimit)
+                    .withOperatorLimit(rightOpLimit)
                     .setResultType(resultType)
                     .setNoConsts(false)
                     .getExpressionFactory()
