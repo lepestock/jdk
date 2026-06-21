@@ -74,7 +74,7 @@ class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
         for (int i = 0; i < elementCount; i++) {
             elements.add(produceElement(elementBuilder));
         }
-        return new CollectionInitializer(arrayType, elements);
+        return new CollectionInitializer(arrayType, elements, arrayType.getStorageKind());
     }
 
     private int chooseElementCount(Type elementType) {

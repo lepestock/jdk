@@ -184,7 +184,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
     private Type pickInitializationType() throws ProductionFailedException {
         if (!isLocal && !ProductionParams.disableArrays.value()
                 && PseudoRandom.randomBoolean(fieldArrayInitProbability())) {
-            return new TypeArray(pickCollectionElementType(), 1);
+            return CollectionCreationFactory.withSelectedStorageKind(new TypeArray(pickCollectionElementType(), 1));
         }
         if (PseudoRandom.randomBoolean(NUMERIC_INIT_TYPE_PREFERENCE)) {
             List<Type> numericPreferred = new ArrayList<>();

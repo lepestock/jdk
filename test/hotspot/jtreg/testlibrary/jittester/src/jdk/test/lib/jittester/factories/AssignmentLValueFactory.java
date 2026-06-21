@@ -38,6 +38,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.collections.CollectionElement;
+import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -140,6 +141,10 @@ class AssignmentLValueFactory extends Factory<IRNode> {
             }
             for (Symbol symbol : SymbolTable.get(new TypeArray(elementType, 1), VariableInfo.class)) {
                 if (!(symbol instanceof VariableInfo varInfo)) {
+                    continue;
+                }
+                if (varInfo.type instanceof TypeArray arrayType
+                        && arrayType.getStorageKind() != IndexedStorageKind.ARRAY) {
                     continue;
                 }
                 if ((varInfo.flags & VariableInfo.INITIALIZED) == 0) {

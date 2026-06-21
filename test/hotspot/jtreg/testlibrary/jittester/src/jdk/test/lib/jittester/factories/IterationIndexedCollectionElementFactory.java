@@ -35,6 +35,7 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.collections.CollectionElement;
+import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
@@ -50,16 +51,23 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
     private final TypeKlass ownerClass;
     private final Type elementType;
     private final boolean assignmentCompatible;
+    private final boolean arrayOnly;
 
     IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType) {
-        this(ownerClass, elementType, false);
+        this(ownerClass, elementType, false, false);
     }
 
     IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType,
             boolean assignmentCompatible) {
+        this(ownerClass, elementType, assignmentCompatible, false);
+    }
+
+    IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType,
+            boolean assignmentCompatible, boolean arrayOnly) {
         this.ownerClass = ownerClass;
         this.elementType = elementType;
         this.assignmentCompatible = assignmentCompatible;
+        this.arrayOnly = arrayOnly;
     }
 
     @Override
@@ -108,7 +116,7 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
         ArrayList<IRNode> indexes = new ArrayList<>(1);
         // Array candidates here carry known generation-time lengths. Kernel loops keep iterator in-range.
         indexes.add(new LocalVariable(iterationInfo));
-        CollectionElement element = new CollectionElement(baseArray, indexes);
+        CollectionElement element = new CollectionElement(baseArray, indexes, storageKind(baseArrayInfo));
         if (element.getResultType().equals(elementType)) {
             return element;
         }
@@ -156,6 +164,9 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
             if (!(varInfo.type instanceof TypeArray arrayType)) {
                 continue;
             }
+            if (arrayOnly && arrayType.getStorageKind() != IndexedStorageKind.ARRAY) {
+                continue;
+            }
             if (arrayType.dimensions != 1) {
                 continue;
             }
@@ -167,5 +178,11 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
             }
         }
         return result;
+    }
+
+    private static IndexedStorageKind storageKind(VariableInfo variableInfo) {
+        return variableInfo.type instanceof TypeArray arrayType
+                ? arrayType.getStorageKind()
+                : IndexedStorageKind.ARRAY;
     }
 }
