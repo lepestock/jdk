@@ -49,6 +49,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.VariableInitialization;
+import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
 import jdk.test.lib.jittester.functions.Function;
 import jdk.test.lib.jittester.functions.FunctionDefinition;
@@ -81,6 +82,7 @@ public class FixedTrees {
         LocalVariable resultVar = new LocalVariable(resultInfo);
 
         TypeKlass printerKlass = new TypeKlass(ProductionParams.printerClassName());
+        TypeKlass printerModeKlass = new TypeKlass(ProductionParams.printerClassName() + ".Mode");
         VariableInfo thisInfo = new VariableInfo("this", owner,
                 owner, VariableInfo.LOCAL | VariableInfo.INITIALIZED);
 
@@ -88,6 +90,17 @@ public class FixedTrees {
 
         for (int i = 0; i < vars.size(); i++) {
             Symbol v = vars.get(i);
+            IRNode variable = variableAccess(owner, thisVar, v);
+            Function reducedCollectionPrint = buildReducedCollectionPrint(owner, printerKlass, printerModeKlass, v, variable);
+            if (reducedCollectionPrint != null) {
+                nodes.add(new Statement(new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar,
+                        reducedCollectionPrint), true));
+                if (i < vars.size() - 1) {
+                    nodes.add(new Statement(new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar,
+                            EOL), true));
+                }
+                continue;
+            }
             boolean usePathAwareObjectPrint = v.type instanceof TypeKlass || v.type instanceof TypeArray;
             Function call;
             if (usePathAwareObjectPrint) {
@@ -108,13 +121,7 @@ public class FixedTrees {
                         TypeList.STRING, 0, FunctionInfo.PUBLIC | FunctionInfo.STATIC, argInfo);
                 call = new Function(owner, printInfo, null);
             }
-            VariableInfo varInfo = new VariableInfo(v.name, v.owner, v.type, v.flags);
-            if (v.isStatic()) {
-                // Use current owner context so static members from other classes are qualified.
-                call.addChild(new StaticMemberVariable(owner, varInfo));
-            } else {
-                call.addChild(new NonStaticMemberVariable(thisVar, varInfo));
-            }
+            call.addChild(variable);
             nodes.add(new Statement(new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar,
                     call), true));
             if (i < vars.size() - 1) {
@@ -129,6 +136,62 @@ public class FixedTrees {
         Block block = blockWithAnchor(owner, TypeList.STRING, nodes, 1, "print-function:" + functionName);
         FunctionInfo printInfo = new FunctionInfo(functionName, owner, TypeList.STRING, 0L, FunctionInfo.PUBLIC, thisInfo);
         return new FunctionDefinition(printInfo, new ArrayList<>(), block, new Return(resultVar));
+    }
+
+    private static IRNode variableAccess(TypeKlass owner, LocalVariable thisVar, Symbol v) {
+        VariableInfo varInfo = new VariableInfo(v.name, v.owner, v.type, v.flags);
+        if (v.isStatic()) {
+            // Use current owner context so static members from other classes are qualified.
+            return new StaticMemberVariable(owner, varInfo);
+        }
+        return new NonStaticMemberVariable(thisVar, varInfo);
+    }
+
+    private static Function buildReducedCollectionPrint(TypeKlass owner,
+                                                        TypeKlass printerKlass,
+                                                        TypeKlass printerModeKlass,
+                                                        Symbol v,
+                                                        IRNode variable) {
+        if (!(v.type instanceof TypeArray arrayType) || !arrayType.getType().equals(TypeList.INT)) {
+            return null;
+        }
+        String printMethodName = reducedCollectionPrintMethodName(arrayType);
+        if (printMethodName == null) {
+            return null;
+        }
+
+        VariableInfo pathArgInfo = new VariableInfo("path", printerKlass, TypeList.STRING,
+                VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+        VariableInfo valueArgInfo = new VariableInfo("arg", printerKlass, arrayType,
+                VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+        VariableInfo modeArgInfo = new VariableInfo("mode", printerKlass, printerModeKlass,
+                VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+        FunctionInfo printInfo = new FunctionInfo(printMethodName, printerKlass,
+                TypeList.STRING, 0, FunctionInfo.PUBLIC | FunctionInfo.STATIC,
+                pathArgInfo, valueArgInfo, modeArgInfo);
+        Function call = new Function(owner, printInfo, null);
+        call.addChild(new Literal(v.owner.getName() + "." + v.name, TypeList.STRING));
+        call.addChild(variable);
+        call.addChild(printerMode(owner, printerModeKlass));
+        return call;
+    }
+
+    private static String reducedCollectionPrintMethodName(TypeArray arrayType) {
+        if (arrayType.getStorageKind() == IndexedStorageKind.LIST) {
+            return arrayType.getDimensions() == 1 ? "printIntList" : null;
+        }
+        if (arrayType.getStorageKind() == IndexedStorageKind.ARRAY && arrayType.getDimensions() <= 3) {
+            return "printIntArray";
+        }
+        return null;
+    }
+
+    private static StaticMemberVariable printerMode(TypeKlass owner, TypeKlass printerModeKlass) {
+        int reductionPercent = Math.max(0, Math.min(100, ProductionParams.collectionPrintReductionPercent.value()));
+        String mode = PseudoRandom.randomNotNegative(100) < reductionPercent ? "REDUCED" : "FULL";
+        VariableInfo modeInfo = new VariableInfo(mode, printerModeKlass, printerModeKlass,
+                VariableInfo.PUBLIC | VariableInfo.STATIC | VariableInfo.FINAL);
+        return new StaticMemberVariable(owner, modeInfo);
     }
 
     public static FunctionDefinition generateMainOrExecuteMethod(TypeKlass owner, boolean isMain) {

@@ -110,6 +110,7 @@ public class ProductionParams {
     public static Option<Integer> arrayKernelBodyComplexityPercent = null;
     public static Option<Integer> arrayKernelBodyStatementPercent = null;
     public static Option<Boolean> arrayKernelCollectionElementLValues = null;
+    public static Option<Integer> collectionPrintReductionPercent = null;
     public static Option<Boolean> embedPrinterClass = null;
     public static Option<Boolean> pulsemap = null;
     public static Option<Boolean> disableFixedTreeExceptionGuards = null;
@@ -273,6 +274,8 @@ public class ProductionParams {
                 "array-kernel-array-element-lvalues",
                 false,
                 "Allow array elements as LValues for compound assignments and inc/dec inside array kernels");
+        collectionPrintReductionPercent = optionResolver.addIntegerOption("collection-print-reduction-percent", 0,
+                "Percent chance to print supported collections as compact CRC summaries");
         arrayFieldDefinitionWeightBonus = optionResolver.addIntegerOption("arrays-field-definition-weight-bonus", 0,
                 "Additional selection weight percent for choosing array-typed class field declarations");
         embedPrinterClass = optionResolver.addBooleanOption(null, "embed-printer-class", false,

@@ -7,3 +7,4 @@
 --array-kernel-body-complexity-percent=130
 --array-kernel-body-statement-percent=150
 --list-storage-percent=50
+--collection-print-reduction-percent=90
