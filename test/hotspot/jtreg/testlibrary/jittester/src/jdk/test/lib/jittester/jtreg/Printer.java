@@ -30,8 +30,13 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Stack;
+import java.util.zip.CRC32;
 
 public class Printer {
+    public enum Mode {
+        FULL,
+        REDUCED
+    }
 
     public static void debugPrint(String gene, String value) {
         System.err.println("[JTDBG] gene=" + gene + " value=" + value);
@@ -146,6 +151,96 @@ public class Printer {
             printObjectDot(sb, visitedObjects, rootPath, arg, false);
         }
         return sb.toString().trim();
+    }
+
+    public static String printIntArray(String rootPath, int[] arg, Mode mode) {
+        if (mode == Mode.FULL) {
+            return print(rootPath, arg);
+        }
+        CRC32 crc = new CRC32();
+        updateInt(crc, arg == null ? -1 : arg.length);
+        if (arg != null) {
+            for (int value : arg) {
+                updateInt(crc, value);
+            }
+        }
+        return reducedCollectionString(rootPath, "int[]", arg == null ? -1 : arg.length, crc);
+    }
+
+    public static String printIntArray(String rootPath, int[][] arg, Mode mode) {
+        if (mode == Mode.FULL) {
+            return print(rootPath, arg);
+        }
+        CRC32 crc = new CRC32();
+        updateInt(crc, arg == null ? -1 : arg.length);
+        if (arg != null) {
+            for (int[] nested : arg) {
+                updateInt(crc, nested == null ? -1 : nested.length);
+                if (nested != null) {
+                    for (int value : nested) {
+                        updateInt(crc, value);
+                    }
+                }
+            }
+        }
+        return reducedCollectionString(rootPath, "int[][]", arg == null ? -1 : arg.length, crc);
+    }
+
+    public static String printIntArray(String rootPath, int[][][] arg, Mode mode) {
+        if (mode == Mode.FULL) {
+            return print(rootPath, arg);
+        }
+        CRC32 crc = new CRC32();
+        updateInt(crc, arg == null ? -1 : arg.length);
+        if (arg != null) {
+            for (int[][] nested2 : arg) {
+                updateInt(crc, nested2 == null ? -1 : nested2.length);
+                if (nested2 != null) {
+                    for (int[] nested1 : nested2) {
+                        updateInt(crc, nested1 == null ? -1 : nested1.length);
+                        if (nested1 != null) {
+                            for (int value : nested1) {
+                                updateInt(crc, value);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return reducedCollectionString(rootPath, "int[][][]", arg == null ? -1 : arg.length, crc);
+    }
+
+    public static String printIntList(String rootPath, ArrayList<Integer> arg, Mode mode) {
+        if (mode == Mode.FULL) {
+            return print(rootPath, arg);
+        }
+        CRC32 crc = new CRC32();
+        updateInt(crc, arg == null ? -1 : arg.size());
+        if (arg != null) {
+            for (Integer value : arg) {
+                if (value == null) {
+                    updateInt(crc, 0);
+                } else {
+                    updateInt(crc, 1);
+                    updateInt(crc, value);
+                }
+            }
+        }
+        return reducedCollectionString(rootPath, "ArrayList<Integer>", arg == null ? -1 : arg.size(), crc);
+    }
+
+    private static String reducedCollectionString(String rootPath, String typeName, int size, CRC32 crc) {
+        if (size < 0) {
+            return rootPath + " = (" + typeName + ") null";
+        }
+        return rootPath + " = (" + typeName + ") [" + size + "] crc32=" + crc.getValue();
+    }
+
+    private static void updateInt(CRC32 crc, int value) {
+        crc.update(value);
+        crc.update(value >>> 8);
+        crc.update(value >>> 16);
+        crc.update(value >>> 24);
     }
 
     private static String print_r(Stack<Object> visitedObjects, Object arg) {
