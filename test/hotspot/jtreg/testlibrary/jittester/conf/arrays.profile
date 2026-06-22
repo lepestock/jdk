@@ -6,3 +6,4 @@
 --arrays-field-definition-weight-bonus=1500
 --array-kernel-body-complexity-percent=130
 --array-kernel-body-statement-percent=150
+--collection-print-reduction-percent=90
