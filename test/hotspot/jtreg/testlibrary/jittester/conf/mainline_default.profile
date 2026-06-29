@@ -1,0 +1,14 @@
+# Mainline identity-class profile.
+# Keep generated sources compatible with mainline javac/java by disabling value classes.
+--identity-value-class-balance=0
+
+# Keep plain generation responsive enough for smoke and pool preselection runs.
+--classes-limit=6
+--member-functions-limit=8
+--data-member-limit=6
+--statement-limit=18
+--test-statement-limit=120
+--operator-limit=35
+--complexity-limit=1000000
+--min-cfg-depth=2
+--max-cfg-depth=3
