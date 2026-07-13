@@ -30,14 +30,7 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
  * Current scope: {@link SymbolTable}, {@link TypeList}, {@link ScopeGuards}, and {@link FlowParams}.
  */
 public final class GenerationState {
-    private static final int[] BYTE_LENGTH_ANCHORS = {
-            0, 1, 2, 3, 4, 7, 8, 15, 16, 17, 31, 32, 33, 63, 64, 65,
-            127, 128, 129, 255, 256, 257, 511, 512
-    };
-    private static final int SMALL_BYTE_ANCHOR_THRESHOLD = 64;
-    private static final int SMALL_ANCHOR_BIAS_PERCENT = 85;
     private static FlowParams currentFlowParams;
-    private static int preferredIntCollectionSize;
 
     private GenerationState() {
     }
@@ -58,17 +51,6 @@ public final class GenerationState {
             throw new IllegalArgumentException("GenerationState flow params must not be null");
         }
         currentFlowParams = flowParams;
-    }
-
-    public static void initializePreferredIntCollectionSize() {
-        preferredIntCollectionSize = Math.max(1, choosePreferredByteAnchor() / 4);
-    }
-
-    public static int preferredIntCollectionSize() {
-        if (preferredIntCollectionSize < 1) {
-            initializePreferredIntCollectionSize();
-        }
-        return preferredIntCollectionSize;
     }
 
     public static Checkpoint checkpoint() {
@@ -102,10 +84,6 @@ public final class GenerationState {
                 .append("}\n");
         sb.append("--- FlowParams ---\n");
         sb.append(currentFlowParams().dumpSnapshot()).append('\n');
-        sb.append("--- Collections ---\n");
-        sb.append("preferredIntCollectionSize=")
-                .append(preferredIntCollectionSize())
-                .append('\n');
         sb.append("--- SymbolTable ---\n");
         sb.append(SymbolTable.dumpSnapshot(Integer.MAX_VALUE, Integer.MAX_VALUE));
         sb.append("--- TypeList ---\n");
@@ -138,21 +116,4 @@ public final class GenerationState {
         }
     }
 
-    private static int choosePreferredByteAnchor() {
-        // FIXME: temporary dev/testing bias; retune after array-utilization work stabilizes.
-        boolean preferSmall = PseudoRandom.randomNotNegative(100) < SMALL_ANCHOR_BIAS_PERCENT;
-        if (preferSmall) {
-            int[] small = new int[BYTE_LENGTH_ANCHORS.length];
-            int count = 0;
-            for (int anchor : BYTE_LENGTH_ANCHORS) {
-                if (anchor <= SMALL_BYTE_ANCHOR_THRESHOLD) {
-                    small[count++] = anchor;
-                }
-            }
-            if (count > 0) {
-                return small[PseudoRandom.randomNotNegative(count)];
-            }
-        }
-        return BYTE_LENGTH_ANCHORS[PseudoRandom.randomNotNegative(BYTE_LENGTH_ANCHORS.length)];
-    }
 }

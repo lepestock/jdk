@@ -24,7 +24,6 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
-import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -40,7 +39,6 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
     private final long complexityLimit;
-    private final int operatorLimit;
     private final Type resultType;
     private final boolean exceptionSafe;
     private final boolean noconsts;
@@ -49,7 +47,6 @@ class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
     CollectionCreationFactory(long complexityLimit, int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
         this.complexityLimit = complexityLimit;
-        this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
         this.exceptionSafe = exceptionSafe;
@@ -73,22 +70,7 @@ class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
                     .setResultType(TypeList.BYTE)
                     .setExceptionSafe(exceptionSafe)
                     .setNoConsts(noconsts);
-            double chanceExpression = ProductionParams.chanceExpressionIndex.value() / 100;
             ArrayList<IRNode> dims = new ArrayList<>(arrayResultType.dimensions);
-            for (int i = 0; i < arrayResultType.dimensions; i++) {
-                if (PseudoRandom.randomBoolean(chanceExpression)) {
-                    dims.add(builder.withOperatorLimit((int) (PseudoRandom.random()
-                                * operatorLimit / arrayResultType.dimensions))
-                            .getExpressionFactory()
-                            .produce());
-                } else {
-                    // FIXME: temporary simplification for collection-alignment experiments:
-                    // treat all arrays as int-typed for sizing and use one generation-wide fixed int count.
-                    int preferredSize = GenerationState.preferredIntCollectionSize();
-                    int byteSizedDimension = Math.max(1, Math.min(Byte.MAX_VALUE, preferredSize));
-                    dims.add(new Literal((byte) byteSizedDimension, TypeList.BYTE));
-                }
-            }
             VariableDeclaration var = builder
                     .setOwnerKlass(ownerClass)
                     .setResultType(arrayResultType)
@@ -96,6 +78,11 @@ class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
                     .setIsStatic(false)
                     .getVariableDeclarationFactory()
                     .produce();
+            int variableSize = var.getVariableInfo().getArrayLength()
+                    .orElseThrow(ProductionFailedException::new);
+            for (int i = 0; i < arrayResultType.dimensions; i++) {
+                dims.add(new Literal(variableSize, TypeList.INT));
+            }
             return new CollectionCreation(var, arrayResultType, dims, storageKind);
         }
         throw new ProductionFailedException();

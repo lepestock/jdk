@@ -84,6 +84,18 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
             thisSymbol = SymbolTable.get("this", VariableInfo.class);
             SymbolTable.remove(thisSymbol);
         }
+        String resultName = "var_" + SymbolTable.getNextVariableNumber();
+        int flags = VariableInfo.INITIALIZED;
+        if (constant) {
+            flags |= VariableInfo.FINAL;
+        }
+        if (isStatic) {
+            flags |= VariableInfo.STATIC;
+        }
+        if (isLocal) {
+            flags |= VariableInfo.LOCAL;
+        }
+        VariableInfo varInfo = new VariableInfo(resultName, ownerClass, resultType, flags);
         IRNode init;
         try {
             if (forbidThisScope) {
@@ -100,7 +112,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                                     .setResultType(resultType)
                                     .setExceptionSafe(exceptionSafe)
                                     .setNoConsts(noConstsForInitExpr)
-                                    .getCollectionInitializerFactory()
+                                    .getCollectionInitializerFactory(varInfo)
                                     .produce();
                         } else {
                         IRNodeBuilder exprBuilder = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
@@ -146,18 +158,6 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                 SymbolTable.add(thisSymbol);
             }
         }
-        String resultName = "var_" + SymbolTable.getNextVariableNumber();
-        int flags = VariableInfo.INITIALIZED;
-        if (constant) {
-            flags |= VariableInfo.FINAL;
-        }
-        if (isStatic) {
-            flags |= VariableInfo.STATIC;
-        }
-        if (isLocal) {
-            flags |= VariableInfo.LOCAL;
-        }
-        VariableInfo varInfo = new VariableInfo(resultName, ownerClass, resultType, flags);
         SymbolTable.add(varInfo);
         return new VariableInitialization(varInfo, init);
     }

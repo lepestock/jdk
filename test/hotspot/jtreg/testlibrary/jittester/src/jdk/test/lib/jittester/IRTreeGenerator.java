@@ -49,7 +49,6 @@ public class IRTreeGenerator {
         //NB: SymbolTable is a widely-used singleton, hence all the locking.
         SymbolTable.removeAll();
         TypeList.removeAll();
-        GenerationState.initializePreferredIntCollectionSize();
 
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setPrefix(name)

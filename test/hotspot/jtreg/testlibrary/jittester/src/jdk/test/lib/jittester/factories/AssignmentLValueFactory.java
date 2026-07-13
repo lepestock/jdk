@@ -165,11 +165,18 @@ class AssignmentLValueFactory extends Factory<IRNode> {
             Symbol iterationSymbol = iterationVariable == null
                     ? null
                     : SymbolTable.get(iterationVariable, VariableInfo.class);
-            if (iterationSymbol instanceof VariableInfo iterationInfo && PseudoRandom.randomBoolean()) {
+            if (iterationSymbol instanceof VariableInfo iterationInfo
+                    && canUseIterationIndex(arrayInfo)
+                    && PseudoRandom.randomBoolean()) {
                 return new LocalVariable(iterationInfo);
             }
-            int arrayLength = arrayInfo.getArrayLength().orElse(GenerationState.preferredIntCollectionSize());
+            int arrayLength = arrayInfo.getArrayLength().orElseThrow(IllegalStateException::new);
             return new Literal(PseudoRandom.randomNotNegative(arrayLength), TypeList.INT);
+        }
+
+        private static boolean canUseIterationIndex(VariableInfo arrayInfo) {
+            int iterationLimit = GenerationState.currentFlowParams().arrayKernelIterationLimit();
+            return iterationLimit <= 0 || arrayInfo.getArrayLength().orElse(0) >= iterationLimit;
         }
     }
 }
