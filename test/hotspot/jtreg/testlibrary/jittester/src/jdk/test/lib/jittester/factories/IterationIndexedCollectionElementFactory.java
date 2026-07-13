@@ -96,6 +96,9 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
             if (varInfo.getArrayLength().isEmpty()) {
                 continue;
             }
+            if (!canUseIterationIndex(varInfo)) {
+                continue;
+            }
             if (varInfo.isLocal()) {
                 arrayCandidates.add(new LocalVariable(varInfo));
                 arrayCandidateInfos.add(varInfo);
@@ -145,6 +148,9 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
             if (varInfo.getArrayLength().isEmpty()) {
                 continue;
             }
+            if (!canUseIterationIndex(varInfo)) {
+                continue;
+            }
             if (varInfo.isLocal() || varInfo.isStatic()) {
                 return true;
             }
@@ -178,6 +184,11 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
             }
         }
         return result;
+    }
+
+    private static boolean canUseIterationIndex(VariableInfo varInfo) {
+        int iterationLimit = GenerationState.currentFlowParams().arrayKernelIterationLimit();
+        return iterationLimit <= 0 || varInfo.getArrayLength().orElse(0) >= iterationLimit;
     }
 
     private static IndexedStorageKind storageKind(VariableInfo variableInfo) {

@@ -25,7 +25,6 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import jdk.test.lib.jittester.BinaryOperator;
-import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.OperatorKind;
@@ -90,22 +89,19 @@ class CollectionElementFactory extends SafeFactory<CollectionElement> {
                 .getExpressionFactory();
         double chanceExpression = ProductionParams.chanceExpressionIndex.value() / 100.;
         ArrayList<IRNode> perDimensionExpressions = new ArrayList<>(dimensionsCount);
-        int preferredSize = GenerationState.preferredIntCollectionSize();
+        int variableSize = collectionVariable.getVariableInfo().getArrayLength()
+                .orElseThrow(ProductionFailedException::new);
         Literal shiftByOne = new Literal(1, TypeList.INT);
-        Literal preferredSizeLiteral = new Literal(preferredSize, TypeList.INT);
+        Literal variableSizeLiteral = new Literal(variableSize, TypeList.INT);
         for (int i = 0; i < dimensionsCount; i++) {
             if (PseudoRandom.randomBoolean(chanceExpression)) {
                 IRNode rawIndex = expressionFactory.produce();
                 IRNode nonNegative = new BinaryOperator(OperatorKind.SAR, TypeList.INT, rawIndex, shiftByOne);
-                IRNode bounded = new BinaryOperator(OperatorKind.MOD, TypeList.INT, nonNegative, preferredSizeLiteral);
+                IRNode bounded = new BinaryOperator(OperatorKind.MOD, TypeList.INT, nonNegative, variableSizeLiteral);
                 perDimensionExpressions.add(bounded);
             } else {
-                byte dimLimit = 0;
-                if (collectionVariable.getVariableInfo().getArrayLength().isPresent()) {
-                    dimLimit = (byte) collectionVariable.getVariableInfo().getArrayLength().getAsInt();
-                }
-                int boundedLimit = dimLimit > 0 ? dimLimit : preferredSize;
-                perDimensionExpressions.add(new Literal((byte)PseudoRandom.randomNotNegative(boundedLimit), TypeList.BYTE));
+                perDimensionExpressions.add(new Literal(PseudoRandom.randomNotNegative(variableSize),
+                        TypeList.INT));
             }
         }
         CollectionElement produced = new CollectionElement(collectionVariable, perDimensionExpressions,

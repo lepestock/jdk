@@ -81,6 +81,6 @@ public class VariableInfo extends Symbol {
         if (!(symbolType instanceof TypeArray)) {
             return;
         }
-        arrayLength = OptionalInt.of(GenerationState.preferredIntCollectionSize());
+        arrayLength = OptionalInt.of(ContainerSizePicker.pickIntContainerSize());
     }
 }

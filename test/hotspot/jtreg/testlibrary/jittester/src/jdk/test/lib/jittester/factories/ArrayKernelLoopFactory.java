@@ -27,6 +27,7 @@ import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.LiteralInitializer;
 import jdk.test.lib.jittester.GenerationState;
+import jdk.test.lib.jittester.KernelTripCountPicker;
 import jdk.test.lib.jittester.LocalVariable;
 import jdk.test.lib.jittester.Nothing;
 import jdk.test.lib.jittester.OperatorKind;
@@ -92,7 +93,7 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
                 .setCanHaveThrow(false);
 
         Type counterType = pickCounterType();
-        int thisLoopIterLimit = clampTripCount(counterType, GenerationState.preferredIntCollectionSize());
+        int thisLoopIterLimit = clampTripCount(counterType, KernelTripCountPicker.pick());
         boolean reverse = PseudoRandom.randomBoolean();
         Loop loop = new Loop();
         loop.initialization = createCounterInitializer(counterType, reverse ? thisLoopIterLimit - 1 : 0);
@@ -122,6 +123,7 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
                     .setCanHaveReturn(false)
                     .setCanHaveThrow(false)
                     .withArrayKernelVariable(iterationVariable)
+                    .withArrayKernelIterationLimit(thisLoopIterLimit)
                     .withInArrayKernel(true)
                     // Generic array expression roots tend to collapse kernel RHS into simple loads.
                     .withCollectionElementExpressionWeightPercent(KERNEL_ARRAY_ELEMENT_EXPRESSION_WEIGHT_PERCENT)

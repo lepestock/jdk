@@ -25,10 +25,10 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.List;
-import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
@@ -40,15 +40,17 @@ class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
     private final Type resultType;
     private final boolean exceptionSafe;
     private final boolean noConsts;
+    private final VariableInfo targetVariableInfo;
 
     CollectionInitializerFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
-            Type resultType, boolean exceptionSafe, boolean noConsts) {
+            Type resultType, boolean exceptionSafe, boolean noConsts, VariableInfo targetVariableInfo) {
         this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
         this.exceptionSafe = exceptionSafe;
         this.noConsts = noConsts;
+        this.targetVariableInfo = targetVariableInfo;
     }
 
     @Override
@@ -60,7 +62,7 @@ class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
             throw new ProductionFailedException();
         }
         Type elementType = arrayType.type;
-        int elementCount = chooseElementCount(elementType);
+        int elementCount = chooseElementCount();
         long perElemComplexity = Math.max(1L, complexityLimit / Math.max(1, elementCount));
         int perElemOps = Math.max(1, operatorLimit / Math.max(1, elementCount));
         IRNodeBuilder elementBuilder = new IRNodeBuilder()
@@ -77,10 +79,11 @@ class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
         return new CollectionInitializer(arrayType, elements, arrayType.getStorageKind());
     }
 
-    private int chooseElementCount(Type elementType) {
-        // FIXME: temporary simplification for collection-alignment experiments:
-        // treat all arrays as int-typed for sizing and use one generation-wide fixed int count.
-        return GenerationState.preferredIntCollectionSize();
+    private int chooseElementCount() throws ProductionFailedException {
+        if (targetVariableInfo == null) {
+            throw new ProductionFailedException();
+        }
+        return targetVariableInfo.getArrayLength().orElseThrow(ProductionFailedException::new);
     }
 
     private IRNode produceElement(IRNodeBuilder elementBuilder) throws ProductionFailedException {

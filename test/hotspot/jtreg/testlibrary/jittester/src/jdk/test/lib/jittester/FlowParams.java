@@ -40,6 +40,7 @@ public final class FlowParams {
     private final int statementLimit;
     private final int operatorLimit;
     private final String iterationVariable;
+    private final int arrayKernelIterationLimit;
     private final boolean inArrayKernel;
     private final boolean preferIterationIndexedArrayTerminal;
     private final Type fixedOperandType;
@@ -49,7 +50,7 @@ public final class FlowParams {
     private final Set<String> iterationVariables;
 
     private FlowParams(FlowParams prev, long complexityLimit, int statementLimit, int operatorLimit,
-                       String iterationVariable, boolean inArrayKernel,
+                       String iterationVariable, int arrayKernelIterationLimit, boolean inArrayKernel,
                        boolean preferIterationIndexedArrayTerminal,
                        Type fixedOperandType,
                        int arrayElementExpressionWeightPercent,
@@ -61,6 +62,7 @@ public final class FlowParams {
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.iterationVariable = iterationVariable;
+        this.arrayKernelIterationLimit = arrayKernelIterationLimit;
         this.inArrayKernel = inArrayKernel;
         this.preferIterationIndexedArrayTerminal = preferIterationIndexedArrayTerminal;
         this.fixedOperandType = fixedOperandType;
@@ -76,6 +78,7 @@ public final class FlowParams {
                 ProductionParams.statementLimit.value(),
                 ProductionParams.operatorLimit.value(),
                 null,
+                0,
                 false,
                 false,
                 null,
@@ -99,6 +102,10 @@ public final class FlowParams {
 
     public String iterationVariable() {
         return iterationVariable;
+    }
+
+    public int arrayKernelIterationLimit() {
+        return arrayKernelIterationLimit;
     }
 
     public boolean inArrayKernel() {
@@ -183,6 +190,7 @@ public final class FlowParams {
                 + ", statementLimit=" + statementLimit
                 + ", operatorLimit=" + operatorLimit
                 + ", iterationVariable=" + (iterationVariable == null ? "<none>" : iterationVariable)
+                + ", arrayKernelIterationLimit=" + arrayKernelIterationLimit
                 + ", inArrayKernel=" + inArrayKernel
                 + ", preferIterationIndexedArrayTerminal=" + preferIterationIndexedArrayTerminal
                 + ", fixedOperandType=" + (fixedOperandType == null ? "<none>" : fixedOperandType.getName())
@@ -214,6 +222,7 @@ public final class FlowParams {
         private int statementLimit;
         private int operatorLimit;
         private String iterationVariable;
+        private int arrayKernelIterationLimit;
         private boolean inArrayKernel;
         private boolean preferIterationIndexedArrayTerminal;
         private Type fixedOperandType;
@@ -231,6 +240,7 @@ public final class FlowParams {
             this.statementLimit = base.statementLimit;
             this.operatorLimit = base.operatorLimit;
             this.iterationVariable = base.iterationVariable;
+            this.arrayKernelIterationLimit = base.arrayKernelIterationLimit;
             this.inArrayKernel = base.inArrayKernel;
             this.preferIterationIndexedArrayTerminal = base.preferIterationIndexedArrayTerminal;
             this.fixedOperandType = base.fixedOperandType;
@@ -263,6 +273,11 @@ public final class FlowParams {
 
         public Builder withIterationVariable(String value) {
             this.iterationVariable = value;
+            return this;
+        }
+
+        public Builder withArrayKernelIterationLimit(int value) {
+            this.arrayKernelIterationLimit = Math.max(0, value);
             return this;
         }
 
@@ -322,7 +337,7 @@ public final class FlowParams {
 
         public FlowParams advance() {
             return new FlowParams(base, complexityLimit, statementLimit, operatorLimit, iterationVariable,
-                    inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
+                    arrayKernelIterationLimit, inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
                     arrayElementExpressionWeightPercent, arrayExtractionExpressionWeightPercent,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
                     Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)));

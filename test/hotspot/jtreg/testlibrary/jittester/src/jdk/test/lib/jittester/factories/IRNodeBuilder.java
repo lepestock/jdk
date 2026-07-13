@@ -59,6 +59,7 @@ import jdk.test.lib.jittester.UnaryOperator;
 import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableDeclaration;
 import jdk.test.lib.jittester.VariableDeclarationBlock;
+import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.VariableInitialization;
 import jdk.test.lib.jittester.collections.CollectionCreation;
 import jdk.test.lib.jittester.collections.CollectionElement;
@@ -121,6 +122,7 @@ public class IRNodeBuilder {
     private Optional<FunctionInfo> functionInfo = Optional.empty();
     private Optional<Boolean> semicolon = Optional.empty();
     private Optional<String> arrayKernelIterationVariable = Optional.empty();
+    private Optional<Integer> arrayKernelIterationLimit = Optional.empty();
     private Optional<Boolean> inArrayKernel = Optional.empty();
     private Optional<Boolean> preferIterationIndexedArrayTerminal = Optional.empty();
     private Optional<Type> fixedOperandType = Optional.empty();
@@ -154,9 +156,9 @@ public class IRNodeBuilder {
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
-    public Factory<CollectionInitializer> getCollectionInitializerFactory() {
+    public Factory<CollectionInitializer> getCollectionInitializerFactory(VariableInfo targetVariableInfo) {
         return new CollectionInitializerFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
-                getResultType(), getExceptionSafe(), getNoConsts());
+                getResultType(), getExceptionSafe(), getNoConsts(), targetVariableInfo);
     }
 
     public Factory<Operator> getAssignmentOperatorFactory() {
@@ -285,6 +287,7 @@ public class IRNodeBuilder {
                 flowParams().statementLimit(),
                 flowParams().operatorLimit());
         arrayKernelIterationVariable.ifPresent(flowBuilder::withIterationVariable);
+        arrayKernelIterationLimit.ifPresent(flowBuilder::withArrayKernelIterationLimit);
         inArrayKernel.ifPresent(flowBuilder::withInArrayKernel);
         arrayElementExpressionWeightPercent.ifPresent(flowBuilder::withCollectionElementExpressionWeightPercent);
         arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withCollectionExtractionExpressionWeightPercent);
@@ -762,6 +765,15 @@ public class IRNodeBuilder {
 
     public IRNodeBuilder withArrayKernelVariable(String value) {
         return setArrayKernelIterationVariable(value);
+    }
+
+    public IRNodeBuilder setArrayKernelIterationLimit(int value) {
+        arrayKernelIterationLimit = Optional.of(value);
+        return this;
+    }
+
+    public IRNodeBuilder withArrayKernelIterationLimit(int value) {
+        return setArrayKernelIterationLimit(value);
     }
 
     public IRNodeBuilder setInArrayKernel(boolean value) {

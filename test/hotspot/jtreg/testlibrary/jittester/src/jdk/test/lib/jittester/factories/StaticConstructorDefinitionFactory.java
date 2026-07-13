@@ -135,7 +135,7 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
                 .setResultType(arrayType)
                 .setExceptionSafe(true)
                 .setNoConsts(false);
-        CollectionInitializer initializer = initBuilder.getCollectionInitializerFactory().produce();
+        CollectionInitializer initializer = initBuilder.getCollectionInitializerFactory(variableInfo).produce();
         variableInfo.flags |= VariableInfo.INITIALIZED;
         StaticMemberVariable target = new StaticMemberVariable(ownerClass, variableInfo);
         return new Statement(new BinaryOperator(OperatorKind.ASSIGN, arrayType, target, initializer), true);
