@@ -86,7 +86,8 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         }
         String resultName = "var_" + SymbolTable.getNextVariableNumber();
         int flags = VariableInfo.INITIALIZED;
-        if (constant) {
+        if (FinalVariablePolicy.shouldMakeInitializedVariableFinal(ownerClass, resultType,
+                isLocal, isStatic, constant)) {
             flags |= VariableInfo.FINAL;
         }
         if (isStatic) {

@@ -24,7 +24,6 @@
 package jdk.test.lib.jittester.factories;
 
 import jdk.test.lib.jittester.ProductionFailedException;
-import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
@@ -46,8 +45,8 @@ class ArgumentDeclarationFactory extends Factory<ArgumentDeclaration> {
     public ArgumentDeclaration produce() throws ProductionFailedException {
         Type resultType = PseudoRandom.randomElement(TypeList.getAll());
         String resultName = "arg_" + argumentNumber;
-        int flags = ((!ProductionParams.disableFinalVariables.value()
-                && PseudoRandom.randomBoolean()) ? VariableInfo.FINAL : VariableInfo.NONE)
+        int flags = (FinalVariablePolicy.shouldMakeArgumentFinal(resultType)
+                ? VariableInfo.FINAL : VariableInfo.NONE)
                 | VariableInfo.LOCAL | VariableInfo.INITIALIZED;
         VariableInfo v = new VariableInfo(resultName, ownerClass, resultType, flags);
         SymbolTable.add(v);

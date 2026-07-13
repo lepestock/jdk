@@ -64,7 +64,8 @@ class DeclarationFactory extends Factory<Declaration> {
                 .withOperatorLimit(operatorLimit)
                 .setIsLocal(isLocal)
                 .setExceptionSafe(exceptionSafe);
-        if (!isConstant) {
+        boolean valueClassInstanceField = FinalVariablePolicy.isValueClassInstanceField(ownerClass, isLocal, false);
+        if (!isConstant && !valueClassInstanceField) {
             rule.add("decl", builder
                     .setIsStatic(false)
                     .getVariableDeclarationFactory());
@@ -73,7 +74,7 @@ class DeclarationFactory extends Factory<Declaration> {
                     .setIsStatic(false)
                     .getVariableInitializationFactory());
         }
-        if (!ProductionParams.disableFinalVariables.value()) {
+        if (!ProductionParams.disableFinalVariables.value() || valueClassInstanceField) {
             rule.add("const_decl_and_init", builder
                     .setIsConstant(true)
                     .setIsStatic(false)
