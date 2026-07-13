@@ -61,15 +61,14 @@ class IfFactory extends SafeFactory<If> {
     public If sproduce() throws ProductionFailedException {
         // resizeUpChildren(If.IfPart.values().length);
         if (statementLimit > 0 && complexityLimit > 0) {
-            long conditionComplLimit = (long) (0.01 * PseudoRandom.random() * (complexityLimit - 1));
+            long conditionComplLimit = Math.max(1L, (long) (0.05 * PseudoRandom.random() * (complexityLimit - 1)));
             IRNodeBuilder builder = new IRNodeBuilder()
                     .setOwnerKlass(ownerClass)
                     .withOperatorLimit(operatorLimit);
             IRNode condition = builder.withComplexityLimit(conditionComplLimit)
                     .setResultType(TypeList.BOOLEAN)
                     .setExceptionSafe(false)
-                    .setNoConsts(false)
-                    .getLimitedExpressionFactory()
+                    .getBooleanConditionFactory()
                     .produce();
             // setChild(If.IfPart.CONDITION.ordinal(), condition);
             long remainder = complexityLimit - 1 - condition.complexity();

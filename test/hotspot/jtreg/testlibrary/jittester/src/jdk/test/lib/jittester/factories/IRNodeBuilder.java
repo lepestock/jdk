@@ -432,6 +432,11 @@ public class IRNodeBuilder {
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
+    public Factory<IRNode> getBooleanConditionFactory() throws ProductionFailedException {
+        return new BooleanConditionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(),
+                getOwnerClass(), getExceptionSafe());
+    }
+
     public Factory<IRNode> getDenominatorExpressionFactory() throws ProductionFailedException {
         return new DenominatorExpressionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());

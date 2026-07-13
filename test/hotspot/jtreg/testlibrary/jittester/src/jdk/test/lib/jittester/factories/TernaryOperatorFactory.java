@@ -61,8 +61,7 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         IRNode conditionalExp = builder.withComplexityLimit(condComplLimit)
                 .withOperatorLimit(condOpLimit)
                 .setResultType(TypeList.BOOLEAN)
-                .setNoConsts(noconsts)
-                .getExpressionFactory()
+                .getBooleanConditionFactory()
                 .produce();
         // Ignore initializations performed in left and right branches:
         IRNode leftExp;
