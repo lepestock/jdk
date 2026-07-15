@@ -32,6 +32,8 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class DeclarationFactory extends Factory<Declaration> {
+    private static final double LOCAL_DECLARATION_ONLY_WEIGHT = 0.05;
+
     private final int operatorLimit;
     private final long complexityLimit;
     private final boolean isLocal;
@@ -68,7 +70,7 @@ class DeclarationFactory extends Factory<Declaration> {
         if (!isConstant && !valueClassInstanceField) {
             rule.add("decl", builder
                     .setIsStatic(false)
-                    .getVariableDeclarationFactory());
+                    .getVariableDeclarationFactory(), declarationOnlyWeight());
             rule.add("decl_and_init", builder
                     .setIsConstant(false)
                     .setIsStatic(false)
@@ -97,5 +99,9 @@ class DeclarationFactory extends Factory<Declaration> {
             }
         }
         return new Declaration(rule.produce());
+    }
+
+    private double declarationOnlyWeight() {
+        return isLocal ? LOCAL_DECLARATION_ONLY_WEIGHT : 1.0;
     }
 }
