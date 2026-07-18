@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.GenerationState;
+import jdk.test.lib.jittester.LocalVariable;
 import jdk.test.lib.jittester.NonStaticMemberVariable;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Symbol;
@@ -91,7 +92,8 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                 if ((varInfo.flags & VariableInfo.FINAL) == (flags & VariableInfo.FINAL)
                         && (varInfo.flags & VariableInfo.INITIALIZED) == (flags & VariableInfo.INITIALIZED)
                         && (varInfo.flags & VariableInfo.STATIC) == 0
-                        && (varInfo.flags & VariableInfo.LOCAL) == 0) {
+                        && (varInfo.flags & VariableInfo.LOCAL) == 0
+                        && VariableFactory.hasAccessibleReceiver((TypeKlass) ownerClass, varInfo)) {
                     GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
                     try {
                         if (DEBUG_SELECTION) {
@@ -111,8 +113,15 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                                     variables, varInfo);
                         }
                         Logger.log(SEED == 194820577109216L, ":expressionSeed " + PseudoRandom.getCurrentSeed());
-                        IRNode object = builder.setResultType(varInfo.owner)
-                                .getExpressionFactory().produce();
+                        IRNode object;
+                        if (VariableFactory.canUseImplicitThis((TypeKlass) ownerClass, varInfo)) {
+                            VariableInfo thisInfo = new VariableInfo("this", varInfo.owner, varInfo.owner,
+                                    VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+                            object = new LocalVariable(thisInfo);
+                        } else {
+                            object = builder.setResultType(varInfo.owner)
+                                    .getExpressionFactory().produce();
+                        }
                         if (!replayMode) {
                             Genome.commitSpeculativeRecord();
                         }
