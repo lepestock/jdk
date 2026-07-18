@@ -75,6 +75,7 @@ class MainKlassFactory extends Factory<MainKlass> {
         parent.addChild(thisKlass);
         SymbolTable.add(new VariableInfo("this", thisKlass, thisKlass,
                 VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED));
+        SymbolTable.add(new FunctionInfo(thisKlass.getName(), thisKlass, thisKlass, 0, FunctionInfo.PUBLIC));
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(thisKlass)
                 .withOperatorLimit(operatorLimit)
