@@ -32,6 +32,7 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 
@@ -39,6 +40,7 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
     private final Rule<VariableBase> rule;
     private final Type resultType;
     private final int flags;
+    private final TypeKlass ownerClass;
 
     VariableFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean constant, boolean initialized, boolean exceptionSafe, boolean noconsts) {
@@ -51,6 +53,7 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
         }
         this.resultType = resultType;
         this.flags = flags;
+        this.ownerClass = ownerClass;
         rule = new Rule<>("variable");
         IRNodeBuilder b = new IRNodeBuilder().setResultType(resultType)
                 .setFlags(flags)
@@ -126,12 +129,63 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
     }
 
     private boolean isNonStaticCandidate(VariableInfo varInfo) {
-        return !varInfo.isLocal() && !varInfo.isStatic();
+        if (varInfo.isLocal() || varInfo.isStatic()) {
+            return false;
+        }
+        return hasAccessibleReceiver(ownerClass, varInfo);
     }
 
     private boolean matchesFlags(VariableInfo varInfo) {
         return (varInfo.flags & VariableInfo.FINAL) == (flags & VariableInfo.FINAL)
                 && (varInfo.flags & VariableInfo.INITIALIZED) == (flags & VariableInfo.INITIALIZED);
+    }
+
+    static boolean hasAccessibleReceiver(TypeKlass ownerClass, VariableInfo varInfo) {
+        return canUseImplicitThis(ownerClass, varInfo)
+                || hasConstructibleReceiver(ownerClass, varInfo.owner)
+                || hasDirectReceiverVariable(varInfo);
+    }
+
+    static boolean canUseImplicitThis(TypeKlass ownerClass, VariableInfo varInfo) {
+        return !ThisVariableControl.isThisForbidden()
+                && ownerClass.equals(varInfo.owner);
+    }
+
+    private static boolean hasConstructibleReceiver(TypeKlass ownerClass, TypeKlass type) {
+        for (Symbol symbol : SymbolTable.get(type, FunctionInfo.class)) {
+            FunctionInfo functionInfo = (FunctionInfo) symbol;
+            if (functionInfo.isConstructor()
+                    && !functionInfo.owner.isAbstract()
+                    && !functionInfo.owner.isInterface()
+                    && isConstructorVisible(ownerClass, functionInfo)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isConstructorVisible(TypeKlass ownerClass, FunctionInfo functionInfo) {
+        if (ownerClass.equals(functionInfo.owner)) {
+            return true;
+        }
+        int access = functionInfo.flags & Symbol.ACCESS_ATTRS_MASK;
+        return access == Symbol.PUBLIC || access == Symbol.DEFAULT;
+    }
+
+    private static boolean hasDirectReceiverVariable(VariableInfo targetField) {
+        for (Symbol symbol : SymbolTable.get(targetField.owner, VariableInfo.class)) {
+            VariableInfo candidate = (VariableInfo) symbol;
+            if ((candidate.flags & VariableInfo.INITIALIZED) == 0) {
+                continue;
+            }
+            if ("this".equals(candidate.name) && ThisVariableControl.isThisForbidden()) {
+                continue;
+            }
+            if (candidate.isLocal() || candidate.isStatic()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static double clamp01(double value) {
