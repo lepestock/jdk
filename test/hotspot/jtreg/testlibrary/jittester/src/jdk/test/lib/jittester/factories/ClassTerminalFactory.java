@@ -152,6 +152,7 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
                 .append(" owner=").append(ownerClass.getName())
                 .append(" complexityLimit=").append(complexityLimit)
                 .append(" operatorLimit=").append(operatorLimit)
+                .append(" thisForbidden=").append(ThisVariableControl.isThisForbidden())
                 .append('\n');
         if (constructors == null) {
             sb.append("constructors=<null>\n");
