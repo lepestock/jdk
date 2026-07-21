@@ -54,13 +54,14 @@ JAR = $(JDK_HOME)/bin/jar
 
 BUILD_DIR = build
 CLASSES_DIR = $(BUILD_DIR)/classes
+JITTESTER_FILELIST = $(CLASSES_DIR)/filelist_jittester
 SRC_DIR = src
 TEST_DIR = test
 MANIFEST = manifest.mf
 APPLICATION_ARGS += \
     --property-file $(PROPERTY_FILE) \
     --testbase-dir $(TESTBASE_DIR)
-MAIN_CLASS = JitTestGenerator.Automatic
+MAIN_CLASS = jdk.test.lib.jittester.JavaCodeGenerator
 
 TESTGROUP_FILE = $(TESTBASE_DIR)/TEST.groups
 TESTROOT_FILE =  $(TESTBASE_DIR)/TEST.ROOT
@@ -87,20 +88,20 @@ ASM_SRC_DIR = ../asm/org/objectweb/asm/
 GENERATORS_SRC_DIR = ../../compiler/lib/generators
 GENERATORS_SRC_FILES = $(shell find $(GENERATORS_SRC_DIR) -name '*.java')
 
-.PHONY: cleantmp
+.PHONY: cleantmp filelist
 
 all: $(DIST_JAR)
 
 $(DIST_JAR): INIT COMPILE manifest
 	$(JAR) cfm $(DIST_JAR) $(MANIFEST) -C $(CLASSES_DIR) .
 
-rebuild:
-	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) -Xmaxerrs 5 @filelist
+rebuild: filelist
+	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) -Xmaxerrs 5 @$(JITTESTER_FILELIST)
 
 manifest:
 	@echo 'Manifest-Version: 1.0' > $(MANIFEST)
 	@echo 'X-COMMENT: Main-Class will be added automatically by build' >> $(MANIFEST)
-	@echo 'Main-Class: jdk.test.lib.jittester.Automatic' >> $(MANIFEST)
+	@echo 'Main-Class: jdk.test.lib.jittester.JavaCodeGenerator' >> $(MANIFEST)
 
 $(CLASSES_DIR)/filelist_asm: INIT
 	$(shell find $(ASM_SRC_DIR) -name '*.java' > $(CLASSES_DIR)/filelist_asm)
@@ -115,12 +116,12 @@ compile_generators: INIT
 	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/org.objectweb.asm=ALL-UNNAMED -Xlint $(GENERATORS_SRC_FILES) -d $(CLASSES_DIR)
 
 COMPILE: INIT filelist compile_asm compile_testlib compile_generators
-	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -Xlint -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) @filelist
+	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -Xlint -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) @$(JITTESTER_FILELIST)
 
-filelist: $(SRC_FILES)
-		@rm -f $@
-		@echo $(SRC_FILES) > $@
-		@echo $(EXTRA_SRC_FILES) >> $@
+filelist: INIT
+	@rm -f $(JITTESTER_FILELIST)
+	@find $(SRC_DIR) -name '*.java' | sort > $(JITTESTER_FILELIST)
+	@if [ -n "$(EXTRA_SRC_FILES)" ]; then printf '%s\n' $(EXTRA_SRC_FILES) >> $(JITTESTER_FILELIST); fi
 
 INIT: $(DIST_DIR)
 	$(shell if [ ! -d $(CLASSES_DIR) ]; then mkdir -p $(CLASSES_DIR); fi)
@@ -132,7 +133,7 @@ clean_testbase:
 	@rm -rf $(TESTBASE_DIR)
 
 cleantmp:
-	@rm filelist
+	@rm -f $(JITTESTER_FILELIST)
 	@rm -rf $(CLASSES_DIR)
 
 copytestlibrary: $(TESTBASE_DIR)/jdk/test/lib/jittester/jtreg
