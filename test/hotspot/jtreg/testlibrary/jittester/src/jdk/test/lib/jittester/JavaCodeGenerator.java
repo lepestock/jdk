@@ -128,6 +128,7 @@ public class JavaCodeGenerator extends TestsGenerator {
                 generator.generateSources(test.seed(), test.mainClass(), test.privateClasses());
             }
         } finally {
+            GenerationWorkStats.printSummary();
             Genome.close();
         }
     }

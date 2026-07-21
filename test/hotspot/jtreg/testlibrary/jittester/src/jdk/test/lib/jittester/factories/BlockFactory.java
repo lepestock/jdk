@@ -26,6 +26,7 @@ package jdk.test.lib.jittester.factories;
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.Gene;
 import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.GenerationWorkStats;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.If;
@@ -201,12 +202,14 @@ class BlockFactory extends Factory<Block> {
                             }
                             addControlFlowDeviation(rule, builder);
                         }
+                        GenerationWorkStats.Snapshot workBefore = GenerationWorkStats.snapshot();
                         try {
                             IRNode choiceResult = rule.produce();
                             attemptedStatements++;
                             successfulStatements++;
                             content.add(choiceResult);
                         } catch (ProductionFailedException e) {
+                            GenerationWorkStats.printCatchDelta("BlockFactory.statement", workBefore, e);
                             if (e instanceof MutationScopeProductionFailedException
                                     && !Genome.isReplayMutationScopeActive()) {
                                 throw new RuntimeException(
@@ -223,9 +226,11 @@ class BlockFactory extends Factory<Block> {
                             attemptedStatements++;
                             failedStatements++;
                         } catch (RuntimeException e) {
+                            GenerationWorkStats.printCatchDelta("BlockFactory.statement", workBefore, e);
                             statementThrowable = e;
                             throw e;
                         } catch (Error e) {
+                            GenerationWorkStats.printCatchDelta("BlockFactory.statement", workBefore, e);
                             statementThrowable = e;
                             throw e;
                         } finally {
