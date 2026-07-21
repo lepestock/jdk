@@ -79,7 +79,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(false);
         Symbol thisSymbol = null;
-        boolean forbidThisScope = !isLocal;
+        boolean forbidThisScope = isStatic;
         if (isStatic) {
             thisSymbol = SymbolTable.get("this", VariableInfo.class);
             SymbolTable.remove(thisSymbol);
