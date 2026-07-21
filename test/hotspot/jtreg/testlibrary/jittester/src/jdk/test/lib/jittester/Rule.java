@@ -114,7 +114,6 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                 }
                 GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
                 SymbolTable.push();
-                GenerationWorkStats.Snapshot workBefore = GenerationWorkStats.snapshot();
                 try {
                     T produced = selected.entry.produce();
                     SymbolTable.merge();
@@ -123,10 +122,6 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                     }
                     return produced;
                 } catch (ProductionFailedException e) {
-                    GenerationWorkStats.printCatchDelta("Rule.replay name=" + name
-                            + " gene=R" + ruleGene
-                            + " entry=" + selected.entry.name
-                            + " choice=" + replayChoice, workBefore, e);
                     if (e instanceof MutationScopeProductionFailedException
                             && !Genome.isReplayMutationScopeActive()) {
                         throw new RuntimeException("Failed to mutate: failure escaped mutable scope in rule '"
@@ -138,10 +133,6 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                     }
                     throw e;
                 } catch (RuntimeException e) {
-                    GenerationWorkStats.printCatchDelta("Rule.replay name=" + name
-                            + " gene=R" + ruleGene
-                            + " entry=" + selected.entry.name
-                            + " choice=" + replayChoice, workBefore, e);
                     GenerationState.rollbackTo(stateCheckpoint);
                     throw e;
                 }
@@ -158,7 +149,6 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                 GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
                 SymbolTable.push();
                 Genome.beginSpeculativeRecord();
-                GenerationWorkStats.Snapshot workBefore = GenerationWorkStats.snapshot();
                 try {
                     Genome.recordChoiceGene(name, selected.originalIndex);
                     if (trace) {
@@ -172,10 +162,6 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                     }
                     return produced;
                 } catch (ProductionFailedException e) {
-                    GenerationWorkStats.printCatchDelta("Rule.record name=" + name
-                            + " gene=R" + ruleGene
-                            + " entry=" + selected.entry.name
-                            + " choice=" + selected.originalIndex, workBefore, e);
                     if (e instanceof MutationScopeProductionFailedException
                             && !Genome.isReplayMutationScopeActive()) {
                         throw new RuntimeException("Failed to mutate: failure escaped mutable scope in rule '"
@@ -187,10 +173,6 @@ public class Rule<T extends IRNode> extends Factory<T> implements Comparable<Rul
                         traceRule("record-failed", ruleGene, rulesList, (long) selected.originalIndex);
                     }
                 } catch (RuntimeException e) {
-                    GenerationWorkStats.printCatchDelta("Rule.record name=" + name
-                            + " gene=R" + ruleGene
-                            + " entry=" + selected.entry.name
-                            + " choice=" + selected.originalIndex, workBefore, e);
                     Genome.rollbackSpeculativeRecord();
                     GenerationState.rollbackTo(stateCheckpoint);
                     throw e;

@@ -141,8 +141,6 @@ public class ProductionParams {
     public static Option<Boolean> blockDebug = null;
     public static Option<Integer> blockDebugAttemptWarn = null;
     public static Option<Integer> blockDebugDepthWarn = null;
-    public static Option<Boolean> rngTimingDebug = null;
-    public static Option<Boolean> generationWorkDebug = null;
     public static Option<Boolean> blockRngLogMutationStatements = null;
     public static Option<Integer> debugRichestExpressionCount = null;
     public static Option<Boolean> debugMethodCallWrapEnabled = null;
@@ -345,16 +343,6 @@ public class ProductionParams {
                 "Report block debug when attempts >= this value; 0 means report every block");
         blockDebugDepthWarn = optionResolver.addIntegerOption("block-debug-depth-warn", 0,
                 "Report block debug when block recursion depth >= this value; 0 means report every block");
-        rngTimingDebug = optionResolver.addBooleanOption(
-                null,
-                "rng-timing-debug",
-                false,
-                "Measure PseudoRandom operation counts and inclusive time");
-        generationWorkDebug = optionResolver.addBooleanOption(
-                null,
-                "generation-work-debug",
-                false,
-                "Measure IRNodeBuilder factory creation and direct produce work");
         blockRngLogMutationStatements = optionResolver.addBooleanOption(
                 null,
                 "block-rng-log-mutation-statements",
@@ -413,9 +401,6 @@ public class ProductionParams {
         activeOptionResolver = parser;
         mutationOverrides = Collections.unmodifiableMap(overrideParseResult.overrides);
         validateMutationOverrides();
-        PseudoRandom.setTimingEnabled(rngTimingDebug.value());
-        GenerationWorkStats.setEnabled(generationWorkDebug.value());
-        GenerationWorkStats.reset();
 
         GenerationState.initializeFlowParamsFromProductionParams();
 
