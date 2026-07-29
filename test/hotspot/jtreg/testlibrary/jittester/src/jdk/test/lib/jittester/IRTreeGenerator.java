@@ -99,9 +99,6 @@ public class IRTreeGenerator {
             CoreLibSymbolsLoader.load(Path.of(ProductionParams.coreLibSymbolsFile.value()));
         }
         TypesParser.applyMethodArgumentConstraints(ProductionParams.methodArgumentConstraintsFile.value());
-        if (ProductionParams.specificSeed.isSet()) {
-            PseudoRandom.setCurrentSeed(ProductionParams.specificSeed.value());
-        }
     }
 
 }

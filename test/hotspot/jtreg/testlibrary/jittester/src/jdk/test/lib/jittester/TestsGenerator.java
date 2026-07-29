@@ -147,8 +147,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     }
 
     protected String getJtregHeader(String mainClassName, long seed) {
-        // Keep header replay-stable: root --seed is not always present on replay.
-        String synopsis = "specificSeed = '" + seed + "'";
+        String synopsis = "seed = '" + seed + "'";
         StringBuilder header = new StringBuilder();
         header.append("/*\n * @test\n * @summary ")
               .append(synopsis)

@@ -49,11 +49,8 @@ public class PseudoRandom {
         }
     }
 
-    public static void reset(String seed) {
-        if (seed == null || seed.length() == 0) {
-            seed = String.valueOf(System.currentTimeMillis());
-        }
-        random = new java.util.Random(seed.hashCode());
+    public static void reset() {
+        random = new java.util.Random();
     }
 
     public static double random() {
