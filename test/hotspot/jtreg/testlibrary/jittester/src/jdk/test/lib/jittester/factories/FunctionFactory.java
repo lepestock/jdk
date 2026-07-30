@@ -298,7 +298,7 @@ public class FunctionFactory extends SafeFactory<Function> {
     }
 
     private static int getWeight(FunctionInfo info, int intrinsicBonus) {
-        return info.intrinsic ? 1 + intrinsicBonus : 1;
+        return info.isIntrinsic() ? 1 + intrinsicBonus : 1;
     }
 
     private static FunctionInfo selectWeightedFunction(List<FunctionInfo> functions, int intrinsicBonus) {
