@@ -150,19 +150,7 @@ public class TypesParser {
     }
 
     private boolean shouldIncludeMethod(Executable method) {
-        if (MethodTemplate.noneMatches(methodsToExclude, method)) {
-            return true;
-        }
-        return ProductionParams.nondeterminism.value() > 0 && isNondeterministicMethod(method);
-    }
-
-    private static boolean isNondeterministicMethod(Executable method) {
-        return method != null
-                && method.getDeclaringClass() == java.lang.System.class
-                && "nanoTime".equals(method.getName())
-                && method.getParameterCount() == 0
-                && (method instanceof Method)
-                && ((Method) method).getReturnType() == long.class;
+        return MethodTemplate.noneMatches(methodsToExclude, method);
     }
 
     private static Type getType(Class<?> klass) {

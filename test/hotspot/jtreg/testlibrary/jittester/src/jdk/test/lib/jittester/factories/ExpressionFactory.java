@@ -172,8 +172,7 @@ class ExpressionFactory extends SafeFactory<IRNode> {
             }
             rule.add("assignment", builder.getAssignmentOperatorFactory(), assignmentWeight);
             rule.add("ternary", builder.getTernaryOperatorFactory());
-            double functionWeight = ProductionParams.nondeterminism.value() > 0 ? 1.2 : 0.1;
-            rule.add("function", builder.getFunctionFactory(), functionWeight);
+            rule.add("function", builder.getFunctionFactory(), 0.1);
             if (supportsStringPlus(resultType)) {
                 rule.add("str_plus", builder.setOperatorKind(OperatorKind.STRADD).getBinaryOperatorFactory());
             }
