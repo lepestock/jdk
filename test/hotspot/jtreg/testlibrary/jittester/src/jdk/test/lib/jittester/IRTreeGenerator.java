@@ -23,7 +23,11 @@
 
 package jdk.test.lib.jittester;
 
+import java.nio.file.Path;
+
 import jdk.test.lib.jittester.factories.IRNodeBuilder;
+import jdk.test.lib.jittester.corelib.CoreLibSymbols;
+import jdk.test.lib.jittester.corelib.CoreLibSymbolsLoader;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -86,8 +90,15 @@ public class IRTreeGenerator {
      * Initializes the generator from ProductionParams static class.
      */
     public static void initializeWithProductionParams() {
-        TypesParser.parseTypesAndMethods(ProductionParams.classesFile.value(),
-                ProductionParams.excludeMethodsFile.value());
+        if (ProductionParams.coreLibSymbolsFile.value().isEmpty()) {
+            CoreLibSymbols.dump(Path.of(ProductionParams.classesFile.value()),
+                    Path.of(ProductionParams.excludeMethodsFile.value()),
+                    Path.of(ProductionParams.intrinsicMethodsFile.value()),
+                    Path.of(ProductionParams.testbaseDir.value(), CoreLibSymbols.DEFAULT_OUTPUT_FILE));
+        } else {
+            CoreLibSymbolsLoader.load(Path.of(ProductionParams.coreLibSymbolsFile.value()));
+        }
+        TypesParser.applyMethodArgumentConstraints(ProductionParams.methodArgumentConstraintsFile.value());
         if (ProductionParams.specificSeed.isSet()) {
             PseudoRandom.setCurrentSeed(ProductionParams.specificSeed.value());
         }

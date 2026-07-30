@@ -92,6 +92,16 @@ public final class MethodArgumentConstraintTemplate {
         }
     }
 
+    public static void applyAll(Collection<MethodArgumentConstraintTemplate> templates,
+            FunctionInfo functionInfo) {
+        if (templates == null || templates.isEmpty()) {
+            return;
+        }
+        for (MethodArgumentConstraintTemplate template : templates) {
+            template.apply(functionInfo);
+        }
+    }
+
     private void apply(Executable method, FunctionInfo functionInfo) {
         if (!methodTemplate.matches(method)) {
             return;
@@ -102,6 +112,20 @@ public final class MethodArgumentConstraintTemplate {
             int visibleIndex = entry.getKey();
             Asserts.assertTrue(visibleIndex <= visibleArgumentCount,
                     "Method argument constraint index is out of range for " + method);
+            functionInfo.setArgumentConstraint(internalOffset + visibleIndex - 1, entry.getValue());
+        }
+    }
+
+    private void apply(FunctionInfo functionInfo) {
+        if (!methodTemplate.matches(functionInfo)) {
+            return;
+        }
+        int internalOffset = functionInfo.isStatic() || functionInfo.isConstructor() ? 0 : 1;
+        int visibleArgumentCount = functionInfo.argTypes.size() - internalOffset;
+        for (Map.Entry<Integer, MethodArgumentConstraint> entry : visibleArgumentConstraints.entrySet()) {
+            int visibleIndex = entry.getKey();
+            Asserts.assertTrue(visibleIndex <= visibleArgumentCount,
+                    "Method argument constraint index is out of range for " + functionInfo);
             functionInfo.setArgumentConstraint(internalOffset + visibleIndex - 1, entry.getValue());
         }
     }

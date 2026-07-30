@@ -24,7 +24,7 @@
 package jdk.test.lib.jittester.types;
 
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.TreeSet;
@@ -38,8 +38,8 @@ import jdk.test.lib.jittester.Logger;
 
 public class TypeKlass extends Type {
     private TypeKlass parentKlass;
-    private final HashSet<String> parentsList;
-    private final HashSet<String> childrenList;
+    private final TreeSet<String> parentsList;
+    private final TreeSet<String> childrenList;
     private final LinkedHashSet<Symbol> symbolsSet;
     private int flags;
 
@@ -56,8 +56,8 @@ public class TypeKlass extends Type {
     public TypeKlass(String name, int flags) {
         super(name);
         this.flags = flags;
-        parentsList = new HashSet<>();
-        childrenList = new HashSet<>();
+        parentsList = new TreeSet<>();
+        childrenList = new TreeSet<>();
         symbolsSet = new LinkedHashSet<>();
     }
 
@@ -79,6 +79,18 @@ public class TypeKlass extends Type {
 
     public boolean removeAllSymbols(Collection<? extends Symbol> symbols) {
         return symbolsSet.removeAll(symbols);
+    }
+
+    public Collection<Symbol> getSymbols() {
+        return Collections.unmodifiableSet(symbolsSet);
+    }
+
+    public int getFlags() {
+        return flags;
+    }
+
+    public void setFlags(int flags) {
+        this.flags = flags;
     }
 
     @Override
@@ -106,11 +118,11 @@ public class TypeKlass extends Type {
         childrenList.remove(c);
     }
 
-    public HashSet<String> getParentsNames() {
+    public Collection<String> getParentsNames() {
         return parentsList;
     }
 
-    public HashSet<String> getChildrenNames() {
+    public Collection<String> getChildrenNames() {
         return childrenList;
     }
 
