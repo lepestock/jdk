@@ -91,17 +91,13 @@ public class FunctionFactory extends SafeFactory<Function> {
             allFunctions = new ArrayList<>(SymbolTable.get(functionInfo.type, FunctionInfo.class));
         }
         int intrinsicBonus = Math.max(0, ProductionParams.intrinsicCallWeightBonus.value());
-        int nondeterminism = Math.max(0, ProductionParams.nondeterminism.value());
-        boolean nondeterministicMode = nondeterminism > 0;
-        int nondeterministicBonus = nondeterminism;
         if (!allFunctions.isEmpty()) {
             boolean replayMode = Genome.isReplayActive();
             List<FunctionInfo> remainingFunctions = toFunctionList(allFunctions);
             remainingFunctions.sort(FUNCTION_ORDER);
             Collection<TypeKlass> klassHierarchy = ownerClass.getAllParents();
             while (!remainingFunctions.isEmpty()) {
-                FunctionInfo functionInfo = selectWeightedFunction(remainingFunctions, intrinsicBonus,
-                        nondeterministicMode, nondeterministicBonus);
+                FunctionInfo functionInfo = selectWeightedFunction(remainingFunctions, intrinsicBonus);
                 removeFunctionOnce(remainingFunctions, functionInfo);
                 // Don't try to construct abstract classes.
                 if (functionInfo.isConstructor() && functionInfo.owner.isAbstract()) {
@@ -301,38 +297,21 @@ public class FunctionFactory extends SafeFactory<Function> {
         }
     }
 
-        private static boolean isNondeterministicPreferred(FunctionInfo info) {
-        return info != null
-                && info.isStatic()
-                && info.owner != null
-                && "java.lang.System".equals(info.owner.getName())
-                && "nanoTime".equals(info.name)
-                && info.argTypes != null
-                && info.argTypes.isEmpty()
-                && info.type != null
-                && "long".equals(info.type.getName());
+    private static int getWeight(FunctionInfo info, int intrinsicBonus) {
+        return info.intrinsic ? 1 + intrinsicBonus : 1;
     }
 
-    private static int getWeight(FunctionInfo info, int intrinsicBonus, boolean nondeterministicMode, int nondeterministicBonus) {
-        int weight = info.intrinsic ? 1 + intrinsicBonus : 1;
-        if (nondeterministicMode && isNondeterministicPreferred(info)) {
-            weight += nondeterministicBonus;
-        }
-        return weight;
-    }
-
-    private static FunctionInfo selectWeightedFunction(List<FunctionInfo> functions, int intrinsicBonus,
-            boolean nondeterministicMode, int nondeterministicBonus) {
+    private static FunctionInfo selectWeightedFunction(List<FunctionInfo> functions, int intrinsicBonus) {
         if (functions.isEmpty()) {
             throw new IllegalArgumentException("functions is empty");
         }
-        if (intrinsicBonus <= 0 && (!nondeterministicMode || nondeterministicBonus <= 0)) {
+        if (intrinsicBonus <= 0) {
             return PseudoRandom.randomElement(functions);
         }
 
         double totalWeight = 0.0;
         for (FunctionInfo functionInfo : functions) {
-            totalWeight += getWeight(functionInfo, intrinsicBonus, nondeterministicMode, nondeterministicBonus);
+            totalWeight += getWeight(functionInfo, intrinsicBonus);
         }
         if (totalWeight <= 0.0) {
             return PseudoRandom.randomElement(functions);
@@ -341,7 +320,7 @@ public class FunctionFactory extends SafeFactory<Function> {
         double draw = PseudoRandom.random() * totalWeight;
         double prefix = 0.0;
         for (FunctionInfo functionInfo : functions) {
-            prefix += getWeight(functionInfo, intrinsicBonus, nondeterministicMode, nondeterministicBonus);
+            prefix += getWeight(functionInfo, intrinsicBonus);
             if (draw < prefix) {
                 return functionInfo;
             }

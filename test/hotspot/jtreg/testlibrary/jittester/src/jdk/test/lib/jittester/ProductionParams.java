@@ -62,7 +62,6 @@ public class ProductionParams {
     public static Option<Boolean> printComplexity = null;
     public static Option<Boolean> printHierarchy = null;
     public static Option<Boolean> injectRuntimeNondeterminism = null;
-    public static Option<Integer> nondeterminism = null;
     //public static BooleanOption disableFinals = optionResolver.addBooleanOption("disable-finals", "Don\'t use finals");
     public static Option<Boolean> disableFinalClasses = null;
     public static Option<Boolean> disableFinalMethods = null;
@@ -203,8 +202,6 @@ public class ProductionParams {
         printHierarchy = optionResolver.addBooleanOption("print-hierarchy", "Print resulting class hierarchy");
         injectRuntimeNondeterminism = optionResolver.addBooleanOption(null, "inject-runtime-nondeterminism", false,
                 "Inject a runtime non-deterministic print (System.nanoTime) into generated main for reproducible mismatch testing");
-        nondeterminism = optionResolver.addIntegerOption("nondeterminism", 0,
-                "Enable nondeterministic function-call mode with weight bonus for System.nanoTime(); 0 disables");
         //disableFinals = optionResolver.addBooleanOption("disable-finals", "Don\'t use finals");
         disableFinalClasses = optionResolver.addBooleanOption("disable-final-classes", "Don\'t use final classes");
         disableFinalMethods = optionResolver.addBooleanOption("disable-final-methods", "Don\'t use final methods");
