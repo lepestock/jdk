@@ -142,8 +142,10 @@ public class TypesParser {
                     paramList.add(new VariableInfo("arg" + argNum, typeKlass, paramType,
                             VariableInfo.LOCAL | VariableInfo.INITIALIZED));
                 }
+                if (MethodTemplate.anyMatches(methodsIntrinsic, method)) {
+                    flags |= FunctionInfo.INTRINSIC;
+                }
                 FunctionInfo info = new FunctionInfo(name, typeKlass, returnType, 1, flags, paramList);
-                info.intrinsic = MethodTemplate.anyMatches(methodsIntrinsic, method);
                 MethodArgumentConstraintTemplate.applyAll(methodArgumentConstraints, method, info);
                 typeKlass.addSymbol(info);
             });

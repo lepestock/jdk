@@ -39,7 +39,7 @@ public class FunctionInfo extends Symbol {
     public static final int ABSTRACT = 0x40;
     public static final int NONRECURSIVE = 0x80;
     public static final int SYNCHRONIZED = 0x100;
-    public boolean intrinsic = false;
+    public static final int INTRINSIC = 0x200;
     private HashMap<Integer, MethodArgumentConstraint> argumentConstraints = new HashMap<>();
 
     public FunctionInfo() {
@@ -67,7 +67,6 @@ public class FunctionInfo extends Symbol {
             argTypes.add(new VariableInfo(i));
         }
         complexity = value.complexity;
-        intrinsic = value.intrinsic;
         argumentConstraints = new HashMap<>(value.argumentConstraints);
     }
 
@@ -78,6 +77,10 @@ public class FunctionInfo extends Symbol {
 
     public boolean isSynchronized() {
         return (flags & SYNCHRONIZED) > 0;
+    }
+
+    public boolean isIntrinsic() {
+        return (flags & INTRINSIC) > 0;
     }
 
     @Override
