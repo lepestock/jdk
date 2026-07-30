@@ -74,7 +74,7 @@ public class TypeList {
 
         TYPES.addAll(BUILTIN_TYPES);
 
-        if (!ProductionParams.disableArrays.value()) {
+        if (!arraysDisabled()) {
             TYPES.addAll(REFERENCE_TYPES);
         }
 
@@ -82,6 +82,10 @@ public class TypeList {
         STRING.setParent(OBJECT);
         add(STRING);
         add(OBJECT);
+    }
+
+    private static boolean arraysDisabled() {
+        return ProductionParams.disableArrays != null && ProductionParams.disableArrays.value();
     }
 
     public static Collection<Type> getAll() {

@@ -100,6 +100,7 @@ public class ProductionParams {
     public static Option<String> classesFile = null;
     public static Option<String> excludeMethodsFile = null;
     public static Option<String> intrinsicMethodsFile = null;
+    public static Option<String> coreLibSymbolsFile = null;
     public static Option<String> methodArgumentConstraintsFile = null;
     public static Option<Integer> expressionGuardRawBp = null;
     public static Option<Integer> intrinsicCallWeightBonus = null;
@@ -247,6 +248,10 @@ public class ProductionParams {
         excludeMethodsFile = optionResolver.addStringOption('r', "exclude-methods-file", "conf/exclude.methods.lst", "File to read excluded methods from");
         intrinsicMethodsFile = optionResolver.addStringOption("intrinsic-methods-file", "conf/intrinsics.lst",
                 "File with methods preferred for intrinsic-oriented call bias");
+        coreLibSymbolsFile = optionResolver.addStringOption(
+                "corelib-symbols-file",
+                "",
+                "File to read precomputed core library symbols from");
         methodArgumentConstraintsFile = optionResolver.addStringOption(
                 "method-argument-constraints-file",
                 "conf/method-argument-constraints.lst",

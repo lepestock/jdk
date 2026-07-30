@@ -47,6 +47,17 @@ public class VariableInfo extends Symbol {
         initializeArrayLength(type);
     }
 
+    private VariableInfo(String name, TypeKlass owner, Type type, int flags, boolean initializeArrayLength) {
+        super(name, owner, type, flags);
+        if (initializeArrayLength) {
+            initializeArrayLength(type);
+        }
+    }
+
+    public static VariableInfo symbolArgument(String name, TypeKlass owner, Type type, int flags) {
+        return new VariableInfo(name, owner, type, flags, false);
+    }
+
     public VariableInfo(TypeKlass owner, Type type) {
         super("", owner, type, Symbol.NONE);
         initializeArrayLength(type);

@@ -36,6 +36,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import jdk.test.lib.Asserts;
+import jdk.test.lib.jittester.functions.FunctionInfo;
+import jdk.test.lib.jittester.types.TypeArray;
 
 import static java.util.function.Predicate.not;
 
@@ -89,11 +91,14 @@ public final class MethodTemplate {
     private final WildcardString klassName;
     private final WildcardString methodName;
     private final Optional<List<Class<?>>> signature;
+    private final Optional<String> signatureDescriptor;
 
-    private MethodTemplate(String klassName, String methodName, Optional<List<Class<?>>> signature) {
+    private MethodTemplate(String klassName, String methodName, Optional<List<Class<?>>> signature,
+            Optional<String> signatureDescriptor) {
         this.klassName = new WildcardString(klassName);
         this.methodName = new WildcardString(methodName);
         this.signature = signature;
+        this.signatureDescriptor = signatureDescriptor;
     }
 
     private static String generateMethodPattern() {
@@ -167,6 +172,13 @@ public final class MethodTemplate {
                      .orElse(true);
     }
 
+    public boolean matches(FunctionInfo other) {
+        boolean result = klassName.matches(other.owner.getName());
+        result &= methodName.matches(other.isConstructor() ? simpleName(other.owner.getName()) : other.name);
+        return result && signatureDescriptor.map(descriptor -> descriptor.equals(argumentDescriptor(other)))
+                .orElse(true);
+    }
+
     /**
      * Parses the given string and returs a MethodTemplate.
      *
@@ -181,10 +193,58 @@ public final class MethodTemplate {
 
         String klassName = matcher.group("klassName").replaceAll("/", "\\.");
         String methodName = matcher.group("methodName");
-        Optional<List<Class<?>>> signature = Optional.ofNullable(matcher.group("argTypes"))
+        Optional<String> signatureDescriptor = Optional.ofNullable(matcher.group("argTypes"))
+                                                     .filter(not("*"::equals));
+        Optional<List<Class<?>>> signature = signatureDescriptor
                                                      .filter(not("*"::equals))
                                                      .map(MethodTemplate::parseSignature);
-        return new MethodTemplate(klassName, methodName, signature);
+        return new MethodTemplate(klassName, methodName, signature, signatureDescriptor);
+    }
+
+    private static String argumentDescriptor(FunctionInfo functionInfo) {
+        StringBuilder sb = new StringBuilder();
+        int firstVisibleArgument = functionInfo.isStatic() || functionInfo.isConstructor() ? 0 : 1;
+        for (int i = firstVisibleArgument; i < functionInfo.argTypes.size(); i++) {
+            sb.append(typeDescriptor(functionInfo.argTypes.get(i).type));
+        }
+        return sb.toString();
+    }
+
+    private static String typeDescriptor(Type type) {
+        if (type instanceof TypeArray) {
+            TypeArray arrayType = (TypeArray) type;
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < arrayType.getDimensions(); i++) {
+                sb.append('[');
+            }
+            sb.append(typeDescriptor(arrayType.getType()));
+            return sb.toString();
+        }
+        if (type.equals(TypeList.VOID)) {
+            return "V";
+        } else if (type.equals(TypeList.BOOLEAN)) {
+            return "Z";
+        } else if (type.equals(TypeList.BYTE)) {
+            return "B";
+        } else if (type.equals(TypeList.CHAR)) {
+            return "C";
+        } else if (type.equals(TypeList.SHORT)) {
+            return "S";
+        } else if (type.equals(TypeList.INT)) {
+            return "I";
+        } else if (type.equals(TypeList.LONG)) {
+            return "J";
+        } else if (type.equals(TypeList.FLOAT)) {
+            return "F";
+        } else if (type.equals(TypeList.DOUBLE)) {
+            return "D";
+        }
+        return "L" + type.getName().replace('.', '/') + ";";
+    }
+
+    private static String simpleName(String name) {
+        int lastDot = name.lastIndexOf('.');
+        return lastDot < 0 ? name : name.substring(lastDot + 1);
     }
 
     private static List<Class<?>> parseSignature(String signature) {

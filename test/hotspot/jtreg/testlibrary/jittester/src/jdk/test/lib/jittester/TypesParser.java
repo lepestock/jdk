@@ -96,16 +96,38 @@ public class TypesParser {
      * @param exMethodsFileName - name of the excluded method file
      */
     public static void parseTypesAndMethods(String klassesFileName, String exMethodsFileName) {
+        parseTypesAndMethods(klassesFileName, exMethodsFileName,
+                ProductionParams.intrinsicMethodsFile.value());
+    }
+
+    public static void parseTypesAndMethods(String klassesFileName, String exMethodsFileName,
+            String intrinsicMethodsFileName) {
         Asserts.assertNotNull(klassesFileName, "Classes input file name is null");
         Asserts.assertFalse(klassesFileName.isEmpty(), "Classes input file name is empty");
         TypesParser theParser = new TypesParser();
         theParser.initMethodsToExclude(exMethodsFileName);
-        theParser.initIntrinsicMethods(ProductionParams.intrinsicMethodsFile.value());
-        theParser.initMethodArgumentConstraints(ProductionParams.methodArgumentConstraintsFile.value());
+        theParser.initIntrinsicMethods(intrinsicMethodsFileName);
         parseKlasses(klassesFileName)
             .stream()
             .filter(klass -> !TypeList.isReferenceType(getTypeKlass(klass)))
             .forEach(theParser::processKlass);
+    }
+
+    public static void applyMethodArgumentConstraints(String methodsFileName) {
+        TypesParser theParser = new TypesParser();
+        theParser.initMethodArgumentConstraints(methodsFileName);
+        TypeList.getAll()
+                .stream()
+                .filter(type -> type instanceof TypeKlass)
+                .map(type -> (TypeKlass) type)
+                .flatMap(type -> type.getSymbols().stream())
+                .filter(symbol -> symbol instanceof FunctionInfo)
+                .map(symbol -> (FunctionInfo) symbol)
+                .forEach(theParser::applyMethodArgumentConstraints);
+    }
+
+    private void applyMethodArgumentConstraints(FunctionInfo info) {
+        MethodArgumentConstraintTemplate.applyAll(methodArgumentConstraints, info);
     }
 
     private void processKlass(Class<?> klass) {
@@ -131,7 +153,7 @@ public class TypesParser {
                 ArrayList<VariableInfo> paramList = new ArrayList<>();
                 int flags = getMethodFlags(method);
                 if (!isConstructor && ((flags & FunctionInfo.STATIC) == 0)) {
-                    paramList.add(new VariableInfo("this", typeKlass, typeKlass,
+                    paramList.add(VariableInfo.symbolArgument("this", typeKlass, typeKlass,
                             VariableInfo.LOCAL | VariableInfo.INITIALIZED));
                 }
                 Class<?>[] paramKlasses = method.getParameterTypes();
@@ -139,14 +161,13 @@ public class TypesParser {
                 for (Class<?> paramKlass : paramKlasses) {
                     argNum++;
                     Type paramType = getType(paramKlass);
-                    paramList.add(new VariableInfo("arg" + argNum, typeKlass, paramType,
+                    paramList.add(VariableInfo.symbolArgument("arg" + argNum, typeKlass, paramType,
                             VariableInfo.LOCAL | VariableInfo.INITIALIZED));
                 }
                 if (MethodTemplate.anyMatches(methodsIntrinsic, method)) {
                     flags |= FunctionInfo.INTRINSIC;
                 }
                 FunctionInfo info = new FunctionInfo(name, typeKlass, returnType, 1, flags, paramList);
-                MethodArgumentConstraintTemplate.applyAll(methodArgumentConstraints, method, info);
                 typeKlass.addSymbol(info);
             });
     }
