@@ -23,6 +23,7 @@
 
 package jdk.test.lib.jittester;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import jdk.test.lib.jittester.factories.IRNodeBuilder;
@@ -53,6 +54,7 @@ public class IRTreeGenerator {
         //NB: SymbolTable is a widely-used singleton, hence all the locking.
         SymbolTable.removeAll();
         TypeList.removeAll();
+        GenerationState.setCurrentMainClassName(name);
 
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setPrefix(name)
@@ -78,6 +80,7 @@ public class IRTreeGenerator {
                     .getMainKlassFactory()
                     .produce();
             TypeKlass aClass = new TypeKlass(name);
+            FixedTrees.normalizeNaNFunctions(aClass).forEach(mainClass.getChild(1)::addChild);
             mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, true));
             mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, false));
         } catch (ProductionFailedException ex) {
@@ -98,7 +101,23 @@ public class IRTreeGenerator {
         } else {
             CoreLibSymbolsLoader.load(Path.of(ProductionParams.coreLibSymbolsFile.value()));
         }
-        TypesParser.applyMethodArgumentConstraints(ProductionParams.methodArgumentConstraintsFile.value());
+        TypesParser.applyMethodArgumentConstraints(resolveConfigFile(
+                ProductionParams.methodArgumentConstraintsFile.value()).toString());
+        TypesParser.applyMethodResultWrappers(resolveConfigFile(
+                ProductionParams.methodResultWrappersFile.value()).toString());
+    }
+
+    private static Path resolveConfigFile(String fileName) {
+        Path path = Path.of(fileName);
+        if (path.isAbsolute() || Files.exists(path)) {
+            return path;
+        }
+        Path classesFile = Path.of(ProductionParams.classesFile.value());
+        Path configDir = classesFile.toAbsolutePath().normalize().getParent();
+        if (configDir == null) {
+            return path;
+        }
+        return configDir.resolve(path.getFileName());
     }
 
 }

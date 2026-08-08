@@ -31,6 +31,7 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
  */
 public final class GenerationState {
     private static FlowParams currentFlowParams;
+    private static String currentMainClassName;
 
     private GenerationState() {
     }
@@ -51,6 +52,20 @@ public final class GenerationState {
             throw new IllegalArgumentException("GenerationState flow params must not be null");
         }
         currentFlowParams = flowParams;
+    }
+
+    public static void setCurrentMainClassName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("GenerationState main class name must not be blank");
+        }
+        currentMainClassName = name;
+    }
+
+    public static String currentMainClassName() {
+        if (currentMainClassName == null || currentMainClassName.isBlank()) {
+            throw new IllegalStateException("GenerationState main class name is not initialized");
+        }
+        return currentMainClassName;
     }
 
     public static Checkpoint checkpoint() {

@@ -23,36 +23,22 @@
 
 package jdk.test.lib.jittester;
 
-/**
- * Extra generation-domain requirements for method arguments.
- *
- * <p>These are deliberately separate from Java types: a denominator argument is
- * still an {@code int} or {@code long}, but it needs a smaller value-domain than
- * the declared type accepts.</p>
- */
-public enum MethodArgumentConstraint {
+public enum MethodResultWrapper {
     NONE("none"),
-    NONZERO("nonzero"),
-    NONNEGATIVE("nonnegative"),
-    SMALL_NONNEGATIVE("small-nonnegative"),
-    NONMIN("nonmin"),
-    NONMAX("nonmax"),
-    INT_RANGE("int-range"),
-    SMALL_INTEGRAL("small-integral"),
-    NAN_NORMALIZED("nan-normalized");
+    NORMALIZE_NAN("normalize-nan");
 
     private final String configName;
 
-    MethodArgumentConstraint(String configName) {
+    MethodResultWrapper(String configName) {
         this.configName = configName;
     }
 
-    static MethodArgumentConstraint parse(String value) {
-        for (MethodArgumentConstraint constraint : values()) {
-            if (constraint.configName.equals(value)) {
-                return constraint;
+    public static MethodResultWrapper parse(String name) {
+        for (MethodResultWrapper wrapper : values()) {
+            if (wrapper.configName.equals(name)) {
+                return wrapper;
             }
         }
-        throw new IllegalArgumentException("Unknown method argument constraint: " + value);
+        throw new IllegalArgumentException("Unknown method result wrapper: " + name);
     }
 }

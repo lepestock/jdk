@@ -1,0 +1,21 @@
+# Method result wrappers applied in selected generation contexts.
+#
+# The left side uses the same method template format as exclude.methods.lst and
+# intrinsics.lst. The right side names the wrapper to apply to the produced
+# method-call result.
+
+java/lang/Math::pow(DD)D -> normalize-nan
+java/lang/Math::sqrt(D)D -> normalize-nan
+java/lang/Math::log(D)D -> normalize-nan
+java/lang/Math::log10(D)D -> normalize-nan
+java/lang/Math::log1p(D)D -> normalize-nan
+java/lang/Math::acos(D)D -> normalize-nan
+java/lang/Math::asin(D)D -> normalize-nan
+java/lang/Math::acosh(D)D -> normalize-nan
+java/lang/Math::atanh(D)D -> normalize-nan
+java/lang/Math::IEEEremainder(DD)D -> normalize-nan
+java/lang/Math::fma(DDD)D -> normalize-nan
+java/lang/Math::fma(FFF)F -> normalize-nan
+java/lang/Math::sin(D)D -> normalize-nan
+java/lang/Math::cos(D)D -> normalize-nan
+java/lang/Math::tan(D)D -> normalize-nan

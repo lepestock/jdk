@@ -54,6 +54,7 @@ public class TypesParser {
     private List<MethodTemplate> methodsToExclude;
     private List<MethodTemplate> methodsIntrinsic;
     private List<MethodArgumentConstraintTemplate> methodArgumentConstraints;
+    private List<MethodResultWrapperTemplate> methodResultWrappers;
 
     private static final HashMap<Class<?>, Type> TYPE_CACHE = new HashMap<>();
 
@@ -126,8 +127,25 @@ public class TypesParser {
                 .forEach(theParser::applyMethodArgumentConstraints);
     }
 
+    public static void applyMethodResultWrappers(String methodsFileName) {
+        TypesParser theParser = new TypesParser();
+        theParser.initMethodResultWrappers(methodsFileName);
+        TypeList.getAll()
+                .stream()
+                .filter(type -> type instanceof TypeKlass)
+                .map(type -> (TypeKlass) type)
+                .flatMap(type -> type.getSymbols().stream())
+                .filter(symbol -> symbol instanceof FunctionInfo)
+                .map(symbol -> (FunctionInfo) symbol)
+                .forEach(theParser::applyMethodResultWrappers);
+    }
+
     private void applyMethodArgumentConstraints(FunctionInfo info) {
         MethodArgumentConstraintTemplate.applyAll(methodArgumentConstraints, info);
+    }
+
+    private void applyMethodResultWrappers(FunctionInfo info) {
+        MethodResultWrapperTemplate.applyAll(methodResultWrappers, info);
     }
 
     private void processKlass(Class<?> klass) {
@@ -368,6 +386,28 @@ public class TypesParser {
             }
         } else {
             methodArgumentConstraints = new ArrayList<>();
+        }
+    }
+
+    private void initMethodResultWrappers(String methodsFileName) {
+        if (methodsFileName != null && !methodsFileName.isEmpty()) {
+            Path methodsFilePath = Paths.get(methodsFileName);
+            if (!Files.exists(methodsFilePath)) {
+                methodResultWrappers = new ArrayList<>();
+                return;
+            }
+            try {
+                methodResultWrappers = Files.lines(methodsFilePath)
+                    .map(TypesParser::trimConstraintComment)
+                    .map(String::trim)
+                    .filter(not(String::isEmpty))
+                    .map(MethodResultWrapperTemplate::parse)
+                    .collect(Collectors.toList());
+            } catch (IOException ex) {
+                throw new Error("Error reading method result wrappers file", ex);
+            }
+        } else {
+            methodResultWrappers = new ArrayList<>();
         }
     }
 }

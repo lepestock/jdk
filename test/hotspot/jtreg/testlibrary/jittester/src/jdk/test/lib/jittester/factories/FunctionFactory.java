@@ -29,6 +29,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import jdk.test.lib.jittester.MethodArgumentConstraint;
+import jdk.test.lib.jittester.MethodResultWrapper;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -40,6 +41,7 @@ import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.functions.Function;
 import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.utils.FixedTrees;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.Logger;
@@ -187,14 +189,15 @@ public class FunctionFactory extends SafeFactory<Function> {
                             }
                             long argComp = (complexityLimit - 1 - functionInfo.complexity) / functionInfo.argTypes.size();
                             int argumentOperatorLimit = (operatorLimit - 1) / functionInfo.argTypes.size();
-                            IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                                    .withComplexityLimit(argComp)
-                                    .withOperatorLimit(argumentOperatorLimit)
-                                    .setExceptionSafe(exceptionSafe)
-                                    .setNoConsts(noconsts);
                             for (int argIndex = 0; argIndex < functionInfo.argTypes.size(); argIndex++) {
                                 VariableInfo argType = functionInfo.argTypes.get(argIndex);
-                                accum.add(produceArgument(b.setResultType(argType.type),
+                                IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
+                                        .withComplexityLimit(argComp)
+                                        .withOperatorLimit(argumentOperatorLimit)
+                                        .setExceptionSafe(exceptionSafe)
+                                        .setNoConsts(noconsts)
+                                        .setResultType(argType.type);
+                                accum.add(produceArgument(b,
                                         functionInfo.getArgumentConstraint(argIndex), argType.type));
             Logger.log(ownerClass, "(FunctionFactory :point1 :function " + functionInfo + ")", accum);
                             }
@@ -209,10 +212,11 @@ public class FunctionFactory extends SafeFactory<Function> {
                         if (expressionScopeSeed != null) {
                             produced.setExpressionGeneSeed(expressionScopeSeed);
                         }
+                        Function result = wrapResultIfNeeded(ownerClass, functionInfo, produced);
                         if (!replayMode) {
                             Genome.commitSpeculativeRecord();
                         }
-                        return produced;
+                        return result;
                     } catch (ProductionFailedException e) {
                         GenerationState.rollbackTo(stateCheckpoint);
                         if (!replayMode) {
@@ -248,6 +252,9 @@ public class FunctionFactory extends SafeFactory<Function> {
 
     private static IRNode produceArgument(IRNodeBuilder builder, MethodArgumentConstraint constraint, Type type)
             throws ProductionFailedException {
+        if (constraint == MethodArgumentConstraint.NAN_NORMALIZED) {
+            return builder.withNormalizeNaN(true).produceExpression();
+        }
         if (constraint == MethodArgumentConstraint.NONZERO && DenominatorExpressionFactory.canThrowFor(type, type)) {
             return builder.produceExpression(true);
         }
@@ -255,6 +262,15 @@ public class FunctionFactory extends SafeFactory<Function> {
             return builder.getConstrainedIntegralExpressionFactory(constraint).produce();
         }
         return builder.getExpressionFactory().produce();
+    }
+
+    private static Function wrapResultIfNeeded(TypeKlass ownerClass, FunctionInfo functionInfo, Function result) {
+        if (GenerationState.currentFlowParams().normalizeNaN()
+                && functionInfo.getResultWrapper() == MethodResultWrapper.NORMALIZE_NAN) {
+            return FixedTrees.wrapWithNormalizeNaN(ownerClass, new TypeKlass(GenerationState.currentMainClassName()),
+                    result);
+        }
+        return result;
     }
 
     private static List<FunctionInfo> toFunctionList(List<Symbol> symbols) {

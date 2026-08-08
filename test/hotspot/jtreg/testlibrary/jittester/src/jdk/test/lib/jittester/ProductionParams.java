@@ -101,6 +101,7 @@ public class ProductionParams {
     public static Option<String> intrinsicMethodsFile = null;
     public static Option<String> coreLibSymbolsFile = null;
     public static Option<String> methodArgumentConstraintsFile = null;
+    public static Option<String> methodResultWrappersFile = null;
     public static Option<Integer> expressionGuardRawBp = null;
     public static Option<Integer> intrinsicCallWeightBonus = null;
     public static Option<Integer> magnetismLevel = null;
@@ -162,6 +163,7 @@ public class ProductionParams {
             "exclude-methods-file",
             "intrinsic-methods-file",
             "method-argument-constraints-file",
+            "method-result-wrappers-file",
             "testbase-dir",
             "temp-dir",
             "individual-sandboxes",
@@ -253,6 +255,10 @@ public class ProductionParams {
                 "method-argument-constraints-file",
                 "conf/method-argument-constraints.lst",
                 "File with method argument generation constraints");
+        methodResultWrappersFile = optionResolver.addStringOption(
+                "method-result-wrappers-file",
+                "conf/method-result-wrappers.lst",
+                "File with method result wrappers");
         expressionGuardRawBp = optionResolver.addIntegerOption(
                 "expression-guard-raw-bp",
                 20,

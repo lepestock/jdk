@@ -48,6 +48,7 @@ public final class FlowParams {
     private final int arrayExtractionExpressionWeightPercent;
     private final Set<String> readOnlyVars;
     private final Set<String> iterationVariables;
+    private final boolean normalizeNaN;
 
     private FlowParams(FlowParams prev, long complexityLimit, int statementLimit, int operatorLimit,
                        String iterationVariable, int arrayKernelIterationLimit, boolean inArrayKernel,
@@ -56,7 +57,8 @@ public final class FlowParams {
                        int arrayElementExpressionWeightPercent,
                        int arrayExtractionExpressionWeightPercent,
                        Set<String> readOnlyVars,
-                       Set<String> iterationVariables) {
+                       Set<String> iterationVariables,
+                       boolean normalizeNaN) {
         this.prev = prev;
         this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
@@ -70,6 +72,7 @@ public final class FlowParams {
         this.arrayExtractionExpressionWeightPercent = arrayExtractionExpressionWeightPercent;
         this.readOnlyVars = readOnlyVars;
         this.iterationVariables = iterationVariables;
+        this.normalizeNaN = normalizeNaN;
     }
 
     public static FlowParams fromProductionParams() {
@@ -85,7 +88,8 @@ public final class FlowParams {
                 100,
                 100,
                 Collections.emptySet(),
-                Collections.emptySet());
+                Collections.emptySet(),
+                false);
     }
 
     public long complexityLimit() {
@@ -150,6 +154,10 @@ public final class FlowParams {
         return iterationVariables;
     }
 
+    public boolean normalizeNaN() {
+        return normalizeNaN;
+    }
+
     public Builder withStatementLimit(int value) {
         return new Builder(this).withStatementLimit(value);
     }
@@ -185,6 +193,10 @@ public final class FlowParams {
         return new Builder(this).withMoreIterationVariables(values);
     }
 
+    public Builder withNormalizeNaN(boolean value) {
+        return new Builder(this).withNormalizeNaN(value);
+    }
+
     public String dumpSnapshot() {
         return "FlowParams{complexityLimit=" + complexityLimit
                 + ", statementLimit=" + statementLimit
@@ -198,6 +210,7 @@ public final class FlowParams {
                 + ", arrayExtractionExpressionWeightPercent=" + arrayExtractionExpressionWeightPercent
                 + ", readOnlyVars=" + readOnlyVars
                 + ", iterationVariables=" + iterationVariables
+                + ", normalizeNaN=" + normalizeNaN
                 + ", depth=" + depth(this)
                 + "}";
     }
@@ -230,6 +243,7 @@ public final class FlowParams {
         private int arrayExtractionExpressionWeightPercent;
         private LinkedHashSet<String> readOnlyVars;
         private LinkedHashSet<String> iterationVariables;
+        private boolean normalizeNaN;
 
         private Builder(FlowParams base) {
             if (base == null) {
@@ -248,6 +262,7 @@ public final class FlowParams {
             this.arrayExtractionExpressionWeightPercent = base.arrayExtractionExpressionWeightPercent;
             this.readOnlyVars = new LinkedHashSet<>(base.readOnlyVars);
             this.iterationVariables = new LinkedHashSet<>(base.iterationVariables);
+            this.normalizeNaN = base.normalizeNaN;
         }
 
         public Builder withComplexityLimit(long value) {
@@ -335,12 +350,18 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withNormalizeNaN(boolean value) {
+            this.normalizeNaN = value;
+            return this;
+        }
+
         public FlowParams advance() {
             return new FlowParams(base, complexityLimit, statementLimit, operatorLimit, iterationVariable,
                     arrayKernelIterationLimit, inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
                     arrayElementExpressionWeightPercent, arrayExtractionExpressionWeightPercent,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
-                    Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)));
+                    Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)),
+                    normalizeNaN);
         }
     }
 }

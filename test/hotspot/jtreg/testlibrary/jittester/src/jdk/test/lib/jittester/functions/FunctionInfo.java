@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 import jdk.test.lib.jittester.MethodArgumentConstraint;
+import jdk.test.lib.jittester.MethodResultWrapper;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
@@ -41,6 +42,7 @@ public class FunctionInfo extends Symbol {
     public static final int SYNCHRONIZED = 0x100;
     public static final int INTRINSIC = 0x200;
     private HashMap<Integer, MethodArgumentConstraint> argumentConstraints = new HashMap<>();
+    private MethodResultWrapper resultWrapper = MethodResultWrapper.NONE;
 
     public FunctionInfo() {
     }
@@ -68,6 +70,7 @@ public class FunctionInfo extends Symbol {
         }
         complexity = value.complexity;
         argumentConstraints = new HashMap<>(value.argumentConstraints);
+        resultWrapper = value.resultWrapper;
     }
 
     @Override
@@ -155,5 +158,13 @@ public class FunctionInfo extends Symbol {
 
     public MethodArgumentConstraint getArgumentConstraint(int argumentIndex) {
         return argumentConstraints.getOrDefault(argumentIndex, MethodArgumentConstraint.NONE);
+    }
+
+    public void setResultWrapper(MethodResultWrapper wrapper) {
+        resultWrapper = wrapper == null ? MethodResultWrapper.NONE : wrapper;
+    }
+
+    public MethodResultWrapper getResultWrapper() {
+        return resultWrapper;
     }
 }

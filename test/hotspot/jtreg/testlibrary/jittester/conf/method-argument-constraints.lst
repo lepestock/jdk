@@ -59,3 +59,6 @@ java/lang/Integer::divideUnsigned(II) -> arg#2=nonzero
 java/lang/Integer::remainderUnsigned(II) -> arg#2=nonzero
 java/lang/Long::divideUnsigned(JJ) -> arg#2=nonzero
 java/lang/Long::remainderUnsigned(JJ) -> arg#2=nonzero
+
+java/lang/Double::doubleToRawLongBits(D) -> arg#1=nan-normalized
+java/lang/Float::floatToRawIntBits(F) -> arg#1=nan-normalized

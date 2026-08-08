@@ -131,6 +131,7 @@ public class IRNodeBuilder {
     private Optional<Integer> arrayExtractionExpressionWeightPercent = Optional.empty();
     private Optional<String[]> moreReadOnlyVars = Optional.empty();
     private Optional<String[]> moreIterationVariables = Optional.empty();
+    private Optional<Boolean> normalizeNaN = Optional.empty();
 
     public Factory<ArgumentDeclaration> getArgumentDeclarationFactory() {
         return new ArgumentDeclarationFactory(getArgumentType(), getVariableNumber());
@@ -293,6 +294,7 @@ public class IRNodeBuilder {
         arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withCollectionExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
+        normalizeNaN.ifPresent(flowBuilder::withNormalizeNaN);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
             return getBlockFactory().produce();
@@ -330,6 +332,7 @@ public class IRNodeBuilder {
         arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withCollectionExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
+        normalizeNaN.ifPresent(flowBuilder::withNormalizeNaN);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
             return denominator ? getDenominatorExpressionFactory().produce() : getExpressionFactory().produce();
@@ -828,6 +831,11 @@ public class IRNodeBuilder {
 
     public IRNodeBuilder withMoreIterationVariables(String... values) {
         moreIterationVariables = Optional.ofNullable(values);
+        return this;
+    }
+
+    public IRNodeBuilder withNormalizeNaN(boolean value) {
+        normalizeNaN = Optional.of(value);
         return this;
     }
 

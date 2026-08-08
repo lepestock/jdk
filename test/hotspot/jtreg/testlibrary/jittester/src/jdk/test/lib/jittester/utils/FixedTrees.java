@@ -44,6 +44,7 @@ import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Statement;
 import jdk.test.lib.jittester.StaticMemberVariable;
 import jdk.test.lib.jittester.Symbol;
+import jdk.test.lib.jittester.TernaryOperator;
 import jdk.test.lib.jittester.TryCatchBlock;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
@@ -65,6 +66,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 
 public class FixedTrees {
     private static final Literal EOL = new Literal("\n", TypeList.STRING);
+    private static final String NORMALIZE_NAN = "normalizeNaN";
 
     public static FunctionDefinition printVariablesAsFunction(PrintVariables node) {
         return buildPrintFunction(node.getOwner(), node.getVars(), "toString");
@@ -72,6 +74,41 @@ public class FixedTrees {
 
     public static FunctionDefinition printFinalVariablesAsFunction(PrintVariables node) {
         return buildPrintFunction(node.getOwner(), node.getFinalVars(), "printFinalState");
+    }
+
+    public static Function wrapWithNormalizeNaN(TypeKlass callOwner, TypeKlass helperOwner, IRNode value) {
+        Type type = value.getResultType();
+        if (!type.equals(TypeList.DOUBLE) && !type.equals(TypeList.FLOAT)) {
+            throw new IllegalArgumentException("normalizeNaN wrapper requires float or double, got "
+                    + type.getName());
+        }
+        VariableInfo argInfo = new VariableInfo("value", helperOwner, type,
+                VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+        FunctionInfo normalizeInfo = new FunctionInfo(NORMALIZE_NAN, helperOwner, type, 0L,
+                FunctionInfo.PUBLIC | FunctionInfo.STATIC, argInfo);
+        Function call = new Function(callOwner, normalizeInfo, new ArrayList<>());
+        call.addChild(value);
+        return call;
+    }
+
+    public static List<FunctionDefinition> normalizeNaNFunctions(TypeKlass owner) {
+        return List.of(normalizeNaNFunction(owner, TypeList.DOUBLE), normalizeNaNFunction(owner, TypeList.FLOAT));
+    }
+
+    private static FunctionDefinition normalizeNaNFunction(TypeKlass owner, Type type) {
+        VariableInfo valueInfo = new VariableInfo("value", owner, type,
+                VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+        LocalVariable value = new LocalVariable(valueInfo);
+        TypeKlass wrapperKlass = new TypeKlass(type.equals(TypeList.DOUBLE) ? "java.lang.Double" : "java.lang.Float");
+        VariableInfo nanInfo = new VariableInfo("NaN", wrapperKlass, type,
+                VariableInfo.PUBLIC | VariableInfo.STATIC | VariableInfo.FINAL);
+        IRNode notNaN = new BinaryOperator(OperatorKind.EQ, TypeList.BOOLEAN, value, value);
+        IRNode result = new TernaryOperator(notNaN, value, new StaticMemberVariable(owner, nanInfo));
+        FunctionInfo functionInfo = new FunctionInfo(NORMALIZE_NAN, owner, type, 0L,
+                FunctionInfo.PUBLIC | FunctionInfo.STATIC, valueInfo);
+        return new FunctionDefinition(functionInfo, List.of(new ArgumentDeclaration(valueInfo)),
+                blockWithAnchor(owner, TypeList.VOID, new ArrayList<>(), 1, "normalize-nan:" + type.getName()),
+                new Return(result));
     }
 
     private static FunctionDefinition buildPrintFunction(TypeKlass owner, List<Symbol> vars, String functionName) {
