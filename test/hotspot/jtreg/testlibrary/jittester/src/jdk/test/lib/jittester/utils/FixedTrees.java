@@ -91,26 +91,6 @@ public class FixedTrees {
         return call;
     }
 
-    public static List<FunctionDefinition> normalizeNaNFunctions(TypeKlass owner) {
-        return List.of(normalizeNaNFunction(owner, TypeList.DOUBLE), normalizeNaNFunction(owner, TypeList.FLOAT));
-    }
-
-    private static FunctionDefinition normalizeNaNFunction(TypeKlass owner, Type type) {
-        VariableInfo valueInfo = new VariableInfo("value", owner, type,
-                VariableInfo.LOCAL | VariableInfo.INITIALIZED);
-        LocalVariable value = new LocalVariable(valueInfo);
-        TypeKlass wrapperKlass = new TypeKlass(type.equals(TypeList.DOUBLE) ? "java.lang.Double" : "java.lang.Float");
-        VariableInfo nanInfo = new VariableInfo("NaN", wrapperKlass, type,
-                VariableInfo.PUBLIC | VariableInfo.STATIC | VariableInfo.FINAL);
-        IRNode notNaN = new BinaryOperator(OperatorKind.EQ, TypeList.BOOLEAN, value, value);
-        IRNode result = new TernaryOperator(notNaN, value, new StaticMemberVariable(owner, nanInfo));
-        FunctionInfo functionInfo = new FunctionInfo(NORMALIZE_NAN, owner, type, 0L,
-                FunctionInfo.PUBLIC | FunctionInfo.STATIC, valueInfo);
-        return new FunctionDefinition(functionInfo, List.of(new ArgumentDeclaration(valueInfo)),
-                blockWithAnchor(owner, TypeList.VOID, new ArrayList<>(), 1, "normalize-nan:" + type.getName()),
-                new Return(result));
-    }
-
     private static FunctionDefinition buildPrintFunction(TypeKlass owner, List<Symbol> vars, String functionName) {
         ArrayList<IRNode> nodes = new ArrayList<>();
 

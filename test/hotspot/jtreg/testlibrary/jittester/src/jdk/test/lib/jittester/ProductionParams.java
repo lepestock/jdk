@@ -111,7 +111,7 @@ public class ProductionParams {
     public static Option<Integer> arrayKernelBodyStatementPercent = null;
     public static Option<Boolean> arrayKernelCollectionElementLValues = null;
     public static Option<Integer> collectionPrintReductionPercent = null;
-    public static Option<Boolean> embedPrinterClass = null;
+    public static Option<Boolean> embedUtils = null;
     public static Option<Boolean> pulsemap = null;
     public static Option<Boolean> disableFixedTreeExceptionGuards = null;
     public static Option<String> generators = null;
@@ -283,8 +283,8 @@ public class ProductionParams {
                 "Percent chance to print supported collections as compact CRC summaries");
         arrayFieldDefinitionWeightBonus = optionResolver.addIntegerOption("arrays-field-definition-weight-bonus", 0,
                 "Additional selection weight percent for choosing array-typed class field declarations");
-        embedPrinterClass = optionResolver.addBooleanOption(null, "embed-printer-class", false,
-                "Embed Printer helper class into each generated Java test source");
+        embedUtils = optionResolver.addBooleanOption(null, "embed-utils", false,
+                "Embed JitTester utility classes into each generated Java test source");
         pulsemap = optionResolver.addBooleanOption(null, "pulsemap", false,
                 "Enable pulsemap prototype instrumentation with block-level runtime beats");
         disableFixedTreeExceptionGuards = optionResolver.addBooleanOption(
@@ -516,7 +516,15 @@ public class ProductionParams {
     }
 
     public static String printerClassName() {
-        return embedPrinterClass.value() ? "Printer" : "jdk.test.lib.jittester.jtreg.Printer";
+        return embedUtils() ? "Printer" : "jdk.test.lib.jittester.jtreg.Printer";
+    }
+
+    public static String runtimeSupportClassName() {
+        return embedUtils() ? "RuntimeSupport" : "jdk.test.lib.jittester.jtreg.RuntimeSupport";
+    }
+
+    public static boolean embedUtils() {
+        return embedUtils.value();
     }
 
     private static State captureState() {

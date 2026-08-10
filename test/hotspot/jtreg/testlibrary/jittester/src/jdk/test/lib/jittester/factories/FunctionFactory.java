@@ -267,7 +267,7 @@ public class FunctionFactory extends SafeFactory<Function> {
     private static Function wrapResultIfNeeded(TypeKlass ownerClass, FunctionInfo functionInfo, Function result) {
         if (GenerationState.currentFlowParams().normalizeNaN()
                 && functionInfo.getResultWrapper() == MethodResultWrapper.NORMALIZE_NAN) {
-            return FixedTrees.wrapWithNormalizeNaN(ownerClass, new TypeKlass(GenerationState.currentMainClassName()),
+            return FixedTrees.wrapWithNormalizeNaN(ownerClass, new TypeKlass(ProductionParams.runtimeSupportClassName()),
                     result);
         }
         return result;

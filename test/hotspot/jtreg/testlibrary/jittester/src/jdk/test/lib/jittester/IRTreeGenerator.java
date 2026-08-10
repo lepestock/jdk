@@ -80,7 +80,6 @@ public class IRTreeGenerator {
                     .getMainKlassFactory()
                     .produce();
             TypeKlass aClass = new TypeKlass(name);
-            FixedTrees.normalizeNaNFunctions(aClass).forEach(mainClass.getChild(1)::addChild);
             mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, true));
             mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, false));
         } catch (ProductionFailedException ex) {

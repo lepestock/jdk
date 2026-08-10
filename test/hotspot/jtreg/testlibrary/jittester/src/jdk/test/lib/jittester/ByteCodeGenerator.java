@@ -52,6 +52,7 @@ class ByteCodeGenerator extends TestsGenerator {
         generateClassFiles(mainClass, test.privateClasses());
         generateSeparateJtregHeader(test.seed(), mainClass);
         compilePrinter();
+        compileRuntimeSupport();
         generateGoldenOut(mainClass.getName());
     }
 

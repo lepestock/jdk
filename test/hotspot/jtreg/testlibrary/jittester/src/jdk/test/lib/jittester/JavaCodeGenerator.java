@@ -49,6 +49,7 @@ public class JavaCodeGenerator extends TestsGenerator {
         String mainClassName = mainClass.getName();
         generateSources(test.seed(), mainClass, test.privateClasses());
         compilePrinter();
+        compileRuntimeSupport();
         compilePulse();
         compileJavaFile(mainClassName);
         generateGoldenOut(mainClassName);
@@ -66,8 +67,10 @@ public class JavaCodeGenerator extends TestsGenerator {
                 .append(snapshot.formatSourceHeader(richestExpressionCount))
                 .append("*/\n");
         }
-        if (ProductionParams.embedPrinterClass.value()) {
+        if (ProductionParams.embedUtils()) {
             code.append(loadEmbeddedPrinterSource())
+                .append("\n")
+                .append(loadEmbeddedRuntimeSupportSource())
                 .append("\n");
         }
         if (privateClasses != null) {

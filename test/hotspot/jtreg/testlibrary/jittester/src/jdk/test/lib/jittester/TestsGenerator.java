@@ -101,7 +101,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     }
 
     protected void compilePrinter() {
-        if (ProductionParams.embedPrinterClass.value()) {
+        if (ProductionParams.embedUtils()) {
             return;
         }
         Path root = getRoot();
@@ -115,6 +115,24 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
             }
         } catch (IOException | InterruptedException e) {
             throw generationFailure("Can't compile printer", e);
+        }
+    }
+
+    protected void compileRuntimeSupport() {
+        if (ProductionParams.embedUtils()) {
+            return;
+        }
+        Path root = getRoot();
+        ProcessBuilder pbRuntimeSupport = new ProcessBuilder(JAVAC,
+                "-d", tmpDir.path.toString(),
+                resolveRuntimeSupportSourcePath(root).toString());
+        try {
+            int exitCode = runProcess(pbRuntimeSupport, root.resolve("RuntimeSupport").toString());
+            if (exitCode != 0) {
+                throw generationFailure("RuntimeSupport compilation returned exit code " + exitCode);
+            }
+        } catch (IOException | InterruptedException e) {
+            throw generationFailure("Can't compile RuntimeSupport", e);
         }
     }
 
@@ -153,8 +171,9 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
               .append(synopsis)
               .append(" \n * @library / ../\n");
         header.append(" * @run build jdk.test.lib.jittester.jtreg.JitTesterDriver");
-        if (!ProductionParams.embedPrinterClass.value()) {
-            header.append(" jdk.test.lib.jittester.jtreg.Printer");
+        if (!ProductionParams.embedUtils()) {
+            header.append(" jdk.test.lib.jittester.jtreg.Printer")
+                  .append(" jdk.test.lib.jittester.jtreg.RuntimeSupport");
         }
         if (ProductionParams.pulsemap.value()) {
             header.append(" jdk.test.lib.jittester.pulse.Pulse");
@@ -192,6 +211,18 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         }
     }
 
+    protected String loadEmbeddedRuntimeSupportSource() {
+        Path runtimeSupportPath = resolveRuntimeSupportSourcePath(getRoot());
+        try {
+            String source = Files.readString(runtimeSupportPath, StandardCharsets.UTF_8);
+            source = source.replaceFirst("(?m)^\\s*package\\s+[^;]+;\\s*$", "");
+            source = source.replaceFirst("(?m)^\\s*public\\s+class\\s+RuntimeSupport\\b", "class RuntimeSupport");
+            return source.trim() + "\n";
+        } catch (IOException e) {
+            throw generationFailure("Can't load embedded RuntimeSupport source: " + runtimeSupportPath, e);
+        }
+    }
+
     protected static Path getRoot() {
         return Paths.get(ProductionParams.testbaseDir.value());
     }
@@ -210,6 +241,30 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
                     .getCodeSource().getLocation().toURI());
             Path fromBuild = classesDir
                     .resolve("../../../src/jdk/test/lib/jittester/jtreg/Printer.java")
+                    .normalize();
+            if (Files.exists(fromBuild)) {
+                return fromBuild;
+            }
+        } catch (URISyntaxException ignored) {
+            // Fall through to final deterministic path.
+        }
+        return fromTestbase;
+    }
+
+    private static Path resolveRuntimeSupportSourcePath(Path root) {
+        Path fromTestbase = root.resolve("jdk/test/lib/jittester/jtreg/RuntimeSupport.java");
+        if (Files.exists(fromTestbase)) {
+            return fromTestbase;
+        }
+        Path fromCwd = Paths.get("src/jdk/test/lib/jittester/jtreg/RuntimeSupport.java");
+        if (Files.exists(fromCwd)) {
+            return fromCwd;
+        }
+        try {
+            Path classesDir = Paths.get(TestsGenerator.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            Path fromBuild = classesDir
+                    .resolve("../../../src/jdk/test/lib/jittester/jtreg/RuntimeSupport.java")
                     .normalize();
             if (Files.exists(fromBuild)) {
                 return fromBuild;
