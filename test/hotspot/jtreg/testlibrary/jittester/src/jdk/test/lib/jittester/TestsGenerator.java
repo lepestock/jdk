@@ -39,6 +39,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 
 public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     private static final int DEFAULT_JTREG_TIMEOUT = 120;
+    private static final Path JTREG_UTILS_SOURCE_DIR = Path.of("jdk/test/lib/jittester/jtreg");
     protected static final String JAVA_BIN = getJavaPath();
     protected static final String JAVAC = Paths.get(JAVA_BIN, "javac").toString();
     protected static final String JAVA = Paths.get(JAVA_BIN, "java").toString();
@@ -200,7 +201,9 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     }
 
     protected String loadEmbeddedPrinterSource() {
-        Path printerPath = resolvePrinterSourcePath(getRoot());
+        Path printerPath = ProductionParams.embedUtilsPath()
+                .resolve(JTREG_UTILS_SOURCE_DIR)
+                .resolve("Printer.java");
         try {
             String source = Files.readString(printerPath, StandardCharsets.UTF_8);
             source = source.replaceFirst("(?m)^\\s*package\\s+[^;]+;\\s*$", "");
@@ -212,7 +215,9 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     }
 
     protected String loadEmbeddedRuntimeSupportSource() {
-        Path runtimeSupportPath = resolveRuntimeSupportSourcePath(getRoot());
+        Path runtimeSupportPath = ProductionParams.embedUtilsPath()
+                .resolve(JTREG_UTILS_SOURCE_DIR)
+                .resolve("RuntimeSupport.java");
         try {
             String source = Files.readString(runtimeSupportPath, StandardCharsets.UTF_8);
             source = source.replaceFirst("(?m)^\\s*package\\s+[^;]+;\\s*$", "");

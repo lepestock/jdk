@@ -111,7 +111,7 @@ public class ProductionParams {
     public static Option<Integer> arrayKernelBodyStatementPercent = null;
     public static Option<Boolean> arrayKernelCollectionElementLValues = null;
     public static Option<Integer> collectionPrintReductionPercent = null;
-    public static Option<Boolean> embedUtils = null;
+    public static Option<String> embedUtilsPath = null;
     public static Option<Boolean> pulsemap = null;
     public static Option<Boolean> disableFixedTreeExceptionGuards = null;
     public static Option<String> generators = null;
@@ -283,8 +283,8 @@ public class ProductionParams {
                 "Percent chance to print supported collections as compact CRC summaries");
         arrayFieldDefinitionWeightBonus = optionResolver.addIntegerOption("arrays-field-definition-weight-bonus", 0,
                 "Additional selection weight percent for choosing array-typed class field declarations");
-        embedUtils = optionResolver.addBooleanOption(null, "embed-utils", false,
-                "Embed JitTester utility classes into each generated Java test source");
+        embedUtilsPath = optionResolver.addStringOption("embed-utils-path", "",
+                "Source root with JitTester utility sources to embed into each generated Java test source");
         pulsemap = optionResolver.addBooleanOption(null, "pulsemap", false,
                 "Enable pulsemap prototype instrumentation with block-level runtime beats");
         disableFixedTreeExceptionGuards = optionResolver.addBooleanOption(
@@ -524,7 +524,11 @@ public class ProductionParams {
     }
 
     public static boolean embedUtils() {
-        return embedUtils.value();
+        return !embedUtilsPath.value().trim().isEmpty();
+    }
+
+    public static Path embedUtilsPath() {
+        return Path.of(embedUtilsPath.value()).toAbsolutePath().normalize();
     }
 
     private static State captureState() {
