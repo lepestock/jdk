@@ -96,6 +96,7 @@ public class ProductionParams {
     public static Option<String> tempDir = null;
     public static Option<Integer> numberOfTests = null;
     public static Option<Long> seed = null;
+    public static Option<String> confDir = null;
     public static Option<String> classesFile = null;
     public static Option<String> excludeMethodsFile = null;
     public static Option<String> intrinsicMethodsFile = null;
@@ -159,6 +160,7 @@ public class ProductionParams {
             "property-file",
             "number-of-tests",
             "seed",
+            "conf-dir",
             "classes-file",
             "exclude-methods-file",
             "intrinsic-methods-file",
@@ -243,6 +245,7 @@ public class ProductionParams {
         tempDir = optionResolver.addStringOption("temp-dir", ".", "Temp dir path");
         numberOfTests = optionResolver.addIntegerOption('n', "number-of-tests", 0, "Number of test classes to generate");
         seed = optionResolver.addLongOption(null, "seed", 0L, "Seed to set for test generation replay");
+        confDir = optionResolver.addStringOption("conf-dir", "", "Directory with JitTester configuration files");
         classesFile = optionResolver.addStringOption('f', "classes-file", "conf/classes.lst", "File to read classes from");
         excludeMethodsFile = optionResolver.addStringOption('r', "exclude-methods-file", "conf/exclude.methods.lst", "File to read excluded methods from");
         intrinsicMethodsFile = optionResolver.addStringOption("intrinsic-methods-file", "conf/intrinsics.lst",
@@ -404,6 +407,7 @@ public class ProductionParams {
                 "conf/default.properties", "File to read properties from");
         ProductionParams.register(parser);
         parser.parse(overrideParseResult.argsWithoutOverrides, propertyFileOpt);
+        applyConfDirDefaults(parser);
         activeOptionResolver = parser;
         mutationOverrides = Collections.unmodifiableMap(overrideParseResult.overrides);
         validateMutationOverrides();
@@ -448,6 +452,27 @@ public class ProductionParams {
         String mutationTarget = valueIfSet(genomeMutationTarget);
         Genome.setReplayStrict(true);
         Genome.initialize(replayPath, recordPath, mutationSeedOverride, mutationTarget);
+    }
+
+    private static void applyConfDirDefaults(OptionResolver parser) {
+        if (!confDir.isSet() || confDir.value().isBlank()) {
+            return;
+        }
+
+        Path dir = Path.of(confDir.value());
+        setFromConfDir(parser, classesFile, dir.resolve("classes.lst"));
+        setFromConfDir(parser, excludeMethodsFile, dir.resolve("exclude.methods.lst"));
+        setFromConfDir(parser, intrinsicMethodsFile, dir.resolve("intrinsics.lst"));
+        setFromConfDir(parser, methodArgumentConstraintsFile,
+                dir.resolve("method-argument-constraints.lst"));
+        setFromConfDir(parser, methodResultWrappersFile,
+                dir.resolve("method-result-wrappers.lst"));
+    }
+
+    private static void setFromConfDir(OptionResolver parser, Option<String> option, Path path) {
+        if (!option.isSet()) {
+            parser.overrideOption(option, path.toString());
+        }
     }
 
     public static boolean isGenomeRecordEnabled() {
