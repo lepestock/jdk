@@ -438,6 +438,7 @@ void InlineTypeNode::load(GraphKit* kit, Node* base, Node* ptr, bool immutable_m
 }
 
 void InlineTypeNode::store_flat(GraphKit* kit, Node* base, Node* ptr, bool atomic, bool immutable_memory, bool null_free, DecoratorSet decorators) {
+  kit->C->record_optimization_event(OptEvent_InlineTypeFlatStore);
   ciInlineKlass* vk = inline_klass();
   bool do_atomic = atomic;
   // With immutable memory, a non-atomic load and an atomic load are the same
@@ -1055,6 +1056,7 @@ InlineTypeNode* InlineTypeNode::buffer(GraphKit* kit, bool safe_for_replace) {
     assert(alloc != nullptr, "must have an allocation node");
     kit->insert_mem_bar(Op_MemBarStoreStore, alloc->proj_out_or_null(AllocateNode::RawAddress));
     oop->init_req(3, alloc_oop);
+    kit->C->record_optimization_event(OptEvent_InlineTypeBuffering);
     region->init_req(3, kit->control());
     io    ->init_req(3, kit->i_o());
     mem   ->init_req(3, kit->merged_memory());
@@ -1240,6 +1242,7 @@ Node* InlineTypeNode::Ideal(PhaseGVN* phase, bool can_reshape) {
           if (res != nullptr && res->is_CheckCastPP()) {
             // Replace allocation by oop and unlink AllocateNode
             replace_allocation(igvn, res, oop);
+            phase->C->record_optimization_event(OptEvent_InlineTypeReallocationElimination);
             igvn->replace_input_of(alloc, AllocateNode::InlineType, igvn->C->top());
             --i; --imax;
           }
@@ -1384,6 +1387,7 @@ InlineTypeNode* InlineTypeNode::make_from_flat(GraphKit* kit, ciInlineKlass* vk,
 // GraphKit wrapper for the 'make_from_flat' method
 InlineTypeNode* InlineTypeNode::make_from_flat_impl(GraphKit* kit, ciInlineKlass* vk, Node* base, Node* ptr, bool atomic, bool immutable_memory,
                                                     bool null_free, bool trust_null_free_oop, DecoratorSet decorators) {
+  kit->C->record_optimization_event(OptEvent_InlineTypeFlatLoad);
   assert(null_free || !trust_null_free_oop, "cannot trust null-free oop when the holder object is not null-free");
   PhaseGVN& gvn = kit->gvn();
   bool do_atomic = atomic;
@@ -1760,6 +1764,7 @@ void InlineTypeNode::remove_redundant_allocations(PhaseIdealLoop* phase) const {
       if (res_dom != res) {
         // Replace allocation by dominating one.
         replace_allocation(igvn, res, res_dom);
+        phase->C->record_optimization_event(OptEvent_InlineTypeReallocationElimination);
         // The result of the dominated allocation is now unused and will be removed
         // later in PhaseMacroExpand::eliminate_allocate_node to not confuse loop opts.
         igvn->_worklist.push(alloc);

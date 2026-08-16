@@ -1317,6 +1317,10 @@ bool PhaseIdealLoop::loop_predication_impl(IdealLoopTree* loop) {
 
   head->verify_strip_mined(1);
 
+  if (hoisted) {
+    C->record_optimization_event(OptEvent_LoopPredication);
+  }
+
   return hoisted;
 }
 
