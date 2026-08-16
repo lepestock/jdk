@@ -1020,7 +1020,6 @@ void PhaseCFG::remove_unreachable_blocks() {
       get_block(i)->_pre_order--;
     }
     _blocks.remove(dead->_pre_order);
-    C->record_optimization_event(OptEvent_BlockElimination);
     _number_of_blocks--;
     // Update the successors' predecessor list and push new unreachable blocks.
     for (uint i = 0; i < dead->_num_succs; i++) {

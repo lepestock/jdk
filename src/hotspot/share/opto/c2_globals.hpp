@@ -694,9 +694,6 @@
   product(bool, TraceTypeProfile, false, DIAGNOSTIC,                        \
           "Trace type profile")                                             \
                                                                             \
-  develop(bool, TraceC2Optimizations, false,                             \
-          "Trace selected C2 loop optimizations (counts only)")           \
-                                                                            \
   develop(bool, PoisonOSREntry, true,                                       \
            "Detect abnormal calls to OSR code")                             \
                                                                             \

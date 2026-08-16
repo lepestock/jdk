@@ -2214,9 +2214,6 @@ Node* IfProjNode::Identity(PhaseGVN* phase) {
        // will cause this node to be reprocessed once the dead branch is killed.
        in(0)->outcnt() == 1))) {
     // IfNode control
-    if (taken) {
-      phase->C->record_optimization_event(OptEvent_ConditionalExpressionElimination);
-    }
     if (in(0)->is_BaseCountedLoopEnd()) {
       // CountedLoopEndNode may be eliminated by if subsuming, replace CountedLoopNode with LoopNode to
       // avoid mismatching between CountedLoopNode and CountedLoopEndNode in the following optimization.

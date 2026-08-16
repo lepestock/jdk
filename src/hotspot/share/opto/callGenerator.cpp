@@ -898,7 +898,6 @@ void CallGenerator::do_late_inline_helper() {
         }
       }
     }
-    C->record_optimization_event(OptEvent_FunctionInlining);
     kit.replace_call(call, result, true, do_asserts);
   }
 }

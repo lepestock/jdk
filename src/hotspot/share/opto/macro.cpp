@@ -1572,9 +1572,6 @@ bool PhaseMacroExpand::eliminate_allocate_node(AllocateNode *alloc) {
   }
 
   process_users_of_allocation(alloc, inline_alloc);
-  if (boxing_alloc) {
-    C->record_optimization_event(OptEvent_EliminateAutobox);
-  }
 
 #ifndef PRODUCT
   if (PrintEliminateAllocations) {
@@ -2645,7 +2642,6 @@ bool PhaseMacroExpand::eliminate_locking_node(AbstractLockNode *alock) {
 #endif
 
   alock->log_lock_optimization(C, "eliminate_lock");
-  C->record_optimization_event(OptEvent_EliminateLocks);
 
 #ifndef PRODUCT
   if (PrintEliminateLocks) {
@@ -3262,9 +3258,6 @@ void PhaseMacroExpand::eliminate_macro_nodes(bool eliminate_locks) {
         CallStaticJavaNode* call = n->as_CallStaticJava();
         if (!call->method()->is_method_handle_intrinsic()) {
           success = eliminate_boxing_node(n->as_CallStaticJava());
-          if (success) {
-            C->record_optimization_event(OptEvent_EliminateAutobox);
-          }
         }
         break;
       }
