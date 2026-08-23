@@ -165,8 +165,16 @@ class BlockFactory extends Factory<Block> {
                         Genome.recordCurrentScopeGene('S', statementScopeSeed);
                         pushStatementContext(blockDepth, attemptedStatements, plannedStatementAttempts);
                         Throwable statementThrowable = null;
-                        builder.withComplexityLimit(LOCAL_COMPLEXITY_LIMIT);
+                        builder.withComplexityLimit(LOCAL_COMPLEXITY_LIMIT)
+                                .setLevel(level);
                         rule = new Rule<>("block");
+                        double mtLegWeight = GenerationState.currentFlowParams().mtLegWeight();
+                        if (mtLegWeight > 0.0
+                                && MorphLegFactory.hasApplicableLeg(GenerationState.currentMorphContext())) {
+                            // This hot rule usually has no active morph legs. Avoid adding a
+                            // mostly-failing factory that would pay exception/checkpoint/rollback cost.
+                            rule.add("morph_leg", new MorphLegFactory(builder), 2.0 * mtLegWeight);
+                        }
                         rule.add("statement", builder.getStatementFactory(), 8);
                         if (!ProductionParams.disableVarsInBlock.value()) {
                             double localDeclWeight = computeLocalDeclarationWeight(

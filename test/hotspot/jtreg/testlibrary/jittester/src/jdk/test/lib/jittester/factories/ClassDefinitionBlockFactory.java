@@ -135,7 +135,7 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                         .withStatementLimit(statementLimit)
                         .withOperatorLimit(operatorLimit)
                         .setLevel(newLevel);
-                IRNode newBlock = b.getBlockFactory().produce();
+                IRNode newBlock = b.produceBlock();
                 List<IRNode> siblings = randomLeaf.getChildren();
                 // to avoid break;
                 int index = PseudoRandom.randomNotZero(siblings.size() - 1);

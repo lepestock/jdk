@@ -437,6 +437,11 @@ public final class FullGenocode implements GenomeBackend {
     }
 
     @Override
+    public synchronized void recordTemplateGene(String templateName, long geneValue) {
+        writeEventGene("T", geneValue);
+    }
+
+    @Override
     public synchronized Long consumeRuleGene(String ruleName, long liveGeneValue) {
         Long value = consumeEventGene('R', liveGeneValue, ruleName);
         if (value == null) {
@@ -475,6 +480,15 @@ public final class FullGenocode implements GenomeBackend {
         Long value = consumeEventGene('U', liveGeneValue, channel);
         if (value != null) {
             writeEventGene("U", value);
+        }
+        return value;
+    }
+
+    @Override
+    public synchronized Long consumeTemplateGene(String templateName, long liveGeneValue) {
+        Long value = consumeEventGene('T', liveGeneValue, templateName);
+        if (value != null) {
+            writeEventGene("T", value);
         }
         return value;
     }
@@ -866,7 +880,7 @@ public final class FullGenocode implements GenomeBackend {
             return false;
         }
         char c = token.charAt(0);
-        return c == 'R' || c == 'C' || c == 'N' || c == 'M' || c == 'U';
+        return c == 'R' || c == 'C' || c == 'N' || c == 'M' || c == 'U' || c == 'T';
     }
 
     private static ReplayEvent parseEventToken(String token) {

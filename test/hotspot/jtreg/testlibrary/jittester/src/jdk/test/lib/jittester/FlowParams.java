@@ -35,6 +35,13 @@ import java.util.Set;
  * so values can be migrated from {@link ProductionParams} gradually.</p>
  */
 public final class FlowParams {
+    public enum CodeContext {
+        UNKNOWN,
+        STATIC_INITIALIZER,
+        CONSTRUCTOR,
+        METHOD
+    }
+
     private final FlowParams prev;
     private final long complexityLimit;
     private final int statementLimit;
@@ -49,6 +56,9 @@ public final class FlowParams {
     private final Set<String> readOnlyVars;
     private final Set<String> iterationVariables;
     private final boolean normalizeNaN;
+    private final CodeContext codeContext;
+    private final double mtCreationProbability;
+    private final double mtLegWeight;
 
     private FlowParams(FlowParams prev, long complexityLimit, int statementLimit, int operatorLimit,
                        String iterationVariable, int arrayKernelIterationLimit, boolean inArrayKernel,
@@ -58,7 +68,10 @@ public final class FlowParams {
                        int arrayExtractionExpressionWeightPercent,
                        Set<String> readOnlyVars,
                        Set<String> iterationVariables,
-                       boolean normalizeNaN) {
+                       boolean normalizeNaN,
+                       CodeContext codeContext,
+                       double mtCreationProbability,
+                       double mtLegWeight) {
         this.prev = prev;
         this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
@@ -73,6 +86,9 @@ public final class FlowParams {
         this.readOnlyVars = readOnlyVars;
         this.iterationVariables = iterationVariables;
         this.normalizeNaN = normalizeNaN;
+        this.codeContext = codeContext;
+        this.mtCreationProbability = mtCreationProbability;
+        this.mtLegWeight = mtLegWeight;
     }
 
     public static FlowParams fromProductionParams() {
@@ -89,7 +105,10 @@ public final class FlowParams {
                 100,
                 Collections.emptySet(),
                 Collections.emptySet(),
-                false);
+                false,
+                CodeContext.UNKNOWN,
+                percentToProbability(ProductionParams.lockEliminationMorphTemplateProbability.value()),
+                percentToProbability(ProductionParams.morphTemplateLegWeight.value()));
     }
 
     public long complexityLimit() {
@@ -158,6 +177,18 @@ public final class FlowParams {
         return normalizeNaN;
     }
 
+    public CodeContext codeContext() {
+        return codeContext;
+    }
+
+    public double mtCreationProbability() {
+        return mtCreationProbability;
+    }
+
+    public double mtLegWeight() {
+        return mtLegWeight;
+    }
+
     public Builder withStatementLimit(int value) {
         return new Builder(this).withStatementLimit(value);
     }
@@ -197,6 +228,22 @@ public final class FlowParams {
         return new Builder(this).withNormalizeNaN(value);
     }
 
+    public Builder withCodeContext(CodeContext value) {
+        return new Builder(this).withCodeContext(value);
+    }
+
+    public Builder withMtCreationProbability(double value) {
+        return new Builder(this).withMtCreationProbability(value);
+    }
+
+    public Builder withMtLegWeight(double value) {
+        return new Builder(this).withMtLegWeight(value);
+    }
+
+    public Builder withMtParameters(double creationProbability, double legWeight) {
+        return new Builder(this).withMtParameters(creationProbability, legWeight);
+    }
+
     public String dumpSnapshot() {
         return "FlowParams{complexityLimit=" + complexityLimit
                 + ", statementLimit=" + statementLimit
@@ -211,8 +258,22 @@ public final class FlowParams {
                 + ", readOnlyVars=" + readOnlyVars
                 + ", iterationVariables=" + iterationVariables
                 + ", normalizeNaN=" + normalizeNaN
+                + ", codeContext=" + codeContext
+                + ", mtCreationProbability=" + mtCreationProbability
+                + ", mtLegWeight=" + mtLegWeight
                 + ", depth=" + depth(this)
                 + "}";
+    }
+
+    private static double percentToProbability(int percent) {
+        return normalizeProbability(percent / 100.0);
+    }
+
+    private static double normalizeProbability(double value) {
+        if (Double.isNaN(value)) {
+            return 0.0;
+        }
+        return Math.max(0.0, Math.min(1.0, value));
     }
 
     private static int depth(FlowParams frame) {
@@ -244,6 +305,9 @@ public final class FlowParams {
         private LinkedHashSet<String> readOnlyVars;
         private LinkedHashSet<String> iterationVariables;
         private boolean normalizeNaN;
+        private CodeContext codeContext;
+        private double mtCreationProbability;
+        private double mtLegWeight;
 
         private Builder(FlowParams base) {
             if (base == null) {
@@ -263,6 +327,9 @@ public final class FlowParams {
             this.readOnlyVars = new LinkedHashSet<>(base.readOnlyVars);
             this.iterationVariables = new LinkedHashSet<>(base.iterationVariables);
             this.normalizeNaN = base.normalizeNaN;
+            this.codeContext = base.codeContext;
+            this.mtCreationProbability = base.mtCreationProbability;
+            this.mtLegWeight = base.mtLegWeight;
         }
 
         public Builder withComplexityLimit(long value) {
@@ -355,13 +422,37 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withCodeContext(CodeContext value) {
+            this.codeContext = value == null ? CodeContext.UNKNOWN : value;
+            return this;
+        }
+
+        public Builder withMtCreationProbability(double value) {
+            this.mtCreationProbability = normalizeProbability(value);
+            return this;
+        }
+
+        public Builder withMtLegWeight(double value) {
+            this.mtLegWeight = normalizeProbability(value);
+            return this;
+        }
+
+        public Builder withMtParameters(double creationProbability, double legWeight) {
+            this.mtCreationProbability = normalizeProbability(creationProbability);
+            this.mtLegWeight = normalizeProbability(legWeight);
+            return this;
+        }
+
         public FlowParams advance() {
             return new FlowParams(base, complexityLimit, statementLimit, operatorLimit, iterationVariable,
                     arrayKernelIterationLimit, inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
                     arrayElementExpressionWeightPercent, arrayExtractionExpressionWeightPercent,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
                     Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)),
-                    normalizeNaN);
+                    normalizeNaN,
+                    codeContext,
+                    mtCreationProbability,
+                    mtLegWeight);
         }
     }
 }

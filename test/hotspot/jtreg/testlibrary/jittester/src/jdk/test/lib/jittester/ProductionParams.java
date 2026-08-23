@@ -152,6 +152,11 @@ public class ProductionParams {
     public static Option<Integer> debugMethodCallWrapGenesMax = null;
     public static Option<Boolean> debugArrayAssignmentCandidates = null;
     public static Option<Integer> debugArrayAssignmentCandidatesMax = null;
+    public static Option<Boolean> debugMorphSourceDiagnostics = null;
+    public static Option<Integer> lockEliminationMorphTemplateProbability = null;
+    public static Option<Integer> morphLockEliminationCreateLockVarProbability = null;
+    public static Option<Integer> morphTemplateLegWeight = null;
+    public static Option<Integer> morphTemplateReferenceDeteriorationPercent = null;
     private static boolean genomeRecordEnabled = false;
     private static OptionResolver activeOptionResolver = null;
     private static Map<String, String> mutationOverrides = Collections.emptyMap();
@@ -392,6 +397,27 @@ public class ProductionParams {
                 "debug-array-assignment-candidates-max",
                 12,
                 "Maximum number of array candidates listed per debug-array-assignment-candidates comment");
+        debugMorphSourceDiagnostics = optionResolver.addBooleanOption(
+                null,
+                "debug-morph-source-diagnostics",
+                false,
+                "Emit source comments for morph template creation and leg materialization");
+        lockEliminationMorphTemplateProbability = optionResolver.addIntegerOption(
+                "lock-elimination-morph-template-probability",
+                20,
+                "Probability (0..100) to create a lock-elimination morph template on produceBlock()");
+        morphLockEliminationCreateLockVarProbability = optionResolver.addIntegerOption(
+                "morph-lock-elimination-create-lock-var-probability",
+                50,
+                "Probability (0..100) for lock-elimination morph leg to create a magnetized lock variable");
+        morphTemplateLegWeight = optionResolver.addIntegerOption(
+                "morph-template-leg-weight",
+                100,
+                "Weight percent (0..100) for active morph template legs at statement points");
+        morphTemplateReferenceDeteriorationPercent = optionResolver.addIntegerOption(
+                "morph-template-reference-deterioration-percent",
+                5,
+                "Percent multiplier for morph parameters inside morph-owned child blocks");
     }
 
     /**

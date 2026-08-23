@@ -99,8 +99,7 @@ class MainKlassFactory extends Factory<MainKlass> {
         IRNode testFunction = builder.setResultType(TypeList.VOID)
                 .withComplexityLimit(complexityLimit)
                 .withStatementLimit(statementsInTestFunctionLimit)
-                .getBlockFactory()
-                .produce();
+                .produceBlock();
         SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
         IRNode printVariables = builder.setLevel(2)
                 .getPrintVariablesFactory()
@@ -186,8 +185,7 @@ class MainKlassFactory extends Factory<MainKlass> {
                         .withComplexityLimit(complexityLimit)
                         .withStatementLimit(statementsInFunctionLimit)
                         .setLevel(newLevel)
-                        .getBlockFactory()
-                        .produce();
+                        .produceBlock();
                 List<IRNode> siblings = randomLeaf.getChildren();
                 // to avoid break;
                 int index = PseudoRandom.randomNotZero(siblings.size() - 1);

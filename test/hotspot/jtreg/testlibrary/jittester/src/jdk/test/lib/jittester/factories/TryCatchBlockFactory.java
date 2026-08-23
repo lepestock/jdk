@@ -115,8 +115,7 @@ class TryCatchBlockFactory extends Factory<TryCatchBlock> {
                 * statementLimit);
         return builder.withStatementLimit(actualStatementLim)
                 .withComplexityLimit(actualComplexityLim)
-                .getBlockFactory()
-                .produce();
+                .produceBlock();
     }
 
     private List<Type> getUncheckedThrowables() {

@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.Block;
+import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -66,6 +68,9 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
             SymbolTable.remove(SymbolTable.get("this", VariableInfo.class));
             long complLimit = (long) (PseudoRandom.random() * complexityLimit);
             ThisVariableControl.pushForbidThis();
+            FlowParams previous = GenerationState.currentFlowParams();
+            GenerationState.setCurrentFlowParams(previous.withCodeContext(
+                    FlowParams.CodeContext.STATIC_INITIALIZER).advance());
             try {
                 body = new IRNodeBuilder()
                         .setOwnerKlass(ownerClass)
@@ -73,14 +78,15 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
                         .withComplexityLimit(complLimit)
                         .withStatementLimit(statementLimit)
                         .withOperatorLimit(operatorLimit)
+                        .withCodeContext(FlowParams.CodeContext.STATIC_INITIALIZER)
                         .setLevel(level)
                         .setSubBlock(true)
                         .setCanHaveBreaks(false)
                         .setCanHaveContinues(false)
                         .setCanHaveReturn(false)
-                        .getBlockFactory()
-                        .produce();
+                        .produceBlock();
             } finally {
+                GenerationState.setCurrentFlowParams(previous);
                 ThisVariableControl.popForbidThis();
             }
         } finally {

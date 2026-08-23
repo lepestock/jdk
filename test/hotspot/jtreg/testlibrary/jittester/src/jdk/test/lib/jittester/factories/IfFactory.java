@@ -93,15 +93,13 @@ class IfFactory extends SafeFactory<If> {
                             .setCanHaveBreaks(canHaveBreaks)
                             .setCanHaveContinues(canHaveContinues)
                             .setCanHaveReturn(canHaveReturn)
-                            .getBlockFactory()
-                            .produce();
+                            .produceBlock();
                 } else {
                     thenBlock = builder.setSubBlock(false)
                             .setCanHaveBreaks(false)
                             .setCanHaveContinues(false)
                             .setCanHaveReturn(false)
-                            .getBlockFactory()
-                            .produce();
+                            .produceBlock();
                 }
                 // setChild(If.IfPart.THEN.ordinal(), thenBlock);
                 Block elseBlock = null;
@@ -113,15 +111,13 @@ class IfFactory extends SafeFactory<If> {
                             .setCanHaveBreaks(canHaveBreaks)
                             .setCanHaveContinues(canHaveContinues)
                             .setCanHaveReturn(canHaveReturn)
-                            .getBlockFactory()
-                            .produce();
+                            .produceBlock();
                     } else {
                         elseBlock = builder.setSubBlock(false)
                             .setCanHaveBreaks(false)
                             .setCanHaveContinues(false)
                             .setCanHaveReturn(false)
-                            .getBlockFactory()
-                            .produce();
+                            .produceBlock();
                     }
                 }
                 // setChild(If.IfPart.ELSE.ordinal(), elseBlock);

@@ -122,6 +122,7 @@ public class Formatter {
             case Statement node -> VISITOR.visit(node);
             case StaticConstructorDefinition node -> VISITOR.visit(node);
             case StaticMemberVariable node -> VISITOR.visit(node);
+            case SynchronizedBlock node -> VISITOR.visit(node);
             case Switch node -> VISITOR.visit(node);
             case TernaryOperator node -> VISITOR.visit(node);
             case TypeArray node -> VISITOR.visit(node);

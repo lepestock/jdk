@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.Block;
@@ -90,6 +91,10 @@ import jdk.test.lib.jittester.loops.For;
 import jdk.test.lib.jittester.loops.LoopingCondition;
 import jdk.test.lib.jittester.loops.While;
 import jdk.test.lib.jittester.types.TypeKlass;
+import jdk.test.lib.jittester.diagnostics.SourceDiagnostics;
+import jdk.test.lib.jittester.morph.LockEliminationMorphTemplate;
+import jdk.test.lib.jittester.morph.MorphTemplate;
+import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public class IRNodeBuilder {
     //private Optional<Type> variableType = Optional.empty();
@@ -263,7 +268,7 @@ public class IRNodeBuilder {
         }
     }
 
-    public Factory<Block> getBlockFactory() {
+    Factory<Block> getBlockFactory() {
         return new BlockFactory(getOwnerClass(), getResultType(), flowParams().complexityLimit(),
                 flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), subBlock.orElse(false),
                 canHaveBreaks.orElse(false), canHaveContinues.orElse(false),
@@ -295,12 +300,42 @@ public class IRNodeBuilder {
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
         normalizeNaN.ifPresent(flowBuilder::withNormalizeNaN);
+        MorphTemplate createdTemplate = createMorphTemplate(flowParams());
+        if (createdTemplate != null) {
+            GenerationState.setCurrentMorphContext(
+                    GenerationState.currentMorphContext().withAdded(createdTemplate));
+        }
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
-            return getBlockFactory().produce();
+            Block block = getBlockFactory().produce();
+            maybeAddMtDiagnostic(block, createdTemplate);
+            return block;
         } finally {
             GenerationState.setCurrentFlowParams(previous);
+            if (createdTemplate != null) {
+                GenerationState.setCurrentMorphContext(
+                        GenerationState.currentMorphContext().withoutId(createdTemplate.id()));
+            }
         }
+    }
+
+    private static MorphTemplate createMorphTemplate(FlowParams flowParams) {
+        if (LockEliminationMorphTemplate.canBeCreated(flowParams)
+                && createLockEliminationMorphTemplateChoice(flowParams.mtCreationProbability())) {
+            return new LockEliminationMorphTemplate();
+        }
+        return null;
+    }
+
+    private static void maybeAddMtDiagnostic(Block block, MorphTemplate template) {
+        if (template == null || !ProductionParams.debugMorphSourceDiagnostics.value()) {
+            return;
+        }
+        SourceDiagnostics.attach(block, template.creationDiagnostic());
+    }
+
+    private static boolean createLockEliminationMorphTemplateChoice(double probability) {
+        return probability > 0.0 && PseudoRandom.randomBoolean(probability);
     }
 
     /**
@@ -402,6 +437,18 @@ public class IRNodeBuilder {
     public Factory<Declaration> getConstantDeclarationFactory() {
         return new DeclarationFactory(getOwnerClass(), flowParams().complexityLimit(), flowParams().operatorLimit(),
                 getIsLocal(), getExceptionSafe(), true);
+    }
+
+    public Factory<Declaration> getInitializedDeclarationFactory() {
+        return new DeclarationFactory(getOwnerClass(), flowParams().complexityLimit(), flowParams().operatorLimit(),
+                getIsLocal(), getExceptionSafe(), getIsConstant(), getResultType(), true);
+    }
+
+    public Declaration produceReferenceTypeDeclaration(Predicate<TypeKlass> typeFilter)
+            throws ProductionFailedException {
+        return new ReferenceTypeDeclarationFactory(getOwnerClass(), flowParams().complexityLimit(),
+                flowParams().operatorLimit(), getIsLocal(), getExceptionSafe(), getIsConstant(),
+                typeFilter).produce();
     }
 
     public Factory<DoWhile> getDoWhileFactory() {
@@ -600,7 +647,8 @@ public class IRNodeBuilder {
 
     public Factory<VariableInitialization> getVariableInitializationFactory() {
         return new VariableInitializationFactory(getOwnerClass(), getIsConstant(), getIsStatic(),
-                getIsLocal(), flowParams().complexityLimit(), flowParams().operatorLimit(), getExceptionSafe());
+                getIsLocal(), flowParams().complexityLimit(), flowParams().operatorLimit(), getExceptionSafe(),
+                getResultType());
     }
 
     public Factory<TryCatchBlock> getTryCatchBlockFactory() {
@@ -642,6 +690,34 @@ public class IRNodeBuilder {
     public IRNodeBuilder withStatementLimit(int value) {
         flowParams = flowParams()
                 .withStatementLimit(value)
+                .advance();
+        return this;
+    }
+
+    public IRNodeBuilder withCodeContext(FlowParams.CodeContext value) {
+        flowParams = flowParams()
+                .withCodeContext(value)
+                .advance();
+        return this;
+    }
+
+    public IRNodeBuilder withMtCreationProbability(double value) {
+        flowParams = flowParams()
+                .withMtCreationProbability(value)
+                .advance();
+        return this;
+    }
+
+    public IRNodeBuilder withMtLegWeight(double value) {
+        flowParams = flowParams()
+                .withMtLegWeight(value)
+                .advance();
+        return this;
+    }
+
+    public IRNodeBuilder withMtParameters(double creationProbability, double legWeight) {
+        flowParams = flowParams()
+                .withMtParameters(creationProbability, legWeight)
                 .advance();
         return this;
     }
@@ -915,6 +991,14 @@ public class IRNodeBuilder {
 
     private boolean getIsSynchronizedAllowed() {
         return isSynchronizedAllowed;
+    }
+
+    public TypeKlass currentOwnerKlass() {
+        return getOwnerClass();
+    }
+
+    public int currentLevel() {
+        return getLevel();
     }
 
     private boolean getIsInitialized() {

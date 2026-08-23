@@ -23,14 +23,17 @@
 
 package jdk.test.lib.jittester;
 
+import jdk.test.lib.jittester.morph.MorphContext;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 /**
  * Aggregates mutable generation state carriers and provides atomic checkpoint/rollback.
- * Current scope: {@link SymbolTable}, {@link TypeList}, {@link ScopeGuards}, and {@link FlowParams}.
+ * Current scope: {@link SymbolTable}, {@link TypeList}, {@link ScopeGuards},
+ * {@link FlowParams}, and {@link MorphContext}.
  */
 public final class GenerationState {
     private static FlowParams currentFlowParams;
+    private static MorphContext currentMorphContext = MorphContext.EMPTY;
     private static String currentMainClassName;
 
     private GenerationState() {
@@ -38,6 +41,7 @@ public final class GenerationState {
 
     public static void initializeFlowParamsFromProductionParams() {
         currentFlowParams = FlowParams.fromProductionParams();
+        currentMorphContext = MorphContext.EMPTY;
     }
 
     public static FlowParams currentFlowParams() {
@@ -52,6 +56,17 @@ public final class GenerationState {
             throw new IllegalArgumentException("GenerationState flow params must not be null");
         }
         currentFlowParams = flowParams;
+    }
+
+    public static MorphContext currentMorphContext() {
+        return currentMorphContext;
+    }
+
+    public static void setCurrentMorphContext(MorphContext morphContext) {
+        if (morphContext == null) {
+            throw new IllegalArgumentException("GenerationState morph context must not be null");
+        }
+        currentMorphContext = morphContext;
     }
 
     public static void setCurrentMainClassName(String name) {
@@ -73,7 +88,8 @@ public final class GenerationState {
                 SymbolTable.checkpoint(),
                 TypeList.checkpoint(),
                 ScopeGuards.checkpoint(),
-                currentFlowParams());
+                currentFlowParams(),
+                currentMorphContext());
     }
 
     public static void rollbackTo(Checkpoint checkpoint) {
@@ -84,6 +100,7 @@ public final class GenerationState {
         TypeList.rollbackToCheckpoint(checkpoint.typeCheckpoint());
         ScopeGuards.rollbackToCheckpoint(checkpoint.scopeGuardsCheckpoint);
         currentFlowParams = checkpoint.flowParamsCheckpoint;
+        currentMorphContext = checkpoint.morphContextCheckpoint;
     }
 
     public static String dumpSnapshot() {
@@ -99,6 +116,8 @@ public final class GenerationState {
                 .append("}\n");
         sb.append("--- FlowParams ---\n");
         sb.append(currentFlowParams().dumpSnapshot()).append('\n');
+        sb.append("--- MorphContext ---\n");
+        sb.append(currentMorphContext()).append('\n');
         sb.append("--- SymbolTable ---\n");
         sb.append(SymbolTable.dumpSnapshot(Integer.MAX_VALUE, Integer.MAX_VALUE));
         sb.append("--- TypeList ---\n");
@@ -111,15 +130,18 @@ public final class GenerationState {
         private final int typeCheckpoint;
         private final ScopeGuards.Checkpoint scopeGuardsCheckpoint;
         private final FlowParams flowParamsCheckpoint;
+        private final MorphContext morphContextCheckpoint;
 
         private Checkpoint(int symbolCheckpoint,
                            int typeCheckpoint,
                            ScopeGuards.Checkpoint scopeGuardsCheckpoint,
-                           FlowParams flowParamsCheckpoint) {
+                           FlowParams flowParamsCheckpoint,
+                           MorphContext morphContextCheckpoint) {
             this.symbolCheckpoint = symbolCheckpoint;
             this.typeCheckpoint = typeCheckpoint;
             this.scopeGuardsCheckpoint = scopeGuardsCheckpoint;
             this.flowParamsCheckpoint = flowParamsCheckpoint;
+            this.morphContextCheckpoint = morphContextCheckpoint;
         }
 
         public int symbolCheckpoint() {

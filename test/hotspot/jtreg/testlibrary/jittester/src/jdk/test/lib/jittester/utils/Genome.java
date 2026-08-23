@@ -150,12 +150,20 @@ public final class Genome {
         genocode.recordMagnetTargetChoice(channel, geneValue);
     }
 
+    public static synchronized void recordTemplateGene(String templateName, long geneValue) {
+        genocode.recordTemplateGene(templateName, geneValue);
+    }
+
     public static Long consumeRuleGene(String ruleName, long liveGeneValue) {
         return genocode.consumeRuleGene(ruleName, liveGeneValue);
     }
 
     public static Long consumeChoiceGene(String ruleName, long liveGeneValue) {
         return genocode.consumeChoiceGene(ruleName, liveGeneValue);
+    }
+
+    public static Long consumeTemplateGene(String templateName, long liveGeneValue) {
+        return genocode.consumeTemplateGene(templateName, liveGeneValue);
     }
 
     /**
@@ -188,6 +196,32 @@ public final class Genome {
         }
         recordBooleanChoiceGene(choiceName, liveValue);
         return liveValue;
+    }
+
+    public static synchronized long createOrConsumeTemplateGene(String templateName, long liveValue) {
+        if (genocode.isReplayActive()) {
+            Long replayValue = consumeTemplateGene(templateName, liveValue);
+            if (replayValue == null) {
+                throw new RuntimeException("Genome replay desync: missing template event for '"
+                        + templateName + "'");
+            }
+            return replayValue;
+        }
+        recordTemplateGene(templateName, liveValue);
+        return liveValue;
+    }
+
+    public static synchronized boolean createOrConsumeBooleanTemplateGene(String templateName,
+            boolean liveValue) {
+        long value = createOrConsumeTemplateGene(templateName, liveValue ? 1L : 0L);
+        if (value == 0L) {
+            return false;
+        }
+        if (value == 1L) {
+            return true;
+        }
+        throw new RuntimeException("Genome replay desync: boolean template event '" + templateName
+                + "' must be 0/1, got " + value);
     }
 
     public static Long consumeRngGene(String rngOpName, long liveGeneValue) {

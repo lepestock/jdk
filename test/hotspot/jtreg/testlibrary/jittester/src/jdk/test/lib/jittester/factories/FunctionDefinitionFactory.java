@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Nothing;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -120,20 +122,24 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
             if (staticMethod) {
                 ThisVariableControl.pushForbidThis();
             }
+            FlowParams previous = GenerationState.currentFlowParams();
+            GenerationState.setCurrentFlowParams(previous.withCodeContext(
+                    FlowParams.CodeContext.METHOD).advance());
             try {
                 body = builder.setOwnerKlass(ownerClass)
                         .setResultType(resType)
                         .withComplexityLimit(blockComplLimit)
                         .withStatementLimit(statementLimit)
                         .withOperatorLimit(operatorLimit)
+                        .withCodeContext(FlowParams.CodeContext.METHOD)
                         .setLevel(level)
                         .setSubBlock(true)
                         .setCanHaveBreaks(false)
                         .setCanHaveContinues(false)
                         .setCanHaveReturn(true)
-                        .getBlockFactory()
-                        .produce();
+                        .produceBlock();
             } finally {
+                GenerationState.setCurrentFlowParams(previous);
                 if (staticMethod) {
                     ThisVariableControl.popForbidThis();
                 }

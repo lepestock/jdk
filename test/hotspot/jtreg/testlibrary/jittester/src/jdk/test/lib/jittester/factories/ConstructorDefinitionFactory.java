@@ -24,6 +24,8 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Symbol;
@@ -92,16 +94,20 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
             long blockComplLimit = (long) (PseudoRandom.random() * complexityLimit);
             try {
                 ThisVariableControl.pushForbidThis();
+                FlowParams previous = GenerationState.currentFlowParams();
+                GenerationState.setCurrentFlowParams(previous.withCodeContext(
+                        FlowParams.CodeContext.CONSTRUCTOR).advance());
                 try {
                     body = builder.setResultType(TypeList.VOID)
                             .withComplexityLimit(blockComplLimit)
                             .withStatementLimit(statementLimit)
                             .withOperatorLimit(operatorLimit)
+                            .withCodeContext(FlowParams.CodeContext.CONSTRUCTOR)
                             .setLevel(level)
                             .setSubBlock(true)
-                            .getBlockFactory()
-                            .produce();
+                            .produceBlock();
                 } finally {
+                    GenerationState.setCurrentFlowParams(previous);
                     ThisVariableControl.popForbidThis();
                 }
         Logger.log(ownerClass, ":CDF.point1", body);

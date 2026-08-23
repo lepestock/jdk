@@ -28,6 +28,7 @@ import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
+import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 
@@ -40,32 +41,51 @@ class DeclarationFactory extends Factory<Declaration> {
     private final boolean exceptionSafe;
     private final TypeKlass ownerClass;
     private final boolean isConstant;
+    private final Type resultType;
+    private final boolean initializedOnly;
 
     DeclarationFactory(TypeKlass ownerClass, long complexityLimit,
             int operatorLimit, boolean isLocal, boolean safe) {
-        this(ownerClass, complexityLimit, operatorLimit, isLocal, safe, /* isConstant */ false);
+        this(ownerClass, complexityLimit, operatorLimit, isLocal, safe, /* isConstant */ false,
+                TypeList.VOID, false);
     }
 
     DeclarationFactory(TypeKlass ownerClass, long complexityLimit,
             int operatorLimit, boolean isLocal, boolean safe, boolean isConstant) {
+        this(ownerClass, complexityLimit, operatorLimit, isLocal, safe, isConstant,
+                TypeList.VOID, false);
+    }
+
+    DeclarationFactory(TypeKlass ownerClass, long complexityLimit,
+            int operatorLimit, boolean isLocal, boolean safe, boolean isConstant,
+            Type resultType, boolean initializedOnly) {
         this.ownerClass = ownerClass;
         this.isLocal = isLocal;
         this.exceptionSafe = safe;
         this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.isConstant = isConstant;
+        this.resultType = resultType;
+        this.initializedOnly = initializedOnly;
     }
 
     @Override
     public Declaration produce() throws ProductionFailedException {
         Rule<IRNode> rule = new Rule<>("declaration");
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                .setResultType(TypeList.VOID)
+                .setResultType(resultType)
                 .setIsLocal(isLocal)
                 .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setIsLocal(isLocal)
                 .setExceptionSafe(exceptionSafe);
+        if (initializedOnly) {
+            return new Declaration(builder
+                    .setIsConstant(isConstant)
+                    .setIsStatic(false)
+                    .getVariableInitializationFactory()
+                    .produce());
+        }
         boolean valueClassInstanceField = FinalVariablePolicy.isValueClassInstanceField(ownerClass, isLocal, false);
         if (!isConstant && !valueClassInstanceField) {
             rule.add("decl", builder

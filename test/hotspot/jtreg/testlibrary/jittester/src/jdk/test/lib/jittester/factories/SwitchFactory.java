@@ -107,8 +107,7 @@ class SwitchFactory extends SafeFactory<Switch> {
                                 .setLevel(level + 1)
                                 .setCanHaveReturn(false)
                                 .setCanHaveBreaks(false)
-                                .getBlockFactory()
-                                .produce());
+                                .produceBlock());
                         builder.setCanHaveBreaks(true)
                                 .setCanHaveReturn(canHaveReturn);
                         accumulatedStatements += currentStatementsLimit;

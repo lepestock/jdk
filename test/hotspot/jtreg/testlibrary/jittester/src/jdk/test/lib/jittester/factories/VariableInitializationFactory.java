@@ -53,9 +53,10 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
     private final boolean isLocal;
     private final boolean exceptionSafe;
     private final TypeKlass ownerClass;
+    private final Type requestedType;
 
     VariableInitializationFactory(TypeKlass ownerClass, boolean constant, boolean isStatic,
-            boolean isLocal, long complexityLimit, int operatorLimit, boolean exceptionSafe) {
+            boolean isLocal, long complexityLimit, int operatorLimit, boolean exceptionSafe, Type requestedType) {
         this.ownerClass = ownerClass;
         this.constant = constant;
         this.isStatic = isStatic;
@@ -63,11 +64,12 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.exceptionSafe = exceptionSafe;
+        this.requestedType = requestedType;
     }
 
     @Override
     protected VariableInitialization sproduce() throws ProductionFailedException {
-        Type resultType = pickInitializationType();
+        Type resultType = requestedType.equals(TypeList.VOID) ? pickInitializationType() : requestedType;
         int effectiveOperatorLimit = Math.max(1, operatorLimit);
         long effectiveComplexityLimit = Math.max(1, complexityLimit);
         int scopeDepth = Math.max(1, SymbolTable.getScopeDepth());

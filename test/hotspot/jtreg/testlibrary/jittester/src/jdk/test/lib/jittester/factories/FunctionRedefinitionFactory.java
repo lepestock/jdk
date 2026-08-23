@@ -98,8 +98,7 @@ class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
                     .setCanHaveBreaks(false)
                     .setCanHaveContinues(false)
                     .setCanHaveReturn(true)
-                    .getBlockFactory()
-                    .produce();
+                    .produceBlock();
             if (!functionInfo.type.equals(TypeList.VOID)) {
                 returnNode = builder.withComplexityLimit(complexityLimit - blockComplLimit)
                         .setExceptionSafe(false)

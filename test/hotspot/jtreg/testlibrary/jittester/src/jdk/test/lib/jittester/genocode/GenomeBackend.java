@@ -100,6 +100,9 @@ public interface GenomeBackend {
     default void recordMagnetTargetChoice(String channel, long geneValue) {
     }
 
+    default void recordTemplateGene(String templateName, long geneValue) {
+    }
+
     default Long consumeRuleGene(String ruleName, long liveGeneValue) {
         return null;
     }
@@ -117,6 +120,10 @@ public interface GenomeBackend {
     }
 
     default Long consumeMagnetTargetChoice(String channel, long liveGeneValue) {
+        return null;
+    }
+
+    default Long consumeTemplateGene(String templateName, long liveGeneValue) {
         return null;
     }
 

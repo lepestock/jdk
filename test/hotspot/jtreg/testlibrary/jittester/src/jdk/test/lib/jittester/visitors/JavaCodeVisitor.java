@@ -50,7 +50,9 @@ import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.PrintVariables;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Statement;
+import jdk.test.lib.jittester.StatementSequence;
 import jdk.test.lib.jittester.StaticMemberVariable;
+import jdk.test.lib.jittester.SynchronizedBlock;
 import jdk.test.lib.jittester.Switch;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.TernaryOperator;
@@ -1271,6 +1273,35 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(Statement node) {
         return node.getChild(0).accept(this)+ (node.isSemicolonNeeded() ? ";" : "");
+    }
+
+    @Override
+    public String visit(StatementSequence node) {
+        StringBuilder code = new StringBuilder();
+        List<IRNode> children = node.getChildren();
+        for (int i = 0; i < children.size(); i++) {
+            IRNode child = children.get(i);
+            String s = child.accept(this);
+            if (s.isEmpty()) {
+                continue;
+            }
+            code.append(i == 0 ? "" : PrintingUtils.align(node.getLevel()))
+                .append(s);
+            if (i + 1 < children.size()) {
+                code.append("\n");
+            }
+        }
+        return code.toString();
+    }
+
+    @Override
+    public String visit(SynchronizedBlock node) {
+        Block body = node.body();
+        int level = body.getLevel();
+        return "synchronized (" + node.lockExpression().accept(this) + ")\n"
+                + openBraceWithGene(level, body)
+                + body.accept(this)
+                + closeBraceWithGene(level, body);
     }
 
     @Override

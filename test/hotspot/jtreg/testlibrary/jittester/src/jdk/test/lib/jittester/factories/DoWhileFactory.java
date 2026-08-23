@@ -103,8 +103,7 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
                         .setCanHaveBreaks(false)
                         .setCanHaveContinues(false)
                         .setCanHaveReturn(false)
-                        .getBlockFactory()
-                        .produce();
+                        .produceBlock();
             } catch (ProductionFailedException e) {
                 header = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
             }

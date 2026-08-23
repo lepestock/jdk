@@ -60,7 +60,9 @@ import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.PrintVariables;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Statement;
+import jdk.test.lib.jittester.StatementSequence;
 import jdk.test.lib.jittester.StaticMemberVariable;
+import jdk.test.lib.jittester.SynchronizedBlock;
 import jdk.test.lib.jittester.Switch;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.TernaryOperator;
@@ -1392,6 +1394,16 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
         Type resultType = child.getResultType();
         emitPop(resultType);
         return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public byte[] visit(SynchronizedBlock node) {
+        throw new UnsupportedOperationException("SynchronizedBlock bytecode generation is not implemented");
+    }
+
+    @Override
+    public byte[] visit(StatementSequence node) {
+        throw new UnsupportedOperationException("StatementSequence bytecode generation is not implemented");
     }
 
     private void emitPop(Type resultType) {
