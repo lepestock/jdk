@@ -218,6 +218,21 @@ public final class Genome {
         return liveMagnetGene;
     }
 
+    /**
+     * Creates or consumes a magnet gene with an encoded requested entity kind.
+     */
+    public static synchronized long createOrConsumeMagnetGene(String channel, int kind) {
+        if (genocode.isReplayActive()) {
+            Long replayGene = genocode.consumeMagnetGene(channel, 0L);
+            assertHard(replayGene != null,
+                    "Genome replay desync: missing magnet event for channel '" + channel + "'");
+            return replayGene;
+        }
+        long liveMagnetGene = MagnetGene.encode(kind, PseudoRandom.nextLongSilent());
+        genocode.recordMagnetGene(channel, liveMagnetGene);
+        return liveMagnetGene;
+    }
+
     public static long startScope(char scopeType, long liveSeed) {
         return genocode.startScope(scopeType, liveSeed);
     }
