@@ -65,8 +65,6 @@ class ExpressionFactory extends SafeFactory<IRNode> {
     private final int stopFullDepth;
     private final boolean expressionDebugEnabled;
     private final int expressionDepthWarn;
-    private final int expressionDepthHardLimit;
-    private final int expressionMaxDepth;
 
     ExpressionFactory(int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean exceptionSafe, boolean noconsts) throws ProductionFailedException {
@@ -84,8 +82,6 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         terminalRule = new Rule<>("expression_terminal");
         this.expressionDebugEnabled = ProductionParams.expressionDebug.value();
         this.expressionDepthWarn = Math.max(1, ProductionParams.expressionDebugDepthWarn.value());
-        this.expressionDepthHardLimit = Math.max(0, ProductionParams.expressionDebugDepthHardLimit.value());
-        this.expressionMaxDepth = Math.max(1, ProductionParams.expressionMaxDepth.value());
         this.stopFloorProbability = Math.max(0.0, Math.min(0.999,
                 ProductionParams.expressionStopFloorPercent.value() / 100.0));
         this.stopStartDepth = Math.max(1, ProductionParams.expressionStopStartDepth.value());
@@ -258,18 +254,6 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                 System.out.printf("EXPR_DEBUG depth_warn depth=%d seed=%d stopP=%.3f%n",
                         depth, PseudoRandom.getCurrentSeed(), computeStopProbability(depth));
             }
-            if (expressionDepthHardLimit > 0 && depth > expressionDepthHardLimit) {
-                stats.depthHardLimitTrips++;
-                if (expressionDebugEnabled) {
-                    System.out.printf("EXPR_DEBUG depth_hard_limit depth=%d hardLimit=%d seed=%d%n",
-                            depth, expressionDepthHardLimit, PseudoRandom.getCurrentSeed());
-                }
-                throw new ProductionFailedException();
-            }
-            if (depth > expressionMaxDepth) {
-                stats.depthHardLimitTrips++;
-                return produceTerminalOrThrow(depth, stats);
-            }
             if (shouldStopExpressionRecursion(depth)) {
                 return produceTerminalOrThrow(depth, stats);
             }
@@ -378,9 +362,9 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         if (depth <= 0) {
             if (expressionDebugEnabled) {
                 DebugStats stats = DEBUG_STATS.get();
-                System.out.printf("EXPR_DEBUG summary maxDepth=%d stopChecks=%d stopHits=%d terminalSuccess=%d terminalFailed=%d depthHardTrips=%d%n",
+                System.out.printf("EXPR_DEBUG summary maxDepth=%d stopChecks=%d stopHits=%d terminalSuccess=%d terminalFailed=%d%n",
                         stats.maxDepth, stats.stopChecks, stats.stopHits, stats.terminalSuccess,
-                        stats.terminalFailed, stats.depthHardLimitTrips);
+                        stats.terminalFailed);
             }
             EXPRESSION_DEPTH.set(0);
             DEBUG_STATS.set(new DebugStats());
@@ -454,6 +438,5 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         int stopHits = 0;
         int terminalSuccess = 0;
         int terminalFailed = 0;
-        int depthHardLimitTrips = 0;
     }
 }

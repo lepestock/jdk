@@ -134,12 +134,10 @@ public class ProductionParams {
     public static Option<Integer> assignmentLocalMinWeightPercent = null;
     public static Option<Integer> constBiasBasePercent = null;
     public static Option<Integer> constBiasHalfDepth = null;
-    public static Option<Integer> expressionMaxDepth = null;
     public static Option<Integer> mainLoopIterations = null;
     public static Option<Integer> mainLoopJitter = null;
     public static Option<Boolean> expressionDebug = null;
     public static Option<Integer> expressionDebugDepthWarn = null;
-    public static Option<Integer> expressionDebugDepthHardLimit = null;
     public static Option<Boolean> blockDebug = null;
     public static Option<Integer> blockDebugAttemptWarn = null;
     public static Option<Integer> blockDebugDepthWarn = null;
@@ -344,8 +342,6 @@ public class ProductionParams {
                 "Base probability (0..100) to bias selected expression builders away from constants/literals");
         constBiasHalfDepth = optionResolver.addIntegerOption("const-bias-half-depth", 5,
                 "Depth parameter for const-bias taper: p_bias(depth)=base*(half/(depth+half))");
-        expressionMaxDepth = optionResolver.addIntegerOption("expression-max-depth", 10,
-                "Hard upper bound on expression recursion depth");
         mainLoopIterations = optionResolver.addIntegerOption("main-loop-iterations", 10,
                 "Target iteration count for generated main() loop");
         mainLoopJitter = optionResolver.addIntegerOption("main-loop-jitter", 2,
@@ -354,8 +350,6 @@ public class ProductionParams {
                 "Enable expression-recursion debug probes");
         expressionDebugDepthWarn = optionResolver.addIntegerOption("expression-debug-depth-warn", 120,
                 "Warn when expression-recursion depth reaches this level");
-        expressionDebugDepthHardLimit = optionResolver.addIntegerOption("expression-debug-depth-hard-limit", 0,
-                "Temporary hard limit for expression-recursion depth; 0 disables this limiter");
         blockDebug = optionResolver.addBooleanOption(null, "block-debug", false,
                 "Enable block-generation debug probes");
         blockDebugAttemptWarn = optionResolver.addIntegerOption("block-debug-attempt-warn", 0,
