@@ -37,16 +37,13 @@ import jdk.test.lib.jittester.types.TypeKlass;
 class FunctionRedefinitionBlockFactory extends Factory<FunctionRedefinitionBlock> {
     private final int statementLimit;
     private final int operatorLimit;
-    private final long complexityLimit;
     private final int level;
     private final TypeKlass ownerClass;
     private final Collection<Symbol> functionSet;
 
-    FunctionRedefinitionBlockFactory(Collection<Symbol> functionSet, TypeKlass ownerClass,
-            long complexityLimit, int statementLimit, int operatorLimit, int level) {
+    FunctionRedefinitionBlockFactory(Collection<Symbol> functionSet, TypeKlass ownerClass, int statementLimit, int operatorLimit, int level) {
         this.functionSet = functionSet;
         this.ownerClass = ownerClass;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -56,9 +53,7 @@ class FunctionRedefinitionBlockFactory extends Factory<FunctionRedefinitionBlock
     public FunctionRedefinitionBlock produce() throws ProductionFailedException {
         ArrayList<IRNode> content = new ArrayList<>();
         if (functionSet.size() > 0) {
-            long funcComplexity = complexityLimit / functionSet.size();
             IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                    .withComplexityLimit(funcComplexity)
                     .withStatementLimit(statementLimit)
                     .withOperatorLimit(operatorLimit)
                     .setLevel(level);

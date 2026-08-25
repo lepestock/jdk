@@ -33,7 +33,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class IfFactory extends SafeFactory<If> {
-    protected final long complexityLimit;
+
     protected final int statementLimit;
     protected final int operatorLimit;
     protected final boolean canHaveBreaks;
@@ -43,12 +43,11 @@ class IfFactory extends SafeFactory<If> {
     protected final Type returnType;
     protected final int level;
 
-    IfFactory(TypeKlass ownerClass, Type returnType, long complexityLimit, int statementLimit,
+    IfFactory(TypeKlass ownerClass, Type returnType, int statementLimit,
             int operatorLimit, int level, boolean canHaveBreaks, boolean canHaveContinues,
             boolean canHaveReturn) {
         this.ownerClass = ownerClass;
         this.returnType = returnType;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -60,70 +59,63 @@ class IfFactory extends SafeFactory<If> {
     @Override
     public If sproduce() throws ProductionFailedException {
         // resizeUpChildren(If.IfPart.values().length);
-        if (statementLimit > 0 && complexityLimit > 0) {
-            long conditionComplLimit = Math.max(1L, (long) (0.05 * PseudoRandom.random() * (complexityLimit - 1)));
-            IRNodeBuilder builder = new IRNodeBuilder()
-                    .setOwnerKlass(ownerClass)
-                    .withOperatorLimit(operatorLimit);
-            IRNode condition = builder.withComplexityLimit(conditionComplLimit)
-                    .setResultType(TypeList.BOOLEAN)
-                    .setExceptionSafe(false)
-                    .getBooleanConditionFactory()
-                    .produce();
-            // setChild(If.IfPart.CONDITION.ordinal(), condition);
-            long remainder = complexityLimit - 1 - condition.complexity();
-            long ifBlockComplLimit = (long) (PseudoRandom.random() * remainder);
-            long elseBlockComplLimit = remainder - ifBlockComplLimit;
-            int ifBlockLimit = (int) (PseudoRandom.random() * statementLimit);
-            int elseBlockLimit = statementLimit - ifBlockLimit;
-            If.IfPart controlDeviation;
-            if (ifBlockLimit > 0 && elseBlockLimit <= 0) {
-                controlDeviation = If.IfPart.THEN;
+        if (statementLimit <= 0) {
+            throw new ProductionFailedException();
+        }
+        IRNodeBuilder builder = new IRNodeBuilder()
+                .setOwnerKlass(ownerClass)
+                .withOperatorLimit(operatorLimit);
+        IRNode condition = builder
+                .setResultType(TypeList.BOOLEAN)
+                .setExceptionSafe(false)
+                .getBooleanConditionFactory()
+                .produce();
+        // setChild(If.IfPart.CONDITION.ordinal(), condition);
+        int ifBlockLimit = 1 + PseudoRandom.randomNotNegative(statementLimit);
+        int elseBlockLimit = statementLimit - ifBlockLimit;
+        If.IfPart controlDeviation;
+        if (elseBlockLimit <= 0) {
+            controlDeviation = If.IfPart.THEN;
+        } else {
+            controlDeviation = PseudoRandom.randomBoolean() ? If.IfPart.THEN : If.IfPart.ELSE;
+        }
+        Block thenBlock;
+        builder.setResultType(returnType)
+                .setLevel(level)
+                .withStatementLimit(ifBlockLimit);
+        if (controlDeviation == If.IfPart.THEN) {
+            thenBlock = builder.setSubBlock(false)
+                    .setCanHaveBreaks(canHaveBreaks)
+                    .setCanHaveContinues(canHaveContinues)
+                    .setCanHaveReturn(canHaveReturn)
+                    .produceBlock();
+        } else {
+            thenBlock = builder.setSubBlock(false)
+                    .setCanHaveBreaks(false)
+                    .setCanHaveContinues(false)
+                    .setCanHaveReturn(false)
+                    .produceBlock();
+        }
+        // setChild(If.IfPart.THEN.ordinal(), thenBlock);
+        Block elseBlock = null;
+        if (elseBlockLimit > 0) {
+            builder
+                    .withStatementLimit(elseBlockLimit);
+            if (controlDeviation == If.IfPart.ELSE) {
+                elseBlock = builder.setSubBlock(false)
+                    .setCanHaveBreaks(canHaveBreaks)
+                    .setCanHaveContinues(canHaveContinues)
+                    .setCanHaveReturn(canHaveReturn)
+                    .produceBlock();
             } else {
-                controlDeviation = PseudoRandom.randomBoolean() ? If.IfPart.THEN : If.IfPart.ELSE;
-            }
-            if (ifBlockLimit > 0 && ifBlockComplLimit > 0) {
-                Block thenBlock;
-                builder.setResultType(returnType)
-                        .setLevel(level)
-                        .withComplexityLimit(ifBlockComplLimit)
-                        .withStatementLimit(ifBlockLimit);
-                if (controlDeviation == If.IfPart.THEN) {
-                    thenBlock = builder.setSubBlock(false)
-                            .setCanHaveBreaks(canHaveBreaks)
-                            .setCanHaveContinues(canHaveContinues)
-                            .setCanHaveReturn(canHaveReturn)
-                            .produceBlock();
-                } else {
-                    thenBlock = builder.setSubBlock(false)
-                            .setCanHaveBreaks(false)
-                            .setCanHaveContinues(false)
-                            .setCanHaveReturn(false)
-                            .produceBlock();
-                }
-                // setChild(If.IfPart.THEN.ordinal(), thenBlock);
-                Block elseBlock = null;
-                if (elseBlockLimit > 0 && elseBlockComplLimit > 0) {
-                    builder.withComplexityLimit(elseBlockComplLimit)
-                            .withStatementLimit(elseBlockLimit);
-                    if (controlDeviation == If.IfPart.ELSE) {
-                        elseBlock = builder.setSubBlock(false)
-                            .setCanHaveBreaks(canHaveBreaks)
-                            .setCanHaveContinues(canHaveContinues)
-                            .setCanHaveReturn(canHaveReturn)
-                            .produceBlock();
-                    } else {
-                        elseBlock = builder.setSubBlock(false)
-                            .setCanHaveBreaks(false)
-                            .setCanHaveContinues(false)
-                            .setCanHaveReturn(false)
-                            .produceBlock();
-                    }
-                }
-                // setChild(If.IfPart.ELSE.ordinal(), elseBlock);
-                return new If(condition, thenBlock, elseBlock, level);
+                elseBlock = builder.setSubBlock(false)
+                    .setCanHaveBreaks(false)
+                    .setCanHaveContinues(false)
+                    .setCanHaveReturn(false)
+                    .produceBlock();
             }
         }
-        throw new ProductionFailedException();
+        // setChild(If.IfPart.ELSE.ordinal(), elseBlock);
+        return new If(condition, thenBlock, elseBlock, level);
     }
 }

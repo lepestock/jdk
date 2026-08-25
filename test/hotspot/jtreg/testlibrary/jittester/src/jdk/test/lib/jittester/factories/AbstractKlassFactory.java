@@ -46,7 +46,6 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
     private final String name;
-    private final long complexityLimit;
     private final int statementsInFunctionLimit;
     private final int operatorLimit;
     private final int memberFunctionsArgLimit;
@@ -57,11 +56,10 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
     private int memberFunctionsLimit;
     protected double abstractProbabilityAdjustment;
 
-    AbstractKlassFactory(String name, long complexityLimit,
+    AbstractKlassFactory(String name,
             int memberFunctionsLimit, int memberFunctionsArgLimit, int statementsInFunctionLimit,
             int operatorLimit, int level) {
         this.name = name;
-        this.complexityLimit = complexityLimit;
         this.memberFunctionsLimit = memberFunctionsLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
         this.statementsInFunctionLimit = statementsInFunctionLimit;
@@ -156,17 +154,14 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                         .withOperatorLimit(operatorLimit)
                         .withStatementLimit(statementsInFunctionLimit)
                         .setMemberFunctionsArgLimit(memberFunctionsArgLimit);
-                variableDeclarations = produceVariableDeclarations(builder,
-                        (long) (complexityLimit * 0.001 * PseudoRandom.random()));
+                variableDeclarations = produceVariableDeclarations(builder);
 
                 if (!ProductionParams.disableFunctions.value()) {
                     abstractFunctionsRedefinitions = builder
-                            .withComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
                             .setLevel(level + 1)
                             .getFunctionRedefinitionBlockFactory(abstractSet)
                             .produce();
                     overridenFunctionsRedefinitions = builder
-                            .withComplexityLimit((long) (complexityLimit * 0.3 * PseudoRandom.random()))
                             .getFunctionRedefinitionBlockFactory(overrideSet)
                             .produce();
 
@@ -181,7 +176,6 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                     }
 
                     functionDefinitions = produceFunctionDefinitions(builder,
-                            (long) (complexityLimit * 0.5 * PseudoRandom.random()),
                             (int) (memberFunctionsLimit * 0.6 * PseudoRandom.random()));
 
                     constructorDefinitions = produceConstructorDefinitions(builder, thizzVariable);
@@ -213,13 +207,12 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
 
     protected abstract boolean canInheritFrom(Type type);
 
-    protected abstract IRNode produceVariableDeclarations(IRNodeBuilder builder, long complexity)
+    protected abstract IRNode produceVariableDeclarations(IRNodeBuilder builder)
             throws ProductionFailedException;
 
-    protected IRNode produceFunctionDefinitions(IRNodeBuilder builder, long complexity, int memberLimit)
+    protected IRNode produceFunctionDefinitions(IRNodeBuilder builder, int memberLimit)
             throws ProductionFailedException {
-        return builder.withComplexityLimit(complexity)
-                .setMemberFunctionsLimit(memberLimit)
+        return builder.setMemberFunctionsLimit(memberLimit)
                 .setFlags(FunctionInfo.NONE)
                 .getFunctionDefinitionBlockFactory()
                 .produce();
@@ -228,7 +221,6 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
     protected IRNode produceConstructorDefinitions(IRNodeBuilder builder, VariableInfo thizzVariable)
             throws ProductionFailedException {
         return builder
-                .withComplexityLimit((long) (complexityLimit * 0.2 * PseudoRandom.random()))
                 .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2 * PseudoRandom.random()))
                 .withStatementLimit(statementsInFunctionLimit)
                 .withOperatorLimit(operatorLimit)

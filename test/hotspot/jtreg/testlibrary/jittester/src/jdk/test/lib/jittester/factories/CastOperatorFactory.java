@@ -40,9 +40,9 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
     private final Type resultType;
     private final Type ownerClass;
 
-    CastOperatorFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    CastOperatorFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(13, complexityLimit, operatorLimit, exceptionSafe, noconsts);
+        super(13, operatorLimit, exceptionSafe, noconsts);
         this.resultType = resultType;
         this.ownerClass = ownerClass;
     }
@@ -72,7 +72,6 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
             boolean merged = false;
             try {
                 Factory<IRNode> expressionFactory = new IRNodeBuilder()
-                        .withComplexityLimit(complexityLimit - 1)
                         .withOperatorLimit(operatorLimit - 1)
                         .setOwnerKlass((TypeKlass) ownerClass)
                         .setExceptionSafe(exceptionSafe)
@@ -96,7 +95,6 @@ class CastOperatorFactory extends OperatorFactory<CastOperator> {
             boolean merged = false;
             try {
                 Factory<IRNode> expressionFactory = new IRNodeBuilder()
-                        .withComplexityLimit(complexityLimit - 1)
                         .withOperatorLimit(operatorLimit - 1)
                         .setOwnerKlass((TypeKlass) ownerClass)
                         .setExceptionSafe(exceptionSafe)

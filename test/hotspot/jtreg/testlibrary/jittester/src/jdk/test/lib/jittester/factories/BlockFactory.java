@@ -53,8 +53,6 @@ import java.util.Collections;
 import java.util.List;
 
 class BlockFactory extends Factory<Block> {
-    private static final long LOCAL_COMPLEXITY_LIMIT = 1024L;
-    private static final double CHILD_STATEMENT_LIMIT_FACTOR = 0.92;
     private static final long STATEMENT_COUNT_MASK = 0x3L;
     private static final double LOCAL_DECL_WEIGHT_MIN = 0.03;
     private static final double LOCAL_DECL_WEIGHT_BASE = 0.08;
@@ -78,7 +76,7 @@ class BlockFactory extends Factory<Block> {
     private final int level;
     private final TypeKlass ownerClass;
 
-    BlockFactory(TypeKlass klass, Type returnType, long complexityLimit, int statementLimit,
+    BlockFactory(TypeKlass klass, Type returnType, int statementLimit,
                  int operatorLimit, int level, boolean subBlock, boolean canHaveBreaks,
                  boolean canHaveContinues, boolean canHaveReturn, boolean canHaveThrows) {
         this.ownerClass = klass;
@@ -112,7 +110,6 @@ class BlockFactory extends Factory<Block> {
                 int failedStatements = 0;
                 int plannedStatementAttempts = decideStatementAttemptCount(
                         blockRngInSeed, effectiveStatementLimit, blockDepth);
-                int attemptsSafetyCap = Math.max(1, effectiveStatementLimit * 12);
                 List<Long> statementDecisionSeeds = prepareStatementDecisionSeeds(
                         blockRngInSeed, plannedStatementAttempts);
                 LongSmallSet replayStatementSeedSpan = Genome.getCurrentStatementSeedOverrides();
@@ -132,7 +129,9 @@ class BlockFactory extends Factory<Block> {
                     plannedStatementAttempts = replayChildCount;
                     statementDecisionSeeds = prepareStatementDecisionSeeds(
                             blockRngInSeed, plannedStatementAttempts);
+                    effectiveStatementLimit = Math.max(effectiveStatementLimit, replayChildCount);
                 }
+                int attemptsSafetyCap = Math.max(1, effectiveStatementLimit * 12);
                 if (ProductionParams.blockDebug.value()) {
                     System.out.printf("BLOCK_PLAN depth=%d seedIn=%d replay=%s replayChildCount=%d plannedAttempts=%d statementLimit=%d operatorLimit=%d%n",
                             blockDepth, blockRngInSeed, Genome.isReplayActive(),
@@ -165,7 +164,7 @@ class BlockFactory extends Factory<Block> {
                         Genome.recordCurrentScopeGene('S', statementScopeSeed);
                         pushStatementContext(blockDepth, attemptedStatements, plannedStatementAttempts);
                         Throwable statementThrowable = null;
-                        builder.withComplexityLimit(LOCAL_COMPLEXITY_LIMIT)
+                        builder
                                 .setLevel(level);
                         rule = new Rule<>("block");
                         double mtLegWeight = GenerationState.currentFlowParams().mtLegWeight();
@@ -183,7 +182,7 @@ class BlockFactory extends Factory<Block> {
                         }
                         if (effectiveStatementLimit > 1 && allowNestedControlFlow) {
                             int childStatementLimit = Math.max(1,
-                                    (int) Math.ceil(effectiveStatementLimit * CHILD_STATEMENT_LIMIT_FACTOR));
+                                    (int) Math.ceil(effectiveStatementLimit * childStatementLimitFactor()));
                             builder.withStatementLimit(childStatementLimit).setLevel(level + 1);
                             boolean inArrayKernelContext = GenerationState.currentFlowParams().inArrayKernel();
                             if (!inArrayKernelContext) {
@@ -270,7 +269,7 @@ class BlockFactory extends Factory<Block> {
                         rule.add("continue", builder.getContinueFactory());
                     }
                     if (canHaveReturn && !subBlock && !returnType.equals(TypeList.VOID)) {
-                        rule.add("return", builder.withComplexityLimit(LOCAL_COMPLEXITY_LIMIT)
+                        rule.add("return", builder
                                 .getReturnFactory());
                     }
                     if (canHaveThrow && !subBlock) {
@@ -282,7 +281,6 @@ class BlockFactory extends Factory<Block> {
                             rtException = throwTypes.iterator().next();
                         }
                         rule.add("throw", builder.setResultType(rtException)
-                                .withComplexityLimit(Math.max(LOCAL_COMPLEXITY_LIMIT, 5))
                                 .withOperatorLimit(Math.max(effectiveOperatorLimit, 5))
                                 .getThrowFactory());
 
@@ -333,6 +331,10 @@ class BlockFactory extends Factory<Block> {
         }
         exitBlockDepth();
         throw new ProductionFailedException();
+    }
+
+    private static double childStatementLimitFactor() {
+        return Math.max(0, ProductionParams.taperingBlockStatementLimitMultiplierPercent.value()) / 100.0;
     }
 
     private static int decideStatementAttemptCount(long blockSeed, int statementLimit,

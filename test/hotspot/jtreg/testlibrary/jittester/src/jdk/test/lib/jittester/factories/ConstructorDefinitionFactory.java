@@ -40,17 +40,15 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.Logger;
 
 class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final int memberFunctionsArgLimit;
     private final int level;
     private final TypeKlass ownerClass;
 
-    ConstructorDefinitionFactory(TypeKlass ownerClass, long complexityLimit, int statementLimit,
+    ConstructorDefinitionFactory(TypeKlass ownerClass, int statementLimit,
             int operatorLimit, int memberFunctionsArgLimit, int level) {
         this.ownerClass = ownerClass;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
@@ -91,7 +89,6 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
                     }
                 }
             }
-            long blockComplLimit = (long) (PseudoRandom.random() * complexityLimit);
             try {
                 ThisVariableControl.pushForbidThis();
                 FlowParams previous = GenerationState.currentFlowParams();
@@ -99,7 +96,6 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
                         FlowParams.CodeContext.CONSTRUCTOR).advance());
                 try {
                     body = builder.setResultType(TypeList.VOID)
-                            .withComplexityLimit(blockComplLimit)
                             .withStatementLimit(statementLimit)
                             .withOperatorLimit(operatorLimit)
                             .withCodeContext(FlowParams.CodeContext.CONSTRUCTOR)

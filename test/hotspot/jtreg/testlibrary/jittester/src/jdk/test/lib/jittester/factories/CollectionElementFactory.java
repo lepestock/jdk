@@ -41,16 +41,15 @@ import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class CollectionElementFactory extends SafeFactory<CollectionElement> {
-    private final long complexityLimit;
+
     private final int operatorLimit;
     private final Type resultType;
     private final TypeKlass ownerClass;
     private final boolean exceptionSafe;
     private final boolean noconsts;
 
-    CollectionElementFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    CollectionElementFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
@@ -67,15 +66,12 @@ class CollectionElementFactory extends SafeFactory<CollectionElement> {
             throw new ProductionFailedException();
         }
         int dimensionsCount = PseudoRandom.randomNotZero(ProductionParams.dimensionsLimit.value());
-        long complexityPerDimension = (long) ((complexityLimit - 1)
-                * PseudoRandom.random()) / dimensionsCount;
         int operatorLimitPerDimension = (int) ((operatorLimit - dimensionsCount)
                 * PseudoRandom.random()) / dimensionsCount;
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
         VariableBase collectionVariable = builder
-                .withComplexityLimit(1)
                 .withOperatorLimit(0)
                 .setResultType(new TypeArray(resultType, dimensionsCount))
                 .setIsConstant(false)
@@ -83,7 +79,6 @@ class CollectionElementFactory extends SafeFactory<CollectionElement> {
                 .getVariableFactory()
                 .produce();
         Factory<IRNode> expressionFactory = builder
-                .withComplexityLimit(complexityPerDimension)
                 .withOperatorLimit(operatorLimitPerDimension)
                 .setResultType(TypeList.BYTE)
                 .getExpressionFactory();

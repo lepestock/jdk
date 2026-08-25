@@ -40,7 +40,6 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
     private final String prefix;
-    private final long complexityLimit;
     private final int classesLimit;
     private final int statementLimit;
     private final int operatorLimit;
@@ -49,13 +48,12 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
     private final int level;
 
     ClassDefinitionBlockFactory(String prefix, int classesLimit, int memberFunctionsLimit,
-            int memberFunctionsArgLimit, long complexityLimit, int statementLimit,
+            int memberFunctionsArgLimit, int statementLimit,
             int operatorLimit, int level) {
         this.prefix = prefix;
         this.classesLimit = classesLimit;
         this.memberFunctionsLimit = memberFunctionsLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -68,12 +66,10 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                 ProductionParams.identityValueClassBalance.value()));
         int limit = (int) Math.ceil(PseudoRandom.random() * classesLimit);
         if (limit > 0) {
-            long classCompl = complexityLimit / limit;
             IRNodeBuilder builder = new IRNodeBuilder().setLevel(level)
                     .setMemberFunctionsArgLimit(memberFunctionsArgLimit)
                     .withStatementLimit(statementLimit)
-                    .withOperatorLimit(operatorLimit)
-                    .withComplexityLimit(classCompl);
+                    .withOperatorLimit(operatorLimit);
             for (int i = 0; i < limit; i++) {
                 try {
                     Rule<IRNode> rule = new Rule<>("class");
@@ -131,7 +127,6 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                 IRNodeBuilder b = new IRNodeBuilder()
                         .setOwnerKlass(owner)
                         .setResultType(retType)
-                        .withComplexityLimit(complexityLimit)
                         .withStatementLimit(statementLimit)
                         .withOperatorLimit(operatorLimit)
                         .setLevel(newLevel);

@@ -33,10 +33,9 @@ import jdk.test.lib.jittester.types.TypeKlass;
 class LogicOperatorFactory extends Factory<Operator> {
     private final Rule<Operator> rule;
 
-    LogicOperatorFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass, Type resultType,
+    LogicOperatorFactory(int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean exceptionSafe, boolean noconsts) throws ProductionFailedException {
         IRNodeBuilder builder = new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)

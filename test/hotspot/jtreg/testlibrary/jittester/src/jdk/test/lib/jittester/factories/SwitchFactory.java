@@ -39,21 +39,19 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
-import jdk.test.lib.jittester.utils.GenomeChoice;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class SwitchFactory extends SafeFactory<Switch> {
+
     private final int statementLimit;
     private final int operatorLimit;
     private final boolean canHaveReturn;
     private final TypeKlass ownerClass;
     private final int level;
-    private final long complexityLimit;
 
-    SwitchFactory(TypeKlass ownerClass, long complexityLimit, int statementLimit,
+    SwitchFactory(TypeKlass ownerClass, int statementLimit,
             int operatorLimit, int level, boolean canHaveReturn) {
         this.ownerClass = ownerClass;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -62,7 +60,7 @@ class SwitchFactory extends SafeFactory<Switch> {
 
     @Override
     protected Switch sproduce() throws ProductionFailedException {
-        if (statementLimit > 0 && complexityLimit > 0) {
+        if (statementLimit > 0) {
             List<Type> switchTypes = new ArrayList<>();
             switchTypes.add(TypeList.CHAR);
             switchTypes.add(TypeList.BYTE);
@@ -76,107 +74,112 @@ class SwitchFactory extends SafeFactory<Switch> {
                     .setCanHaveBreaks(true)
                     .setCanHaveContinues(false)
                     .setCanHaveReturn(canHaveReturn);
-            MAIN_LOOP:
+            Rule<Switch> switchRule = new Rule<>("switch");
             for (Type type : switchTypes) {
-                List<IRNode> caseConsts = new ArrayList<>();
-                List<IRNode> caseBlocks = new ArrayList<>();
-                try {
-                    int accumulatedStatements = 0;
-                    int currentStatementsLimit = 0;
-                    long accumulatedComplexity = 0L;
-                    long currentComplexityLimit = 0L;
-                    currentComplexityLimit = (long) (PseudoRandom.random()
-                            * (complexityLimit - accumulatedComplexity));
-                    boolean noConstsForSwitchExpr = shouldDisallowConstsByDepth(level + 1);
-                    IRNode switchExp = builder.withComplexityLimit(currentComplexityLimit)
-                            .setResultType(type)
-                            .setExceptionSafe(false)
-                            .setNoConsts(noConstsForSwitchExpr)
-                            .getLimitedExpressionFactory()
-                            .produce();
-                    accumulatedComplexity += currentComplexityLimit;
-                    List<Type> caseTypes = buildCompatibleCaseTypes((BuiltInType) type);
-                    if (PseudoRandom.randomBoolean()) { // "default"
-                        currentStatementsLimit = (int) (PseudoRandom.random()
-                                * (statementLimit - accumulatedStatements));
-                        currentComplexityLimit = (long) (PseudoRandom.random()
-                                * (complexityLimit - accumulatedComplexity));
-                        caseConsts.add(new Nothing());
-                        caseBlocks.add(builder.withComplexityLimit(currentComplexityLimit)
-                                .withStatementLimit(currentStatementsLimit)
-                                .setLevel(level + 1)
-                                .setCanHaveReturn(false)
-                                .setCanHaveBreaks(false)
-                                .produceBlock());
-                        builder.setCanHaveBreaks(true)
-                                .setCanHaveReturn(canHaveReturn);
-                        accumulatedStatements += currentStatementsLimit;
-                        accumulatedComplexity += currentComplexityLimit;
+                switchRule.add(type.getName(), new Factory<Switch>() {
+                    @Override
+                    public Switch produce() throws ProductionFailedException {
+                        return produceSwitchForType(builder, type);
                     }
-                    HashSet<Integer> cases = new HashSet<>();
-                    while (accumulatedStatements < statementLimit) { // "case"s
-                        currentStatementsLimit = (int) (PseudoRandom.random()
-                                * (statementLimit - accumulatedStatements));
-                        currentComplexityLimit = (long) (PseudoRandom.random()
-                                * (complexityLimit - accumulatedComplexity));
-                        PseudoRandom.shuffle(caseTypes);
-                        for (int tryCount = 0; true; tryCount++) {
-                            if (tryCount >= 10) {
-                                continue MAIN_LOOP;
-                            }
-                            Literal literal = builder.setResultType(caseTypes.get(0))
-                                    .getLiteralFactory().produce();
-                            int value = 0;
-                            if (literal.value instanceof Integer) {
-                                value = (Integer) literal.value;
-                            }
-                            if (literal.value instanceof Short) {
-                                value = (Short) literal.value;
-                            }
-                            if (literal.value instanceof Byte) {
-                                value = (Byte) literal.value;
-                            }
-                            if (literal.value instanceof Character) {
-                                value = (Character) literal.value;
-                            }
-                            if (!cases.contains(value)) {
-                                cases.add(value);
-                                caseConsts.add(literal);
-                                break;
-                            }
-                        }
-                        Rule<IRNode> rule = new Rule<>("case_block");
-                        rule.add("block", builder.withComplexityLimit(currentComplexityLimit)
-                                .withStatementLimit(currentStatementsLimit)
-                                .setLevel(level)
-                                .setCanHaveReturn(false)
-                                .setCanHaveBreaks(false)
-                                .getBlockFactory());
-                        builder.setCanHaveBreaks(true)
-                                .setCanHaveReturn(canHaveReturn);
-                        rule.add("nothing", builder.getNothingFactory());
-                        IRNode choiceResult = rule.produce();
-                        caseBlocks.add(choiceResult);
-                        if (choiceResult instanceof Nothing) {
-                            accumulatedStatements++;
-                        } else {
-                            accumulatedStatements += currentStatementsLimit;
-                            accumulatedComplexity += currentComplexityLimit;
-                        }
-                    }
-                    PseudoRandom.shuffle(caseConsts);
-                    List<IRNode> accum = new ArrayList<>();
-                    int caseBlockIdx = 1 + caseConsts.size();
-                    accum.add(switchExp);
-                    for (int i = 1; i < caseBlockIdx; ++i) {
-                        accum.add(caseConsts.get(i - 1));
-                    }
-                    for (int i = caseBlockIdx; i < 1 + caseConsts.size() + caseBlocks.size(); ++i) {
-                        accum.add(caseBlocks.get(i - caseBlockIdx));
-                    }
-                    return new Switch(level, accum, caseBlockIdx);
-                } catch (ProductionFailedException e) {
+                });
+            }
+            return switchRule.produce();
+        }
+        throw new ProductionFailedException();
+    }
+
+    private Switch produceSwitchForType(IRNodeBuilder builder, Type type) throws ProductionFailedException {
+        List<IRNode> caseConsts = new ArrayList<>();
+        List<IRNode> caseBlocks = new ArrayList<>();
+        int accumulatedStatements = 0;
+        int currentStatementsLimit = 0;
+        boolean noConstsForSwitchExpr = shouldDisallowConstsByDepth(level + 1);
+        IRNode switchExp = builder
+                .setResultType(type)
+                .setExceptionSafe(false)
+                .setNoConsts(noConstsForSwitchExpr)
+                .getLimitedExpressionFactory()
+                .produce();
+        List<Type> caseTypes = buildCompatibleCaseTypes((BuiltInType) type);
+        if (PseudoRandom.randomBoolean()) { // "default"
+            currentStatementsLimit = (int) (PseudoRandom.random()
+                    * (statementLimit - accumulatedStatements));
+            caseConsts.add(new Nothing());
+            caseBlocks.add(builder
+                    .withStatementLimit(currentStatementsLimit)
+                    .setLevel(level + 1)
+                    .setCanHaveReturn(false)
+                    .setCanHaveBreaks(false)
+                    .produceBlock());
+            builder.setCanHaveBreaks(true)
+                    .setCanHaveReturn(canHaveReturn);
+            accumulatedStatements += currentStatementsLimit;
+        }
+        HashSet<Integer> cases = new HashSet<>();
+        while (accumulatedStatements < statementLimit) { // "case"s
+            currentStatementsLimit = (int) (PseudoRandom.random()
+                    * (statementLimit - accumulatedStatements));
+            PseudoRandom.shuffle(caseTypes);
+            produceUniqueCaseLiteral(builder, caseTypes, cases, caseConsts);
+            Rule<IRNode> rule = new Rule<>("case_block");
+            int caseStatementLimit = currentStatementsLimit;
+            rule.add("block", new Factory<IRNode>() {
+                @Override
+                public IRNode produce() throws ProductionFailedException {
+                    return builder
+                            .withStatementLimit(caseStatementLimit)
+                            .setLevel(level)
+                            .setCanHaveReturn(false)
+                            .setCanHaveBreaks(false)
+                            .produceBlock();
                 }
+            });
+            builder.setCanHaveBreaks(true)
+                    .setCanHaveReturn(canHaveReturn);
+            rule.add("nothing", builder.getNothingFactory());
+            IRNode choiceResult = rule.produce();
+            caseBlocks.add(choiceResult);
+            if (choiceResult instanceof Nothing) {
+                accumulatedStatements++;
+            } else {
+                accumulatedStatements += currentStatementsLimit;
+            }
+        }
+        PseudoRandom.shuffle(caseConsts);
+        List<IRNode> accum = new ArrayList<>();
+        int caseBlockIdx = 1 + caseConsts.size();
+        accum.add(switchExp);
+        for (int i = 1; i < caseBlockIdx; ++i) {
+            accum.add(caseConsts.get(i - 1));
+        }
+        for (int i = caseBlockIdx; i < 1 + caseConsts.size() + caseBlocks.size(); ++i) {
+            accum.add(caseBlocks.get(i - caseBlockIdx));
+        }
+        return new Switch(level, accum, caseBlockIdx);
+    }
+
+    private void produceUniqueCaseLiteral(IRNodeBuilder builder, List<Type> caseTypes,
+            HashSet<Integer> cases, List<IRNode> caseConsts) throws ProductionFailedException {
+        for (int tryCount = 0; tryCount < 10; tryCount++) {
+            Literal literal = builder.setResultType(caseTypes.get(0))
+                    .getLiteralFactory().produce();
+            int value = 0;
+            if (literal.value instanceof Integer) {
+                value = (Integer) literal.value;
+            }
+            if (literal.value instanceof Short) {
+                value = (Short) literal.value;
+            }
+            if (literal.value instanceof Byte) {
+                value = (Byte) literal.value;
+            }
+            if (literal.value instanceof Character) {
+                value = (Character) literal.value;
+            }
+            if (!cases.contains(value)) {
+                cases.add(value);
+                caseConsts.add(literal);
+                return;
             }
         }
         throw new ProductionFailedException();
@@ -186,8 +189,7 @@ class SwitchFactory extends SafeFactory<Switch> {
         double base = Math.max(0.0, Math.min(1.0, ProductionParams.constBiasBasePercent.value() / 100.0));
         int halfDepth = Math.max(1, ProductionParams.constBiasHalfDepth.value());
         double noConstsProbability = DepthProbabilityTaper.decayingAsymptote(depth, base, halfDepth);
-        boolean noConstsLive = PseudoRandom.randomSilent() < noConstsProbability;
-        return GenomeChoice.bool(noConstsLive);
+        return PseudoRandom.randomBoolean(noConstsProbability);
     }
 
     private static List<Type> buildCompatibleCaseTypes(BuiltInType switchType) {

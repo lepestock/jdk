@@ -50,17 +50,15 @@ public class FunctionFactory extends SafeFactory<Function> {
     private static final String MAGNET_CHANNEL = "use.function";
     private final FunctionInfo functionInfo;
     private final int operatorLimit;
-    private final long complexityLimit;
     private final boolean exceptionSafe;
     private final TypeKlass ownerClass;
     public static long SEED;
     private static long INTERVENTION = 131992649516573L;
     public static VariableInfo forbiddenThizz = null;
 
-    FunctionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    FunctionFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe) {
         functionInfo = new FunctionInfo();
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.functionInfo.type = resultType;
@@ -99,6 +97,7 @@ public class FunctionFactory extends SafeFactory<Function> {
             remainingFunctions.sort(FUNCTION_ORDER);
             Collection<TypeKlass> klassHierarchy = ownerClass.getAllParents();
             while (!remainingFunctions.isEmpty()) {
+                List<FunctionInfo> selectionCandidates = new ArrayList<>(remainingFunctions);
                 FunctionInfo functionInfo = selectWeightedFunction(remainingFunctions, intrinsicBonus);
                 removeFunctionOnce(remainingFunctions, functionInfo);
                 // Don't try to construct abstract classes.
@@ -138,102 +137,98 @@ public class FunctionFactory extends SafeFactory<Function> {
                         continue;
                     }
                 }
-                if (functionInfo.complexity < complexityLimit - 1) {
-                    Long replayTargetGene = null;
-                    if (replayMode) {
-                        replayTargetGene = Genome.consumeMagnetTargetGene("magnet.use." + MAGNET_CHANNEL, 0L);
-                        // Failed record attempts keep selection RNG (N...) but roll back magnet target (U...).
-                        // In replay we may encounter those attempts and should skip them.
-                        if (replayTargetGene == null) {
-                            continue;
-                        }
-                        if (replayTargetGene == -1L) {
-                            throw new RuntimeException("Genome broken around magnet gene -1 for channel '"
-                                    + MAGNET_CHANNEL + "': selected function magnet is "
-                                    + functionInfo.getMagnetismGeneId());
-                        }
-                        if (replayTargetGene != functionInfo.getMagnetismGeneId()) {
-                            throw new RuntimeException("Genome broken around magnet gene "
-                                    + replayTargetGene + " for channel '" + MAGNET_CHANNEL
-                                    + "': selected function magnet is "
-                                    + functionInfo.getMagnetismGeneId());
-                        }
+                Long replayTargetGene = null;
+                if (replayMode) {
+                    replayTargetGene = Genome.consumeMagnetTargetGene("magnet.use." + MAGNET_CHANNEL, 0L);
+                    // Failed record attempts keep selection RNG (N...) but roll back magnet target (U...).
+                    // In replay we may encounter those attempts and should skip them.
+                    if (replayTargetGene == null) {
+                        continue;
                     }
-                    GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
-                    try {
-                        if (!replayMode) {
-                            Genome.beginSpeculativeRecord();
-                            SymbolTable.recordMagnetTargetSelection(MAGNET_CHANNEL,
-                                    functionInfo.getMagnetismGeneId(), remainingFunctions, functionInfo);
-                        }
-                        List<IRNode> accum = new ArrayList<>();
-                        if (!functionInfo.argTypes.isEmpty()) {
-                            // Here we should do some analysis here to determine if
-                            // there are any conflicting functions due to possible
-                            // constant folding.
+                    if (replayTargetGene == -1L) {
+                        throw new RuntimeException("Genome broken around magnet gene -1 for channel '"
+                                + MAGNET_CHANNEL + "': selected function magnet is "
+                                + functionInfo.getMagnetismGeneId());
+                    }
+                    if (replayTargetGene != functionInfo.getMagnetismGeneId()) {
+                        throw new RuntimeException("Genome broken around magnet gene "
+                                + replayTargetGene + " for channel '" + MAGNET_CHANNEL
+                                + "': selected function magnet is "
+                                + functionInfo.getMagnetismGeneId());
+                    }
+                }
+                GenerationState.Checkpoint stateCheckpoint = GenerationState.checkpoint();
+                try {
+                    if (!replayMode) {
+                        Genome.beginSpeculativeRecord();
+                        SymbolTable.recordMagnetTargetSelection(MAGNET_CHANNEL,
+                                functionInfo.getMagnetismGeneId(), selectionCandidates, functionInfo);
+                    }
+                    List<IRNode> accum = new ArrayList<>();
+                    if (!functionInfo.argTypes.isEmpty()) {
+                        // Here we should do some analysis here to determine if
+                        // there are any conflicting functions due to possible
+                        // constant folding.
 
-                            // For example the following can be done:
-                            // Scan all the hieirachy where the class is declared.
-                            // If there are function with a same name and same number of args,
-                            // then disable usage of foldable expressions in the args.
-                            boolean noconsts = false;
-                            Collection<Symbol> allFuncsInKlass = SymbolTable.getAllCombined(functionInfo.owner,
-                                    FunctionInfo.class);
-                            for (Symbol s2 : allFuncsInKlass) {
-                                FunctionInfo i2 = (FunctionInfo) s2;
-                                if (!i2.equals(functionInfo) && i2.name.equals(functionInfo.name)
-                                        && i2.argTypes.size() == functionInfo.argTypes.size()) {
-                                    noconsts = true;
-                                    break;
-                                }
-                            }
-                            long argComp = (complexityLimit - 1 - functionInfo.complexity) / functionInfo.argTypes.size();
-                            int argumentOperatorLimit = (operatorLimit - 1) / functionInfo.argTypes.size();
-                            for (int argIndex = 0; argIndex < functionInfo.argTypes.size(); argIndex++) {
-                                VariableInfo argType = functionInfo.argTypes.get(argIndex);
-                                IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                                        .withComplexityLimit(argComp)
-                                        .withOperatorLimit(argumentOperatorLimit)
-                                        .setExceptionSafe(exceptionSafe)
-                                        .setNoConsts(noconsts)
-                                        .setResultType(argType.type);
-                                accum.add(produceArgument(b,
-                                        functionInfo.getArgumentConstraint(argIndex), argType.type));
-            Logger.log(ownerClass, "(FunctionFactory :point1 :function " + functionInfo + ")", accum);
+                        // For example the following can be done:
+                        // Scan all the hieirachy where the class is declared.
+                        // If there are function with a same name and same number of args,
+                        // then disable usage of foldable expressions in the args.
+                        boolean noconsts = false;
+                        Collection<Symbol> allFuncsInKlass = SymbolTable.getAllCombined(functionInfo.owner,
+                                FunctionInfo.class);
+                        for (Symbol s2 : allFuncsInKlass) {
+                            FunctionInfo i2 = (FunctionInfo) s2;
+                            if (!i2.equals(functionInfo) && i2.name.equals(functionInfo.name)
+                                    && i2.argTypes.size() == functionInfo.argTypes.size()) {
+                                noconsts = true;
+                                break;
                             }
                         }
-
-            //if (SEED == INTERVENTION) {
-            if (thizzRemoved) {
-                SymbolTable.add(forbiddenThizz);
-            }
-                        Function produced = new Function(ownerClass, functionInfo, accum);
-                        Long expressionScopeSeed = Genome.getCurrentExpressionScopeSeed();
-                        if (expressionScopeSeed != null) {
-                            produced.setExpressionGeneSeed(expressionScopeSeed);
+                        int argumentOperatorLimit = Math.max(1, (operatorLimit - 1) / functionInfo.argTypes.size());
+                        for (int argIndex = 0; argIndex < functionInfo.argTypes.size(); argIndex++) {
+                            VariableInfo argType = functionInfo.argTypes.get(argIndex);
+                            IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
+                                    .withOperatorLimit(argumentOperatorLimit)
+                                    .setExceptionSafe(exceptionSafe)
+                                    .setNoConsts(noconsts)
+                                    .setResultType(argType.type);
+                            accum.add(produceArgument(b,
+                                    functionInfo.getArgumentConstraint(argIndex), argType.type));
+                            Logger.log(ownerClass, "(FunctionFactory :point1 :function " + functionInfo + ")", accum);
                         }
-                        Function result = wrapResultIfNeeded(ownerClass, functionInfo, produced);
-                        if (!replayMode) {
-                            Genome.commitSpeculativeRecord();
-                        }
-                        return result;
-                    } catch (ProductionFailedException e) {
-                        GenerationState.rollbackTo(stateCheckpoint);
-                        if (!replayMode) {
-                            Genome.rollbackSpeculativeRecord();
-                        } else if (replayTargetGene != null) {
-                            throw new RuntimeException("Genome broken around magnet gene "
-                                    + replayTargetGene + " for channel '" + MAGNET_CHANNEL
-                                    + "': selected function failed in replay", e);
-                        }
-                        // Failed attempts are normal here; keep trying other candidates.
-                    } catch (RuntimeException e) {
-                        GenerationState.rollbackTo(stateCheckpoint);
-                        if (!replayMode) {
-                            Genome.rollbackSpeculativeRecord();
-                        }
-                        throw e;
                     }
+
+                    //if (SEED == INTERVENTION) {
+                    if (thizzRemoved) {
+                        SymbolTable.add(forbiddenThizz);
+                    }
+                    Function produced = new Function(ownerClass, functionInfo, accum);
+                    Long expressionScopeSeed = Genome.getCurrentExpressionScopeSeed();
+                    if (expressionScopeSeed != null) {
+                        produced.setExpressionGeneSeed(expressionScopeSeed);
+                    }
+                    Function result = wrapResultIfNeeded(ownerClass, functionInfo, produced);
+                    if (!replayMode) {
+                        Genome.commitSpeculativeRecord();
+                    }
+                    return result;
+                } catch (ProductionFailedException e) {
+                    GenerationState.rollbackTo(stateCheckpoint);
+                    if (!replayMode) {
+                        Genome.rollbackSpeculativeRecord();
+                    } else if (replayTargetGene != null) {
+                        throw new RuntimeException("Genome broken around magnet gene "
+                                + replayTargetGene + " for channel '" + MAGNET_CHANNEL
+                                + "': selected function failed in replay", e);
+                    }
+                    // Failed attempts are normal here; keep trying other candidates.
+                } catch (RuntimeException e) {
+                    GenerationState.rollbackTo(stateCheckpoint);
+                    if (!replayMode) {
+                        Genome.rollbackSpeculativeRecord();
+                    }
+                    throw e;
                 }
             }
         }

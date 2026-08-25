@@ -48,17 +48,15 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
             Boolean.getBoolean("jittester.debug.member.selection");
     private final Type type;
     private final int flags;
-    private final long complexityLimit;
     private final int operatorLimit;
     private final boolean exceptionSafe;
     private final Type ownerClass;
 
-    NonStaticMemberVariableFactory(long complexityLimit, int operatorLimit,
+    NonStaticMemberVariableFactory(int operatorLimit,
             TypeKlass ownerClass, Type type, int flags, boolean exceptionSafe) {
         this.ownerClass = ownerClass;
         this.type = type;
         this.flags = flags;
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.exceptionSafe = exceptionSafe;
     }
@@ -82,8 +80,7 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                 variables = new ArrayList<>();
                 variables.add(selected);
             }
-            IRNodeBuilder builder = new IRNodeBuilder().withComplexityLimit(complexityLimit)
-                    .withOperatorLimit(operatorLimit)
+            IRNodeBuilder builder = new IRNodeBuilder().withOperatorLimit(operatorLimit)
                     .setOwnerKlass((TypeKlass) ownerClass)
                     .setExceptionSafe(exceptionSafe)
                     .setNoConsts(false);

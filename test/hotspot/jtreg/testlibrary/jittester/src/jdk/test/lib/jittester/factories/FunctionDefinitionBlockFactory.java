@@ -36,7 +36,6 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class FunctionDefinitionBlockFactory extends Factory<FunctionDefinitionBlock> {
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final int memberFunctionsLimit;
@@ -47,12 +46,11 @@ class FunctionDefinitionBlockFactory extends Factory<FunctionDefinitionBlock> {
     private final TypeKlass ownerClass;
 
     FunctionDefinitionBlockFactory(TypeKlass ownerClass, int memberFunctionsLimit,
-            int memberFunctionsArgLimit, long complexityLimit, int statementLimit,
+            int memberFunctionsArgLimit, int statementLimit,
             int operatorLimit, int level, int initialFlags, boolean isSynchronizedAllowed) {
         this.ownerClass = ownerClass;
         this.memberFunctionsLimit = memberFunctionsLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -65,9 +63,7 @@ class FunctionDefinitionBlockFactory extends Factory<FunctionDefinitionBlock> {
         ArrayList<IRNode> content = new ArrayList<>();
         int memFunLimit = (int) (PseudoRandom.random() * memberFunctionsLimit);
         if (memFunLimit > 0) {
-            long memFunCompl = complexityLimit / memFunLimit;
             IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
-                    .withComplexityLimit(memFunCompl)
                     .withStatementLimit(statementLimit)
                     .withOperatorLimit(operatorLimit)
                     .setMemberFunctionsArgLimit(memberFunctionsArgLimit)

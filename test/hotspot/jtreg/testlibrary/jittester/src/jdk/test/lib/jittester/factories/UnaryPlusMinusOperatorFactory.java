@@ -33,9 +33,9 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class UnaryPlusMinusOperatorFactory extends UnaryOperatorFactory {
-    UnaryPlusMinusOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
+    UnaryPlusMinusOperatorFactory(OperatorKind opKind, int operatorLimit,
             Type ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(opKind, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(opKind, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override
@@ -63,7 +63,6 @@ class UnaryPlusMinusOperatorFactory extends UnaryOperatorFactory {
     @Override
     protected UnaryOperator generateProduction(Type type) throws ProductionFailedException {
         return new UnaryOperator(opKind, resultType, new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setOwnerKlass((TypeKlass) ownerClass)
                 .setResultType(type)

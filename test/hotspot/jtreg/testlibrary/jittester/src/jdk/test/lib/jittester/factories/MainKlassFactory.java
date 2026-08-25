@@ -45,7 +45,6 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class MainKlassFactory extends Factory<MainKlass> {
     private final String name;
-    private final long complexityLimit;
     private final int statementsInTestFunctionLimit;
     private final int statementsInFunctionLimit;
     private final int operatorLimit;
@@ -53,11 +52,10 @@ class MainKlassFactory extends Factory<MainKlass> {
     private final int memberFunctionsArgLimit;
     private TypeKlass thisKlass;
 
-    MainKlassFactory(String name, long complexityLimit, int memberFunctionsLimit,
+    MainKlassFactory(String name, int memberFunctionsLimit,
             int memberFunctionsArgLimit, int statementsInFunctionLimit,
             int statementsInTestFunctionLimit, int operatorLimit) {
         this.name = name;
-        this.complexityLimit = complexityLimit;
         this.memberFunctionsLimit = memberFunctionsLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
         this.statementsInFunctionLimit = statementsInFunctionLimit;
@@ -84,20 +82,16 @@ class MainKlassFactory extends Factory<MainKlass> {
                 .withStatementLimit(statementsInFunctionLimit)
                 .setLevel(1)
                 .setExceptionSafe(true);
-        IRNode variableDeclarations = builder
-                .withComplexityLimit((long) (complexityLimit * 0.08))
-                .getVariableDeclarationBlockFactory().produce();
+        IRNode variableDeclarations = builder.getVariableDeclarationBlockFactory().produce();
         IRNode functionDefinitions = null;
         if (!ProductionParams.disableFunctions.value()) {
             functionDefinitions = builder
-                    .withComplexityLimit((long) (complexityLimit * 0.01 * PseudoRandom.random()))
                     .setFlags(FunctionInfo.NONRECURSIVE)
                     .getFunctionDefinitionBlockFactory()
                     .produce();
         }
         functionDefinitions = ensureMainClassStaticCollectionInitializer(builder, functionDefinitions);
         IRNode testFunction = builder.setResultType(TypeList.VOID)
-                .withComplexityLimit(complexityLimit)
                 .withStatementLimit(statementsInTestFunctionLimit)
                 .produceBlock();
         SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
@@ -182,7 +176,6 @@ class MainKlassFactory extends Factory<MainKlass> {
                 Type retType = randomLeaf.getResultType();
                 IRNode newBlock = builder.setOwnerKlass(owner)
                         .setResultType(retType)
-                        .withComplexityLimit(complexityLimit)
                         .withStatementLimit(statementsInFunctionLimit)
                         .setLevel(newLevel)
                         .produceBlock();

@@ -35,10 +35,10 @@ class BooleanConditionFactory extends Factory<IRNode> {
     private static final double VARIABLE_WEIGHT = 6.0;
     private static final double COMPARISON_WEIGHT = 4.0;
     private static final BudgetRange[] BUDGET_RANGES = {
-            new BudgetRange(3, 4, 12, 24, 70),
-            new BudgetRange(5, 8, 25, 64, 25),
-            new BudgetRange(9, 16, 65, 128, 4),
-            new BudgetRange(Integer.MAX_VALUE, Integer.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, 1),
+            new BudgetRange(3, 4, 70),
+            new BudgetRange(5, 8, 25),
+            new BudgetRange(9, 16, 4),
+            new BudgetRange(Integer.MAX_VALUE, Integer.MAX_VALUE, 1),
     };
     private static final int TOTAL_BUDGET_WEIGHT = totalBudgetWeight();
 
@@ -46,11 +46,10 @@ class BooleanConditionFactory extends Factory<IRNode> {
     private final Factory<? extends IRNode> fallbackExpressionFactory;
     private final Factory<? extends IRNode> literalFactory;
 
-    BooleanConditionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    BooleanConditionFactory(int operatorLimit, TypeKlass ownerClass,
             boolean exceptionSafe) throws ProductionFailedException {
-        Budget budget = pickBudget(complexityLimit, operatorLimit);
+        Budget budget = pickBudget(operatorLimit);
         IRNodeBuilder builder = new IRNodeBuilder()
-                .withComplexityLimit(budget.complexityLimit)
                 .withOperatorLimit(budget.operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(TypeList.BOOLEAN)
@@ -85,16 +84,16 @@ class BooleanConditionFactory extends Factory<IRNode> {
         rule.add(name, builder.setOperatorKind(kind).getBinaryOperatorFactory(), weight);
     }
 
-    private static Budget pickBudget(long complexityLimit, int operatorLimit) {
+    private static Budget pickBudget(int operatorLimit) {
         int selected = PseudoRandom.randomNotNegative(TOTAL_BUDGET_WEIGHT);
         int threshold = 0;
         for (BudgetRange range : BUDGET_RANGES) {
             threshold += range.weight;
             if (selected < threshold) {
-                return range.pick(complexityLimit, operatorLimit);
+                return range.pick(operatorLimit);
             }
         }
-        return BUDGET_RANGES[BUDGET_RANGES.length - 1].pick(complexityLimit, operatorLimit);
+        return BUDGET_RANGES[BUDGET_RANGES.length - 1].pick(operatorLimit);
     }
 
     private static int totalBudgetWeight() {
@@ -118,16 +117,13 @@ class BooleanConditionFactory extends Factory<IRNode> {
         }
     }
 
-    private record Budget(long complexityLimit, int operatorLimit) {
+    private record Budget(int operatorLimit) {
     }
 
-    private record BudgetRange(int minOperators, int maxOperators,
-            long minComplexity, long maxComplexity, int weight) {
-        Budget pick(long complexityLimit, int operatorLimit) {
+    private record BudgetRange(int minOperators, int maxOperators, int weight) {
+        Budget pick(int operatorLimit) {
             int pickedOperators = pickInt(minOperators, maxOperators);
-            long pickedComplexity = pickLong(minComplexity, maxComplexity);
-            return new Budget(Math.max(1, Math.min(complexityLimit, pickedComplexity)),
-                    Math.max(1, Math.min(operatorLimit, pickedOperators)));
+            return new Budget(Math.max(1, Math.min(operatorLimit, pickedOperators)));
         }
 
         private static int pickInt(int min, int max) {
@@ -137,11 +133,5 @@ class BooleanConditionFactory extends Factory<IRNode> {
             return min + PseudoRandom.randomNotNegative(max - min + 1);
         }
 
-        private static long pickLong(long min, long max) {
-            if (max == Long.MAX_VALUE) {
-                return max;
-            }
-            return min + PseudoRandom.randomNotNegative((int) (max - min + 1));
-        }
     }
 }

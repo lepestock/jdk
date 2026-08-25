@@ -9,6 +9,3 @@
 --statement-limit=18
 --test-statement-limit=120
 --operator-limit=35
---complexity-limit=1000000
---min-cfg-depth=2
---max-cfg-depth=3

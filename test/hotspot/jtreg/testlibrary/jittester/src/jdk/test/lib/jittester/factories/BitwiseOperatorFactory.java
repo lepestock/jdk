@@ -34,10 +34,9 @@ import jdk.test.lib.jittester.types.TypeKlass;
 class BitwiseOperatorFactory extends Factory<Operator> {
     private final Rule<Operator> rule;
 
-    BitwiseOperatorFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    BitwiseOperatorFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) throws ProductionFailedException {
         IRNodeBuilder builder = new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)

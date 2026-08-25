@@ -70,16 +70,14 @@ class DenominatorExpressionFactory extends Factory<IRNode> {
             5L, -5L, 7L, -7L, 10L, -10L, 15L, -15L, 31L, -31L
     };
 
-    private final long complexityLimit;
     private final int operatorLimit;
     private final TypeKlass ownerClass;
     private final Type resultType;
     private final boolean exceptionSafe;
     private final boolean noconsts;
 
-    DenominatorExpressionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    DenominatorExpressionFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
@@ -92,7 +90,6 @@ class DenominatorExpressionFactory extends Factory<IRNode> {
         boolean guardIntegralDenominator = !ExpressionGuards.shouldSkipGuard(RAW_PROBABILITY_DIVISOR);
         int rawOperatorLimit = guardIntegralDenominator ? Math.max(0, operatorLimit - 1) : operatorLimit;
         IRNode raw = new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(rawOperatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)

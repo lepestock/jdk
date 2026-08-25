@@ -47,7 +47,6 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
     private final Type resultType;
     private final String name;
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final int memberFunctionsArgLimit;
@@ -55,13 +54,11 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
     private final int level;
     private final TypeKlass ownerClass;
 
-    FunctionDefinitionFactory(String name, TypeKlass ownerClass, Type resultType,
-            long complexityLimit, int statementLimit, int operatorLimit,
+    FunctionDefinitionFactory(String name, TypeKlass ownerClass, Type resultType, int statementLimit, int operatorLimit,
             int memberFunctionsArgLimit, int level, int flags) {
         this.name = name;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
@@ -117,7 +114,6 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
                     break;
                 }
             }
-            long blockComplLimit = (long) (PseudoRandom.random() * complexityLimit);
             boolean staticMethod = (flags & FunctionInfo.STATIC) > 0;
             if (staticMethod) {
                 ThisVariableControl.pushForbidThis();
@@ -128,7 +124,6 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
             try {
                 body = builder.setOwnerKlass(ownerClass)
                         .setResultType(resType)
-                        .withComplexityLimit(blockComplLimit)
                         .withStatementLimit(statementLimit)
                         .withOperatorLimit(operatorLimit)
                         .withCodeContext(FlowParams.CodeContext.METHOD)
@@ -145,8 +140,7 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
                 }
             }
             if (!resType.equals(TypeList.VOID)) {
-                returnNode = builder.withComplexityLimit(complexityLimit - blockComplLimit)
-                        .setExceptionSafe(false)
+                returnNode = builder.setExceptionSafe(false)
                         .getReturnFactory()
                         .produce();
             } else {

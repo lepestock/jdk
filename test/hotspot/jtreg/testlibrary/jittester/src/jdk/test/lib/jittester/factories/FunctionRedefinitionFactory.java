@@ -35,18 +35,15 @@ import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.functions.FunctionRedefinition;
 import jdk.test.lib.jittester.functions.Return;
 import jdk.test.lib.jittester.types.TypeKlass;
-import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final int level;
     private final TypeKlass ownerClass;
     private final FunctionInfo functionInfo;
 
-    FunctionRedefinitionFactory(FunctionInfo functionInfo, TypeKlass ownerClass,
-            long complexityLimit, int statementLimit, int operatorLimit, int level, int flags) {
+    FunctionRedefinitionFactory(FunctionInfo functionInfo, TypeKlass ownerClass, int statementLimit, int operatorLimit, int level, int flags) {
         this.ownerClass = ownerClass;
         this.functionInfo = new FunctionInfo(functionInfo); // do deep coping
         functionInfo.owner = ownerClass; // important! fix klass!
@@ -58,7 +55,6 @@ class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
         for (VariableInfo varInfo : functionInfo.argTypes) {
             varInfo.owner = ownerClass;
         }
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -86,22 +82,19 @@ class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
                     SymbolTable.add(argumentsInfo.get(i));
                 }
             }
-            long blockComplLimit = (long) (PseudoRandom.random() * complexityLimit);
             IRNodeBuilder builder = new IRNodeBuilder()
                     .setOwnerKlass(ownerClass)
                     .setResultType(functionInfo.type)
                     .withStatementLimit(statementLimit)
                     .withOperatorLimit(operatorLimit);
-            body = builder.withComplexityLimit(blockComplLimit)
-                    .setLevel(level)
+            body = builder.setLevel(level)
                     .setSubBlock(true)
                     .setCanHaveBreaks(false)
                     .setCanHaveContinues(false)
                     .setCanHaveReturn(true)
                     .produceBlock();
             if (!functionInfo.type.equals(TypeList.VOID)) {
-                returnNode = builder.withComplexityLimit(complexityLimit - blockComplLimit)
-                        .setExceptionSafe(false)
+                returnNode = builder.setExceptionSafe(false)
                         .getReturnFactory()
                         .produce();
             } else {

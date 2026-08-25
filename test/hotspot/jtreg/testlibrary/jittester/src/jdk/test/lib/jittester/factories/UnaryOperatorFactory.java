@@ -34,9 +34,9 @@ public abstract class UnaryOperatorFactory extends OperatorFactory<UnaryOperator
     protected final Type resultType;
     protected final Type ownerClass;
 
-    protected UnaryOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
+    protected UnaryOperatorFactory(OperatorKind opKind, int operatorLimit,
             Type ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(opKind.priority, complexityLimit, operatorLimit, exceptionSafe, noconsts);
+        super(opKind.priority, operatorLimit, exceptionSafe, noconsts);
         this.opKind = opKind;
         this.resultType = resultType;
         this.ownerClass = ownerClass;

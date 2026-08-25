@@ -154,6 +154,10 @@ public final class Genome {
         genocode.recordTemplateGene(templateName, geneValue);
     }
 
+    public static synchronized void recordDecisionGene(String decisionName, long geneValue) {
+        genocode.recordDecisionGene(decisionName, geneValue);
+    }
+
     public static Long consumeRuleGene(String ruleName, long liveGeneValue) {
         return genocode.consumeRuleGene(ruleName, liveGeneValue);
     }
@@ -164,6 +168,10 @@ public final class Genome {
 
     public static Long consumeTemplateGene(String templateName, long liveGeneValue) {
         return genocode.consumeTemplateGene(templateName, liveGeneValue);
+    }
+
+    public static Long consumeDecisionGene(String decisionName, long liveGeneValue) {
+        return genocode.consumeDecisionGene(decisionName, liveGeneValue);
     }
 
     /**
@@ -211,16 +219,27 @@ public final class Genome {
         return liveValue;
     }
 
-    public static synchronized boolean createOrConsumeBooleanTemplateGene(String templateName,
+    public static synchronized boolean createOrConsumeBooleanDecisionGene(String decisionName,
             boolean liveValue) {
-        long value = createOrConsumeTemplateGene(templateName, liveValue ? 1L : 0L);
+        long value;
+        if (genocode.isReplayActive()) {
+            Long replayValue = consumeDecisionGene(decisionName, liveValue ? 1L : 0L);
+            if (replayValue == null) {
+                throw new RuntimeException("Genome replay desync: missing decision event for '"
+                        + decisionName + "'");
+            }
+            value = replayValue;
+        } else {
+            value = liveValue ? 1L : 0L;
+            recordDecisionGene(decisionName, value);
+        }
         if (value == 0L) {
             return false;
         }
         if (value == 1L) {
             return true;
         }
-        throw new RuntimeException("Genome replay desync: boolean template event '" + templateName
+        throw new RuntimeException("Genome replay desync: boolean decision event '" + decisionName
                 + "' must be 0/1, got " + value);
     }
 

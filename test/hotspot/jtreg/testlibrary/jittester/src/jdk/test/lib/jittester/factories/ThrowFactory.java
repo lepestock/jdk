@@ -33,10 +33,9 @@ import jdk.test.lib.jittester.types.TypeKlass;
 class ThrowFactory extends SafeFactory<Throw> {
     private final Rule<IRNode> rule;
 
-    ThrowFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    ThrowFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe) {
         IRNodeBuilder b = new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)

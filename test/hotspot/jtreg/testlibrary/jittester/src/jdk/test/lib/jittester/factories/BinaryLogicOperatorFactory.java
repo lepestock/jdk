@@ -35,9 +35,10 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public class BinaryLogicOperatorFactory extends BinaryOperatorFactory {
-    BinaryLogicOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
+
+    BinaryLogicOperatorFactory(OperatorKind opKind, int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(opKind, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(opKind, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override
@@ -54,15 +55,13 @@ public class BinaryLogicOperatorFactory extends BinaryOperatorFactory {
     protected BinaryOperator generateProduction(Type leftType, Type rightType) throws ProductionFailedException {
         int leftOpLimit = (int) (PseudoRandom.random() * (operatorLimit - 1));
         int rightOpLimit = operatorLimit - 1 - leftOpLimit;
-        long leftComplLimit = (long) (PseudoRandom.random() * (complexityLimit - 1));
-        long rightComplLimit = complexityLimit - 1 - leftComplLimit;
-        if (leftOpLimit == 0 || rightOpLimit == 0 || leftComplLimit == 0 || rightComplLimit == 0) {
+        if (leftOpLimit == 0 || rightOpLimit == 0) {
             throw new ProductionFailedException();
         }
         boolean swap = PseudoRandom.randomBoolean();
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)
                 .setExceptionSafe(exceptionSafe);
-        IRNode leftOperand = builder.withComplexityLimit(leftComplLimit)
+        IRNode leftOperand = builder
                 .withOperatorLimit(leftOpLimit)
                 .setResultType(leftType)
                 .setNoConsts(swap && noconsts)
@@ -72,7 +71,7 @@ public class BinaryLogicOperatorFactory extends BinaryOperatorFactory {
         SymbolTable.push();
         IRNode rightOperand;
         try {
-            rightOperand = builder.withComplexityLimit(rightComplLimit)
+            rightOperand = builder
                     .withOperatorLimit(rightOpLimit)
                     .setResultType(rightType)
                     .setNoConsts(!swap && noconsts)

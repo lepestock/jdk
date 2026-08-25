@@ -68,14 +68,13 @@ class ExpressionFactory extends SafeFactory<IRNode> {
     private final int expressionDepthHardLimit;
     private final int expressionMaxDepth;
 
-    ExpressionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass, Type resultType,
+    ExpressionFactory(int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean exceptionSafe, boolean noconsts) throws ProductionFailedException {
         SEED = PseudoRandom.getCurrentSeed();
         this.ownerClass = ownerClass; //FIXME JNP Remove
         this.resultType = resultType;
         this.noConsts = noconsts;
         IRNodeBuilder builder = new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
@@ -129,7 +128,7 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         }
         if (isReferenceTerminalType(resultType)) {
             Factory<? extends IRNode> classTerminalFactory = new ClassTerminalFactory(
-                    complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+                    operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
             double classTerminalWeight = terminalWeight * 2.0;
             addTerminal("class_terminal", classTerminalFactory, classTerminalWeight, 2.0, groupTerminals);
         }
@@ -144,7 +143,7 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                 ? 1.0
                 : Math.max(0.0,
                         (1.0 - stopFloorProbability) * 0.6);
-        boolean operatorsEnabledLive = operatorLimit > 0 && complexityLimit > 0
+        boolean operatorsEnabledLive = operatorLimit > 0
                 && PseudoRandom.randomSilent() < operatorEnableProbability;
         boolean operatorsEnabled = GenomeChoice.bool(operatorsEnabledLive);
         if (expressionDebugEnabled) {
@@ -167,7 +166,7 @@ class ExpressionFactory extends SafeFactory<IRNode> {
                 rule.add("logic", builder.getLogicOperatorFactory());
             }
             if (supportsBitwise(resultType)) {
-                rule.add("bitwise", new BitwiseOperatorFactory(complexityLimit, operatorLimit, ownerClass,
+                rule.add("bitwise", new BitwiseOperatorFactory(operatorLimit, ownerClass,
                         resultType, exceptionSafe, noconsts));
             }
             rule.add("assignment", builder.getAssignmentOperatorFactory(), assignmentWeight);

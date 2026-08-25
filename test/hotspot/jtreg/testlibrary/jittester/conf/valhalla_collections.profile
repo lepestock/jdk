@@ -9,9 +9,6 @@
 --statement-limit=18
 --test-statement-limit=120
 --operator-limit=35
---complexity-limit=1000000
---min-cfg-depth=2
---max-cfg-depth=3
 
 --arrays-disable=false
 # FIXME: non-int collection element types currently expose invalid casted-lvalue
@@ -19,7 +16,6 @@
 --arrays-allowed-types int
 --array-production-weight-bonus=1500
 --arrays-field-definition-weight-bonus=1500
---array-kernel-body-complexity-percent=130
 --array-kernel-body-statement-percent=150
 --list-storage-percent=50
 --collection-print-reduction-percent=90

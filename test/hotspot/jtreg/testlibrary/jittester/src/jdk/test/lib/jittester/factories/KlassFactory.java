@@ -35,10 +35,10 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class KlassFactory extends AbstractKlassFactory<Klass> {
 
-    KlassFactory(String name, long complexityLimit,
+    KlassFactory(String name,
             int memberFunctionsLimit, int memberFunctionsArgLimit, int statementsInFunctionLimit,
             int operatorLimit, int level) {
-        super(name, complexityLimit, memberFunctionsLimit, memberFunctionsArgLimit,
+        super(name, memberFunctionsLimit, memberFunctionsArgLimit,
                 statementsInFunctionLimit, operatorLimit, level);
     }
 
@@ -57,16 +57,15 @@ class KlassFactory extends AbstractKlassFactory<Klass> {
     }
 
     @Override
-    protected IRNode produceVariableDeclarations(IRNodeBuilder builder, long complexity)
+    protected IRNode produceVariableDeclarations(IRNodeBuilder builder)
             throws ProductionFailedException {
-        return builder.withComplexityLimit(complexity).getVariableDeclarationBlockFactory().produce();
+        return builder.getVariableDeclarationBlockFactory().produce();
     }
 
     @Override
-    protected IRNode produceFunctionDefinitions(IRNodeBuilder builder, long complexity, int memberLimit)
+    protected IRNode produceFunctionDefinitions(IRNodeBuilder builder, int memberLimit)
             throws ProductionFailedException {
-        return builder.withComplexityLimit(complexity)
-                .setMemberFunctionsLimit(memberLimit)
+        return builder.setMemberFunctionsLimit(memberLimit)
                 .setFlags(FunctionInfo.NONE)
                 .getFunctionDefinitionBlockFactory()
                 .produce();

@@ -39,7 +39,6 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 class AssignmentOperatorFactory extends Factory<Operator> {
     private static final double COMPOUND_DIVISION_LIKE_WEIGHT = 0.05;
     private final int operatorLimit;
-    private final long complexityLimit;
     private final Type resultType;
     private final boolean exceptionSafe;
     private final boolean noconsts;
@@ -48,15 +47,14 @@ class AssignmentOperatorFactory extends Factory<Operator> {
     private Rule<Operator> fillRule(Type resultType) throws ProductionFailedException {
         Rule<Operator> rule = new Rule<>("assignment");
         IRNodeBuilder builder = new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
         rule.add("simple_assign", builder.setOperatorKind(OperatorKind.ASSIGN).getBinaryOperatorFactory());
-        boolean hasLValue = AssignmentLValueFactory.hasCandidates(complexityLimit, operatorLimit,
-                ownerClass, resultType, exceptionSafe, noconsts);
+        boolean hasLValue = AssignmentLValueFactory.hasCandidates(operatorLimit, ownerClass, resultType,
+                exceptionSafe, noconsts);
         if (hasLValue && supportsCompoundArithmetic(resultType)) {
             rule.add("compound_add", builder.setOperatorKind(OperatorKind.COMPOUND_ADD).getBinaryOperatorFactory());
             rule.add("compound_sub", builder.setOperatorKind(OperatorKind.COMPOUND_SUB).getBinaryOperatorFactory());
@@ -88,10 +86,9 @@ class AssignmentOperatorFactory extends Factory<Operator> {
         return rule;
     }
 
-    AssignmentOperatorFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    AssignmentOperatorFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
         this.ownerClass = ownerClass;
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.resultType = resultType;
         this.exceptionSafe = exceptionSafe;

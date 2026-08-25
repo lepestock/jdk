@@ -61,23 +61,18 @@ public class IRTreeGenerator {
                 .setName(name)
                 .setLevel(0);
 
-        Long complexityLimit = ProductionParams.complexityLimit.value();
         IRNode privateClasses = null;
         if (!ProductionParams.disableClasses.value()) {
-            long privateClassComlexity = (long) (complexityLimit * PseudoRandom.random());
             try {
-                privateClasses = builder.withComplexityLimit(privateClassComlexity)
-                        .getClassDefinitionBlockFactory()
+                privateClasses = builder.getClassDefinitionBlockFactory()
                         .produce();
             } catch (ProductionFailedException ex) {
                 ex.printStackTrace(System.out);
             }
         }
-        long mainClassComplexity = (long) (complexityLimit * PseudoRandom.random());
         IRNode mainClass = null;
         try {
-            mainClass = builder.withComplexityLimit(mainClassComplexity)
-                    .getMainKlassFactory()
+            mainClass = builder.getMainKlassFactory()
                     .produce();
             TypeKlass aClass = new TypeKlass(name);
             mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, true));

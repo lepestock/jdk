@@ -37,7 +37,6 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.Logger;
 
 class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlock> {
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final int memberFunctionsLimit;
@@ -46,12 +45,11 @@ class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlo
     private final int level;
 
     ConstructorDefinitionBlockFactory(TypeKlass ownerClass, int memberFunctionsLimit,
-            int memberFunctionsArgLimit, long complexityLimit, int statementLimit,
+            int memberFunctionsArgLimit, int statementLimit,
             int operatorLimit, int level) {
         this.ownerClass = ownerClass;
         this.memberFunctionsLimit = memberFunctionsLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -67,7 +65,6 @@ class ConstructorDefinitionBlockFactory extends Factory<ConstructorDefinitionBlo
         ArrayList<IRNode> content = new ArrayList<>();
         Logger.log(ownerClass, "Point 1", content);
         int memFunLimit = PseudoRandom.randomNotZero(memberFunctionsLimit);
-        builder.withComplexityLimit(complexityLimit / memFunLimit);
         boolean mustEmitStaticConstructor = hasPendingStaticArrayInitialization();
         if (!ProductionParams.disableStatic.value()
                 && (mustEmitStaticConstructor || PseudoRandom.randomBoolean())) {

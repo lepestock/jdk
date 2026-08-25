@@ -470,13 +470,22 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     private static String closeBraceWithGene(int level, IRNode body) {
+        return closeBrace(level, body, true);
+    }
+
+    private static String closeBraceWithoutGene(int level, IRNode body) {
+        return closeBrace(level, body, false);
+    }
+
+    private static String closeBrace(int level, IRNode body, boolean withGene) {
+        String gene = withGene ? geneComment(body) : "";
         if (hasBlockPulseScope(body)) {
             return PrintingUtils.align(level + 1) + "} finally {\n"
                     + blockPulseEndScope(level + 1, body)
                     + PrintingUtils.align(level + 1) + "}\n"
-                    + PrintingUtils.align(level) + "}" + geneComment(body);
+                    + PrintingUtils.align(level) + "}" + gene;
         }
-        return PrintingUtils.align(level) + "}" + geneComment(body);
+        return PrintingUtils.align(level) + "}" + gene;
     }
 
     private static String openBraceSuffixWithGene(IRNode body) {
@@ -688,10 +697,12 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append(loop.manipulator.accept(this))
             .append(";\n")
             .append(body2.accept(this))
-            .append(closeBraceWithGene(level, body1))
+            .append(closeBraceWithoutGene(level, body1))
             .append(" while (")
             .append(loop.condition.accept(this))
-            .append(");\n")
+            .append(");")
+            .append(geneComment(body1))
+            .append("\n")
             .append(loopPulseEndScope(level, loop, body1));
         return code.toString();
     }
@@ -1581,11 +1592,9 @@ public class JavaCodeVisitor implements Visitor<String> {
         }
         if (finallyBody != null) {
             String finallyContent = finallyBody.accept(this);
-                if (!finallyContent.isEmpty()) {
-                result.append(PrintingUtils.align(level)).append("finally ").append(openBraceSuffixWithGene(finallyBody))
-                        .append(finallyContent).append("\n")
-                        .append(PrintingUtils.align(level)).append(closeBraceSuffixWithGene(finallyBody)).append("\n");
-            }
+            result.append(PrintingUtils.align(level)).append("finally ").append(openBraceSuffixWithGene(finallyBody))
+                    .append(finallyContent).append("\n")
+                    .append(PrintingUtils.align(level)).append(closeBraceSuffixWithGene(finallyBody)).append("\n");
         }
         return result.toString();
     }

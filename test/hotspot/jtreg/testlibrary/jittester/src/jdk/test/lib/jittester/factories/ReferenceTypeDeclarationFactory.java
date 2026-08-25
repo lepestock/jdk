@@ -36,18 +36,16 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class ReferenceTypeDeclarationFactory extends Factory<Declaration> {
     private final TypeKlass ownerClass;
-    private final long complexityLimit;
     private final int operatorLimit;
     private final boolean isLocal;
     private final boolean exceptionSafe;
     private final boolean isConstant;
     private final Predicate<TypeKlass> typeFilter;
 
-    ReferenceTypeDeclarationFactory(TypeKlass ownerClass, long complexityLimit,
+    ReferenceTypeDeclarationFactory(TypeKlass ownerClass,
             int operatorLimit, boolean isLocal, boolean exceptionSafe, boolean isConstant,
             Predicate<TypeKlass> typeFilter) {
         this.ownerClass = ownerClass;
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.isLocal = isLocal;
         this.exceptionSafe = exceptionSafe;
@@ -79,7 +77,7 @@ class ReferenceTypeDeclarationFactory extends Factory<Declaration> {
     }
 
     private Declaration produceDeclaration(Type type) throws ProductionFailedException {
-        return new DeclarationFactory(ownerClass, complexityLimit, operatorLimit, isLocal,
+        return new DeclarationFactory(ownerClass, operatorLimit, isLocal,
                 exceptionSafe, isConstant, type, true).produce();
     }
 

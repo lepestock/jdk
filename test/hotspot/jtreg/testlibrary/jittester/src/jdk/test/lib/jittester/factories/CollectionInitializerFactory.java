@@ -34,7 +34,7 @@ import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
-    private final long complexityLimit;
+
     private final int operatorLimit;
     private final TypeKlass ownerClass;
     private final Type resultType;
@@ -42,9 +42,8 @@ class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
     private final boolean noConsts;
     private final VariableInfo targetVariableInfo;
 
-    CollectionInitializerFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    CollectionInitializerFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noConsts, VariableInfo targetVariableInfo) {
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
@@ -63,11 +62,9 @@ class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
         }
         Type elementType = arrayType.type;
         int elementCount = chooseElementCount();
-        long perElemComplexity = Math.max(1L, complexityLimit / Math.max(1, elementCount));
         int perElemOps = Math.max(1, operatorLimit / Math.max(1, elementCount));
         IRNodeBuilder elementBuilder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
-                .withComplexityLimit(perElemComplexity)
                 .withOperatorLimit(perElemOps)
                 .setResultType(elementType)
                 .setExceptionSafe(exceptionSafe)

@@ -42,19 +42,17 @@ import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.functions.StaticConstructorDefinition;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
-import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefinition> {
-    private final long complexityLimit;
+
     private final int statementLimit;
     private final int operatorLimit;
     private final int level;
     private final TypeKlass ownerClass;
 
-    StaticConstructorDefinitionFactory(TypeKlass ownerClass, long complexityLimit,
+    StaticConstructorDefinitionFactory(TypeKlass ownerClass,
             int statementLimit, int operatorLimit, int level) {
         this.ownerClass = ownerClass;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -66,7 +64,6 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
         IRNode body;
         try {
             SymbolTable.remove(SymbolTable.get("this", VariableInfo.class));
-            long complLimit = (long) (PseudoRandom.random() * complexityLimit);
             ThisVariableControl.pushForbidThis();
             FlowParams previous = GenerationState.currentFlowParams();
             GenerationState.setCurrentFlowParams(previous.withCodeContext(
@@ -75,7 +72,6 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
                 body = new IRNodeBuilder()
                         .setOwnerKlass(ownerClass)
                         .setResultType(TypeList.VOID)
-                        .withComplexityLimit(complLimit)
                         .withStatementLimit(statementLimit)
                         .withOperatorLimit(operatorLimit)
                         .withCodeContext(FlowParams.CodeContext.STATIC_INITIALIZER)
@@ -136,7 +132,6 @@ class StaticConstructorDefinitionFactory extends Factory<StaticConstructorDefini
         TypeArray arrayType = (TypeArray) variableInfo.type;
         IRNodeBuilder initBuilder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
-                .withComplexityLimit(Math.max(1L, complexityLimit / 8))
                 .withOperatorLimit(Math.max(1, operatorLimit / 8))
                 .setResultType(arrayType)
                 .setExceptionSafe(true)

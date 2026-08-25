@@ -35,9 +35,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 class BinaryEqualityOperatorFactory extends BinaryOperatorFactory {
-    BinaryEqualityOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
+    BinaryEqualityOperatorFactory(OperatorKind opKind, int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(opKind, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(opKind, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override

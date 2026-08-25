@@ -31,9 +31,9 @@ import jdk.test.lib.jittester.UnaryOperator;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class LogicalInversionOperatorFactory extends UnaryOperatorFactory {
-    LogicalInversionOperatorFactory(long complexityLimit, int operatorLimit,
+    LogicalInversionOperatorFactory(int operatorLimit,
             Type ownerType, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(OperatorKind.NOT, complexityLimit, operatorLimit, ownerType, resultType, exceptionSafe, noconsts);
+        super(OperatorKind.NOT, operatorLimit, ownerType, resultType, exceptionSafe, noconsts);
     }
 
     @Override
@@ -43,7 +43,13 @@ class LogicalInversionOperatorFactory extends UnaryOperatorFactory {
 
     @Override
     protected UnaryOperator generateProduction(Type resultType) throws ProductionFailedException {
-        return new UnaryOperator(opKind, new ExpressionFactory(complexityLimit - 1,
-                operatorLimit - 1, (TypeKlass) ownerClass, resultType, exceptionSafe, noconsts).produce());
+        return new UnaryOperator(opKind, new IRNodeBuilder()
+                .withOperatorLimit(operatorLimit - 1)
+                .setOwnerKlass((TypeKlass) ownerClass)
+                .setResultType(resultType)
+                .setExceptionSafe(exceptionSafe)
+                .setNoConsts(noconsts)
+                .getExpressionFactory()
+                .produce());
     }
 }

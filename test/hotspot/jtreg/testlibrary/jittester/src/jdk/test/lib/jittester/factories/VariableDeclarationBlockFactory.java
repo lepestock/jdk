@@ -33,22 +33,20 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> {
-    private final long complexityLimit;
     private final int operatorLimit;
     private final boolean exceptionSafe;
     private final boolean constantsOnly;
     private final int level;
     private final TypeKlass ownerClass;
 
-    VariableDeclarationBlockFactory(TypeKlass ownerClass, long complexityLimit,
+    VariableDeclarationBlockFactory(TypeKlass ownerClass,
             int operatorLimit, int level, boolean exceptionSafe) {
-        this(ownerClass, complexityLimit, operatorLimit, level, exceptionSafe, false);
+        this(ownerClass, operatorLimit, level, exceptionSafe, false);
     }
 
-    VariableDeclarationBlockFactory(TypeKlass ownerClass, long complexityLimit,
+    VariableDeclarationBlockFactory(TypeKlass ownerClass,
             int operatorLimit, int level, boolean exceptionSafe, boolean constantsOnly) {
         this.ownerClass = ownerClass;
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
         this.exceptionSafe = exceptionSafe;
@@ -64,7 +62,6 @@ class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> 
         int limit = Math.max(floor, randomPart);
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setIsLocal(false)
                 .setExceptionSafe(exceptionSafe);

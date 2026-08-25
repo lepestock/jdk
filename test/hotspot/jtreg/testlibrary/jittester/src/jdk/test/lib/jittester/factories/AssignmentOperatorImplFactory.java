@@ -44,14 +44,13 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
     private static final int LVALUE_PICK_RETRIES = 16;
-    private static final int ARRAY_KERNEL_LVALUE_COMPLEXITY_PERCENT = 5;
     private static final int ARRAY_KERNEL_LVALUE_OPERATOR_PERCENT = 10;
     private static final ArrayAssignmentDiagnostics ARRAY_ASSIGNMENT_DIAGNOSTICS =
             Diagnostics.arrayAssignment();
 
-    AssignmentOperatorImplFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    AssignmentOperatorImplFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(OperatorKind.ASSIGN, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(OperatorKind.ASSIGN, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override
@@ -76,22 +75,16 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
     protected BinaryOperator generateProduction(Type leftOperandType, Type rightOperandType)
             throws ProductionFailedException {
         boolean inArrayKernel = GenerationState.currentFlowParams().inArrayKernel();
-        long leftComplexityLimit = inArrayKernel
-                ? percentageLimit(complexityLimit, ARRAY_KERNEL_LVALUE_COMPLEXITY_PERCENT)
-                : (long) (PseudoRandom.random() * complexityLimit);
-        long rightComplexityLimit = complexityLimit - leftComplexityLimit;
         int leftOperatorLimit = inArrayKernel
                 ? percentageLimit(operatorLimit, ARRAY_KERNEL_LVALUE_OPERATOR_PERCENT)
                 : (int) (PseudoRandom.random() * operatorLimit);
         int rightOperatorLimit = operatorLimit - leftOperatorLimit;
-        if (leftOperatorLimit <= 0 || rightOperatorLimit <= 0
-                || leftComplexityLimit <= 0 || rightComplexityLimit <= 0) {
+        if (leftOperatorLimit <= 0 || rightOperatorLimit <= 0) {
             throw new ProductionFailedException();
         }
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts)
-                .withComplexityLimit(leftComplexityLimit)
                 .withOperatorLimit(leftOperatorLimit)
                 .setResultType(leftOperandType)
                 .setIsConstant(false);
@@ -144,7 +137,7 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         Type effectiveRightOperandType = preferIndexedArrayTerminal ? leftOperandType : rightOperandType;
         ArrayAssignmentDiagnostics.Snapshot diagnosticSnapshot =
                 ARRAY_ASSIGNMENT_DIAGNOSTICS.snapshot(leftOperandType, effectiveRightOperandType);
-        IRNode rightOperandValue = builder.withComplexityLimit(rightComplexityLimit)
+        IRNode rightOperandValue = builder
                 .withOperatorLimit(rightOperatorLimit)
                 .setResultType(effectiveRightOperandType)
                 .withPreferIterationIndexedArrayTerminal(preferIndexedArrayTerminal)
@@ -162,10 +155,6 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
         ARRAY_ASSIGNMENT_DIAGNOSTICS.attach(diagnosticSnapshot, result, opKind,
                 leftOperandValue, rightOperandValue);
         return result;
-    }
-
-    private static long percentageLimit(long limit, int percent) {
-        return Math.max(1L, Math.min(limit - 1L, (long) Math.ceil(limit * (percent / 100.0))));
     }
 
     private static int percentageLimit(int limit, int percent) {

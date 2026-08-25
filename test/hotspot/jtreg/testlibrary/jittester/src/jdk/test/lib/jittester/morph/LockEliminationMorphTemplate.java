@@ -107,6 +107,7 @@ public record LockEliminationMorphTemplate(long id, int nextLeg, long lockMagnet
     private Declaration produceLockDeclaration(IRNodeBuilder builder) throws ProductionFailedException {
         Declaration declaration = new IRNodeBuilder()
                 .setOwnerKlass(builder.currentOwnerKlass())
+                .setResultType(TypeList.VOID)
                 .setIsLocal(true)
                 .setIsConstant(false)
                 .setExceptionSafe(false)

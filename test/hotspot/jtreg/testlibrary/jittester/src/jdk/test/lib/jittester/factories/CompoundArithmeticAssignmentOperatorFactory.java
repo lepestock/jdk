@@ -34,9 +34,10 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory {
-    CompoundArithmeticAssignmentOperatorFactory(OperatorKind opKind, long complexityLimit,
+
+    CompoundArithmeticAssignmentOperatorFactory(OperatorKind opKind,
             int operatorLimit, TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(opKind, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(opKind, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override
@@ -59,19 +60,20 @@ class CompoundArithmeticAssignmentOperatorFactory extends BinaryOperatorFactory 
 
     @Override
     protected BinaryOperator generateProduction(Type leftType, Type rightType) throws ProductionFailedException {
-        long leftComplexityLimit = (long) (PseudoRandom.random() * complexityLimit);
-        long rightComplexityLimit = complexityLimit - leftComplexityLimit;
         int leftOperatorLimit = (int) (PseudoRandom.random() * operatorLimit);
-        int rightOperatorLimit = operatorLimit = leftOperatorLimit;
+        int rightOperatorLimit = operatorLimit - leftOperatorLimit;
+        if (leftOperatorLimit <= 0 || rightOperatorLimit <= 0) {
+            throw new ProductionFailedException();
+        }
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass((TypeKlass) ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
-        IRNode rightExpr = builder.withComplexityLimit(rightComplexityLimit)
+        IRNode rightExpr = builder
                 .withOperatorLimit(rightOperatorLimit)
                 .setResultType(rightType)
                 .produceExpression(needsSafeDenominator(leftType, rightType));
-        IRNode selectedLeft = new AssignmentLValueFactory(leftComplexityLimit, leftOperatorLimit,
-                (TypeKlass) ownerClass, leftType, exceptionSafe, noconsts).produce();
+        IRNode selectedLeft = new AssignmentLValueFactory(leftOperatorLimit, (TypeKlass) ownerClass,
+                leftType, exceptionSafe, noconsts).produce();
         return new BinaryOperator(opKind, resultType, selectedLeft, rightExpr);
     }
 

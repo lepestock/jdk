@@ -43,7 +43,6 @@ public final class FlowParams {
     }
 
     private final FlowParams prev;
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final String iterationVariable;
@@ -59,8 +58,9 @@ public final class FlowParams {
     private final CodeContext codeContext;
     private final double mtCreationProbability;
     private final double mtLegWeight;
+    private final double taperingBlockTerminalProbability;
 
-    private FlowParams(FlowParams prev, long complexityLimit, int statementLimit, int operatorLimit,
+    private FlowParams(FlowParams prev, int statementLimit, int operatorLimit,
                        String iterationVariable, int arrayKernelIterationLimit, boolean inArrayKernel,
                        boolean preferIterationIndexedArrayTerminal,
                        Type fixedOperandType,
@@ -71,9 +71,9 @@ public final class FlowParams {
                        boolean normalizeNaN,
                        CodeContext codeContext,
                        double mtCreationProbability,
-                       double mtLegWeight) {
+                       double mtLegWeight,
+                       double taperingBlockTerminalProbability) {
         this.prev = prev;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.iterationVariable = iterationVariable;
@@ -89,11 +89,11 @@ public final class FlowParams {
         this.codeContext = codeContext;
         this.mtCreationProbability = mtCreationProbability;
         this.mtLegWeight = mtLegWeight;
+        this.taperingBlockTerminalProbability = taperingBlockTerminalProbability;
     }
 
     public static FlowParams fromProductionParams() {
         return new FlowParams(null,
-                ProductionParams.complexityLimit.value(),
                 ProductionParams.statementLimit.value(),
                 ProductionParams.operatorLimit.value(),
                 null,
@@ -108,11 +108,8 @@ public final class FlowParams {
                 false,
                 CodeContext.UNKNOWN,
                 percentToProbability(ProductionParams.lockEliminationMorphTemplateProbability.value()),
-                percentToProbability(ProductionParams.morphTemplateLegWeight.value()));
-    }
-
-    public long complexityLimit() {
-        return complexityLimit;
+                percentToProbability(ProductionParams.morphTemplateLegWeight.value()),
+                percentToProbability(ProductionParams.taperingBlockTerminalProbabilityPercent.value()));
     }
 
     public int statementLimit() {
@@ -189,16 +186,16 @@ public final class FlowParams {
         return mtLegWeight;
     }
 
+    public double taperingBlockTerminalProbability() {
+        return taperingBlockTerminalProbability;
+    }
+
     public Builder withStatementLimit(int value) {
         return new Builder(this).withStatementLimit(value);
     }
 
-    public Builder withComplexityLimit(long value) {
-        return new Builder(this).withComplexityLimit(value);
-    }
-
-    public Builder withLimits(long complexityLimit, int statementLimit, int operatorLimit) {
-        return new Builder(this).withLimits(complexityLimit, statementLimit, operatorLimit);
+    public Builder withLimits(int statementLimit, int operatorLimit) {
+        return new Builder(this).withLimits(statementLimit, operatorLimit);
     }
 
     public Builder withOperatorLimit(int value) {
@@ -211,7 +208,6 @@ public final class FlowParams {
 
     public Builder withProductionParamsLimits() {
         return new Builder(this)
-                .withComplexityLimit(ProductionParams.complexityLimit.value())
                 .withStatementLimit(ProductionParams.statementLimit.value())
                 .withOperatorLimit(ProductionParams.operatorLimit.value());
     }
@@ -244,9 +240,12 @@ public final class FlowParams {
         return new Builder(this).withMtParameters(creationProbability, legWeight);
     }
 
+    public Builder withTaperingBlockTerminalProbability(double value) {
+        return new Builder(this).withTaperingBlockTerminalProbability(value);
+    }
+
     public String dumpSnapshot() {
-        return "FlowParams{complexityLimit=" + complexityLimit
-                + ", statementLimit=" + statementLimit
+        return "FlowParams{statementLimit=" + statementLimit
                 + ", operatorLimit=" + operatorLimit
                 + ", iterationVariable=" + (iterationVariable == null ? "<none>" : iterationVariable)
                 + ", arrayKernelIterationLimit=" + arrayKernelIterationLimit
@@ -261,6 +260,7 @@ public final class FlowParams {
                 + ", codeContext=" + codeContext
                 + ", mtCreationProbability=" + mtCreationProbability
                 + ", mtLegWeight=" + mtLegWeight
+                + ", taperingBlockTerminalProbability=" + taperingBlockTerminalProbability
                 + ", depth=" + depth(this)
                 + "}";
     }
@@ -292,7 +292,6 @@ public final class FlowParams {
 
     public static final class Builder {
         private final FlowParams base;
-        private long complexityLimit;
         private int statementLimit;
         private int operatorLimit;
         private String iterationVariable;
@@ -308,13 +307,13 @@ public final class FlowParams {
         private CodeContext codeContext;
         private double mtCreationProbability;
         private double mtLegWeight;
+        private double taperingBlockTerminalProbability;
 
         private Builder(FlowParams base) {
             if (base == null) {
                 throw new IllegalArgumentException("FlowParams builder base must not be null");
             }
             this.base = base;
-            this.complexityLimit = base.complexityLimit;
             this.statementLimit = base.statementLimit;
             this.operatorLimit = base.operatorLimit;
             this.iterationVariable = base.iterationVariable;
@@ -330,16 +329,11 @@ public final class FlowParams {
             this.codeContext = base.codeContext;
             this.mtCreationProbability = base.mtCreationProbability;
             this.mtLegWeight = base.mtLegWeight;
+            this.taperingBlockTerminalProbability = base.taperingBlockTerminalProbability;
         }
 
-        public Builder withComplexityLimit(long value) {
-            this.complexityLimit = value;
-            return this;
-        }
-
-        public Builder withLimits(long complexityLimit, int statementLimit, int operatorLimit) {
-            return withComplexityLimit(complexityLimit)
-                    .withStatementLimit(statementLimit)
+        public Builder withLimits(int statementLimit, int operatorLimit) {
+            return withStatementLimit(statementLimit)
                     .withOperatorLimit(operatorLimit);
         }
 
@@ -443,8 +437,13 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withTaperingBlockTerminalProbability(double value) {
+            this.taperingBlockTerminalProbability = normalizeProbability(value);
+            return this;
+        }
+
         public FlowParams advance() {
-            return new FlowParams(base, complexityLimit, statementLimit, operatorLimit, iterationVariable,
+            return new FlowParams(base, statementLimit, operatorLimit, iterationVariable,
                     arrayKernelIterationLimit, inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
                     arrayElementExpressionWeightPercent, arrayExtractionExpressionWeightPercent,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
@@ -452,7 +451,8 @@ public final class FlowParams {
                     normalizeNaN,
                     codeContext,
                     mtCreationProbability,
-                    mtLegWeight);
+                    mtLegWeight,
+                    taperingBlockTerminalProbability);
         }
     }
 }

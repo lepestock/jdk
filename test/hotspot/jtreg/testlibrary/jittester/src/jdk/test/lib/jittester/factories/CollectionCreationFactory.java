@@ -38,15 +38,13 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
-    private final long complexityLimit;
     private final Type resultType;
     private final boolean exceptionSafe;
     private final boolean noconsts;
     private final TypeKlass ownerClass;
 
-    CollectionCreationFactory(long complexityLimit, int operatorLimit,
+    CollectionCreationFactory(int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        this.complexityLimit = complexityLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
         this.exceptionSafe = exceptionSafe;
@@ -65,7 +63,6 @@ class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
             arrayResultType = withSelectedStorageKind(arrayResultType);
             IndexedStorageKind storageKind = arrayResultType.getStorageKind();
             IRNodeBuilder builder = new IRNodeBuilder()
-                    .withComplexityLimit(complexityLimit)
                     .setOwnerKlass(ownerClass)
                     .setResultType(TypeList.BYTE)
                     .setExceptionSafe(exceptionSafe)

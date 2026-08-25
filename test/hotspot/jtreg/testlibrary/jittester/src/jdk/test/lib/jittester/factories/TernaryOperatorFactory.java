@@ -37,9 +37,9 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
     private final Type resultType;
     private final TypeKlass ownerClass;
 
-    TernaryOperatorFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    TernaryOperatorFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(2, complexityLimit, operatorLimit, exceptionSafe, noconsts);
+        super(2, operatorLimit, exceptionSafe, noconsts);
         this.resultType = resultType;
         this.ownerClass = ownerClass;
     }
@@ -49,16 +49,12 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         int leftOpLimit = (int) (PseudoRandom.random() * 0.3 * (operatorLimit - 1));
         int rightOpLimit = (int) (PseudoRandom.random() * 0.3 * (operatorLimit - 1));
         int condOpLimit = operatorLimit - 1 - leftOpLimit - rightOpLimit;
-        long leftComplLimit = (long) (PseudoRandom.random() * 0.3 * (complexityLimit - 1));
-        long rightComplLimit = (long) (PseudoRandom.random() * 0.3 * (complexityLimit - 1));
-        long condComplLimit = complexityLimit - 1 - leftComplLimit - rightComplLimit;
-        if (leftComplLimit == 0 || rightComplLimit == 0 || condComplLimit == 0
-                || leftOpLimit == 0 || rightOpLimit == 0 || condOpLimit == 0) {
+        if (leftOpLimit == 0 || rightOpLimit == 0 || condOpLimit == 0) {
             throw new ProductionFailedException();
         }
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe);
-        IRNode conditionalExp = builder.withComplexityLimit(condComplLimit)
+        IRNode conditionalExp = builder
                 .withOperatorLimit(condOpLimit)
                 .setResultType(TypeList.BOOLEAN)
                 .getBooleanConditionFactory()
@@ -68,7 +64,7 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         SymbolTable.push();
         try {
             if (seed == 18218056952499L) Logger.enableTrace();
-            leftExp = builder.withComplexityLimit(leftComplLimit)
+            leftExp = builder
                     .withOperatorLimit(leftOpLimit)
                     .setResultType(resultType)
                     .setNoConsts(false)
@@ -81,7 +77,7 @@ class TernaryOperatorFactory extends OperatorFactory<TernaryOperator> {
         IRNode rightExp;
         SymbolTable.push();
         try {
-            rightExp = builder.withComplexityLimit(rightComplLimit)
+            rightExp = builder
                     .withOperatorLimit(rightOpLimit)
                     .setResultType(resultType)
                     .setNoConsts(false)

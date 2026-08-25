@@ -49,7 +49,6 @@ public class ProductionParams {
     public static Option<Integer> statementLimit = null;
     public static Option<Integer> testStatementLimit = null;
     public static Option<Integer> operatorLimit = null;
-    public static Option<Long> complexityLimit = null;
     public static Option<Integer> memberFunctionsLimit = null;
     public static Option<Integer> memberFunctionsArgLimit = null;
     public static Option<Integer> stringLiteralSizeLimit = null;
@@ -108,7 +107,6 @@ public class ProductionParams {
     public static Option<Integer> magnetismLevel = null;
     public static Option<Integer> arrayProductionWeightBonus = null;
     public static Option<Integer> listStoragePercent = null;
-    public static Option<Integer> arrayKernelBodyComplexityPercent = null;
     public static Option<Integer> arrayKernelBodyStatementPercent = null;
     public static Option<Boolean> arrayKernelCollectionElementLValues = null;
     public static Option<Integer> collectionPrintReductionPercent = null;
@@ -122,10 +120,12 @@ public class ProductionParams {
     public static Option<Long> genomeMutationSeed = null;
     public static Option<String> genomeMutationTarget = null;
     public static Option<String> genocode = null;
-    public static Option<Integer> branchStopPercent = null;
     public static Option<Integer> expressionStopFloorPercent = null;
     public static Option<Integer> expressionStopStartDepth = null;
     public static Option<Integer> expressionStopFullDepth = null;
+    public static Option<Integer> taperingBlockTerminalProbabilityPercent = null;
+    public static Option<Integer> taperingBlockTerminalReciprocalK = null;
+    public static Option<Integer> taperingBlockStatementLimitMultiplierPercent = null;
     public static Option<Integer> blockStatementBoostPercent = null;
     public static Option<Integer> blockStatementBoostHalfDepth = null;
     public static Option<Integer> assignmentFieldBiasBoostPercent = null;
@@ -196,7 +196,6 @@ public class ProductionParams {
         statementLimit = optionResolver.addIntegerOption('s', "statement-limit", 30, "Upper limit on statements in function");
         testStatementLimit = optionResolver.addIntegerOption('e', "test-statement-limit", 300, "Upper limit on statements in test() function");
         operatorLimit = optionResolver.addIntegerOption('o', "operator-limit", 50, "Upper limit on operators in a statement");
-        complexityLimit = optionResolver.addLongOption('x', "complexity-limit", 10000000, "Upper limit on complexity");
         memberFunctionsLimit = optionResolver.addIntegerOption('m', "member-functions-limit", 15, "Upper limit on member functions");
         memberFunctionsArgLimit = optionResolver.addIntegerOption('a', "member-functions-arg-limit", 5, "Upper limit on the number of member function args");
         stringLiteralSizeLimit = optionResolver.addIntegerOption("string-literal-size-limit", 10, "Upper limit on the number of chars in string literal");
@@ -279,8 +278,6 @@ public class ProductionParams {
                 "Additional selection weight percent for array productions (0 keeps default)");
         listStoragePercent = optionResolver.addIntegerOption("list-storage-percent", 0,
                 "Percent chance to use java.util.List-backed one-dimensional indexed storage");
-        arrayKernelBodyComplexityPercent = optionResolver.addIntegerOption("array-kernel-body-complexity-percent", 50,
-                "Percent of parent complexity budget used for array-kernel body generation");
         arrayKernelBodyStatementPercent = optionResolver.addIntegerOption("array-kernel-body-statement-percent", 50,
                 "Percent of parent statement budget used for array-kernel body generation");
         arrayKernelCollectionElementLValues = optionResolver.addBooleanOption(null,
@@ -315,15 +312,23 @@ public class ProductionParams {
                 "full-genocode",
                 "Genome genocode backend (supported: full-genocode)");
 
-        branchStopPercent = optionResolver.addIntegerOption("branch-stop-percent", 12,
-                "Base probability (0..100) to stop generating more statements in a block");
         expressionStopFloorPercent = optionResolver.addIntegerOption("expression-stop-floor-percent", 1,
                 "Minimum probability (0..100) to force terminal expression generation at shallow depths");
         expressionStopStartDepth = optionResolver.addIntegerOption("expression-stop-start-depth", 3,
                 "Expression depth where S-shaped terminal-forcing ramp starts rising");
         expressionStopFullDepth = optionResolver.addIntegerOption("expression-stop-full-depth", 12,
                 "Expression depth where S-shaped terminal-forcing ramp reaches 100%");
-        blockStatementBoostPercent = optionResolver.addIntegerOption("block-statement-boost-percent", 140,
+        taperingBlockTerminalProbabilityPercent = optionResolver.addIntegerOption("tapering-block-terminal-percent", 12,
+                "Initial probability (0..100) to produce an empty terminal block");
+        taperingBlockTerminalReciprocalK = optionResolver.addIntegerOption(
+                "tapering-block-terminal-reciprocal-k",
+                2800,
+                "Reciprocal block terminal taper parameter: y(n+1)=y(n)-k/y(n), where y is non-empty percent");
+        taperingBlockStatementLimitMultiplierPercent = optionResolver.addIntegerOption(
+                "tapering-block-statement-limit-multiplier-percent",
+                40,
+                "Recursive percent multiplier for child block statement limit");
+        blockStatementBoostPercent = optionResolver.addIntegerOption("block-statement-boost-percent", 50,
                 "Depth-tapered shallow-block statement-attempt boost (0..1000), applied on top of block-seed count");
         blockStatementBoostHalfDepth = optionResolver.addIntegerOption("block-statement-boost-half-depth", 3,
                 "Depth parameter for block statement-attempt boost taper");

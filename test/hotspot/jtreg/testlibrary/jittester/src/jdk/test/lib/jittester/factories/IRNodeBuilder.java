@@ -94,9 +94,12 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.diagnostics.SourceDiagnostics;
 import jdk.test.lib.jittester.morph.LockEliminationMorphTemplate;
 import jdk.test.lib.jittester.morph.MorphTemplate;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public class IRNodeBuilder {
+    private static final String BLOCK_TERMINAL_DECISION = "tapering.block.terminal";
+
     //private Optional<Type> variableType = Optional.empty();
     private FlowParams flowParams;
     private Optional<TypeKlass> argumentType = Optional.empty();
@@ -143,32 +146,32 @@ public class IRNodeBuilder {
     }
 
     public Factory<Operator> getArithmeticOperatorFactory() throws ProductionFailedException {
-        return new ArithmeticOperatorFactory(flowParams().complexityLimit(), flowParams().operatorLimit(),
+        return new ArithmeticOperatorFactory(flowParams().operatorLimit(),
                 getOwnerClass(), getResultType(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<CollectionCreation> getCollectionCreationFactory() {
-        return new CollectionCreationFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new CollectionCreationFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<CollectionElement> getCollectionElementFactory() {
-        return new CollectionElementFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new CollectionElementFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<CollectionExtraction> getCollectionExtractionFactory() {
-        return new CollectionExtractionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new CollectionExtractionFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<CollectionInitializer> getCollectionInitializerFactory(VariableInfo targetVariableInfo) {
-        return new CollectionInitializerFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new CollectionInitializerFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts(), targetVariableInfo);
     }
 
     public Factory<Operator> getAssignmentOperatorFactory() {
-        return new AssignmentOperatorFactory(flowParams().complexityLimit(), flowParams().operatorLimit(),
+        return new AssignmentOperatorFactory(flowParams().operatorLimit(),
                 getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
     }
 
@@ -176,66 +179,60 @@ public class IRNodeBuilder {
         OperatorKind o = getOperatorKind();
         switch (o) {
             case ASSIGN:
-                return new AssignmentOperatorImplFactory(flowParams().complexityLimit(), flowParams().operatorLimit(),
+                return new AssignmentOperatorImplFactory(flowParams().operatorLimit(),
                         getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case AND:
             case OR:
-                return new BinaryLogicOperatorFactory(o, flowParams().complexityLimit(), flowParams().operatorLimit(),
+                return new BinaryLogicOperatorFactory(o, flowParams().operatorLimit(),
                         getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case BIT_OR:
             case BIT_XOR:
             case BIT_AND:
-                return new BinaryBitwiseOperatorFactory(o, flowParams().complexityLimit(), flowParams().operatorLimit(),
+                return new BinaryBitwiseOperatorFactory(o, flowParams().operatorLimit(),
                         getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
 
             case EQ:
             case NE:
-                return new BinaryEqualityOperatorFactory(o, flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new BinaryEqualityOperatorFactory(o, flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case GT:
             case LT:
             case GE:
             case LE:
-                return new BinaryComparisonOperatorFactory(o, flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new BinaryComparisonOperatorFactory(o, flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case SHR:
             case SHL:
             case SAR:
-                return new BinaryShiftOperatorFactory(o, flowParams().complexityLimit(), flowParams().operatorLimit(),
+                return new BinaryShiftOperatorFactory(o, flowParams().operatorLimit(),
                         getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case ADD:
             case SUB:
             case MUL:
             case DIV:
             case MOD:
-                return new BinaryArithmeticOperatorFactory(o, flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new BinaryArithmeticOperatorFactory(o, flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case STRADD:
-                return new BinaryStringPlusFactory(flowParams().complexityLimit(), flowParams().operatorLimit(),
+                return new BinaryStringPlusFactory(flowParams().operatorLimit(),
                         getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case COMPOUND_ADD:
             case COMPOUND_SUB:
             case COMPOUND_MUL:
             case COMPOUND_DIV:
             case COMPOUND_MOD:
-                return new CompoundArithmeticAssignmentOperatorFactory(o, flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new CompoundArithmeticAssignmentOperatorFactory(o, flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case COMPOUND_AND:
             case COMPOUND_OR:
             case COMPOUND_XOR:
-                return new CompoundBitwiseAssignmentOperatorFactory(o, flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new CompoundBitwiseAssignmentOperatorFactory(o, flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case COMPOUND_SHR:
             case COMPOUND_SHL:
             case COMPOUND_SAR:
-                return new CompoundShiftAssignmentOperatorFactory(o, flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new CompoundShiftAssignmentOperatorFactory(o, flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             default:
                 throw new ProductionFailedException();
         }
@@ -245,23 +242,20 @@ public class IRNodeBuilder {
         OperatorKind o = getOperatorKind();
         switch (o) {
             case NOT:
-                return new LogicalInversionOperatorFactory(flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new LogicalInversionOperatorFactory(flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case BIT_NOT:
-                return new BitwiseInversionOperatorFactory(flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new BitwiseInversionOperatorFactory(flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case UNARY_PLUS:
             case UNARY_MINUS:
-                return new UnaryPlusMinusOperatorFactory(o, flowParams().complexityLimit(),
-                        flowParams().operatorLimit(), getOwnerClass(), resultType.orElse(null), getExceptionSafe(),
-                        getNoConsts());
+                return new UnaryPlusMinusOperatorFactory(o, flowParams().operatorLimit(),
+                        getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             case PRE_DEC:
             case POST_DEC:
             case PRE_INC:
             case POST_INC:
-                return new IncDecOperatorFactory(o, flowParams().complexityLimit(), flowParams().operatorLimit(),
+                return new IncDecOperatorFactory(o, flowParams().operatorLimit(),
                         getOwnerClass(), resultType.orElse(null), getExceptionSafe(), getNoConsts());
             default:
                 throw new ProductionFailedException();
@@ -269,15 +263,15 @@ public class IRNodeBuilder {
     }
 
     Factory<Block> getBlockFactory() {
-        return new BlockFactory(getOwnerClass(), getResultType(), flowParams().complexityLimit(),
-                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), subBlock.orElse(false),
+        return new BlockFactory(getOwnerClass(), getResultType(), flowParams().statementLimit(),
+                flowParams().operatorLimit(), getLevel(), subBlock.orElse(false),
                 canHaveBreaks.orElse(false), canHaveContinues.orElse(false),
                 canHaveReturn.orElse(false), canHaveReturn.orElse(false));
         //now 'throw' can be placed only in the same positions as 'return'
     }
 
     public Factory<For> getArrayKernelLoopFactory() {
-        return new ArrayKernelLoopFactory(getOwnerClass(), getResultType(), flowParams().complexityLimit(),
+        return new ArrayKernelLoopFactory(getOwnerClass(), getResultType(),
                 flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(),
                 canHaveReturn.orElse(false));
     }
@@ -287,11 +281,16 @@ public class IRNodeBuilder {
      * This is intended for context-shaped block production (e.g. array kernels).
      */
     public Block produceBlock() throws ProductionFailedException {
+        FlowParams current = flowParams();
+        if (shouldProduceTerminalBlock(current)) {
+            return BlockFactory.produceEmptyBlock(getOwnerClass(), getResultType(), getLevel());
+        }
         FlowParams previous = GenerationState.currentFlowParams();
         FlowParams.Builder flowBuilder = flowParams().withLimits(
-                flowParams().complexityLimit(),
                 flowParams().statementLimit(),
                 flowParams().operatorLimit());
+        flowBuilder.withTaperingBlockTerminalProbability(
+                nextTaperingBlockTerminalProbability(current.taperingBlockTerminalProbability()));
         arrayKernelIterationVariable.ifPresent(flowBuilder::withIterationVariable);
         arrayKernelIterationLimit.ifPresent(flowBuilder::withArrayKernelIterationLimit);
         inArrayKernel.ifPresent(flowBuilder::withInArrayKernel);
@@ -319,9 +318,36 @@ public class IRNodeBuilder {
         }
     }
 
+    private boolean shouldProduceTerminalBlock(FlowParams flowParams) {
+        if (!canProduceTerminalBlock()) {
+            return false;
+        }
+        double probability = flowParams.taperingBlockTerminalProbability();
+        boolean liveChoice = probability > 0.0 && PseudoRandom.randomSilent() < probability;
+        return Genome.createOrConsumeBooleanDecisionGene(BLOCK_TERMINAL_DECISION, liveChoice);
+    }
+
+    private boolean canProduceTerminalBlock() {
+        return subBlock.orElse(false)
+                || !canHaveReturn.orElse(false)
+                || getResultType().equals(TypeList.VOID);
+    }
+
+    private static double nextTaperingBlockTerminalProbability(double currentProbability) {
+        double nonEmptyPercent = (1.0 - currentProbability) * 100.0;
+        if (nonEmptyPercent <= 0.0) {
+            return 1.0;
+        }
+        double k = Math.max(0.0, ProductionParams.taperingBlockTerminalReciprocalK.value());
+        // Reciprocal taper keeps early child blocks viable, then bends sharply
+        // toward terminal blocks to avoid depth and size explosions.
+        double nextNonEmptyPercent = Math.max(0.0, nonEmptyPercent - k / nonEmptyPercent);
+        return Math.max(0.0, Math.min(1.0, 1.0 - nextNonEmptyPercent / 100.0));
+    }
+
     private static MorphTemplate createMorphTemplate(FlowParams flowParams) {
         if (LockEliminationMorphTemplate.canBeCreated(flowParams)
-                && createLockEliminationMorphTemplateChoice(flowParams.mtCreationProbability())) {
+                && createLockEliminationMorphTemplateDecision(flowParams.mtCreationProbability())) {
             return new LockEliminationMorphTemplate();
         }
         return null;
@@ -334,8 +360,9 @@ public class IRNodeBuilder {
         SourceDiagnostics.attach(block, template.creationDiagnostic());
     }
 
-    private static boolean createLockEliminationMorphTemplateChoice(double probability) {
-        return probability > 0.0 && PseudoRandom.randomBoolean(probability);
+    private static boolean createLockEliminationMorphTemplateDecision(double probability) {
+        boolean liveChoice = probability > 0.0 && PseudoRandom.randomSilent() < probability;
+        return Genome.createOrConsumeBooleanDecisionGene("morph.lock_elimination.create", liveChoice);
     }
 
     /**
@@ -355,7 +382,6 @@ public class IRNodeBuilder {
     public IRNode produceExpression(boolean denominator) throws ProductionFailedException {
         FlowParams previous = GenerationState.currentFlowParams();
         FlowParams.Builder flowBuilder = flowParams().withLimits(
-                flowParams().complexityLimit(),
                 flowParams().statementLimit(),
                 flowParams().operatorLimit());
         preferIterationIndexedArrayTerminal.ifPresent(flowBuilder::withPreferIterationIndexedArrayTerminal);
@@ -381,7 +407,7 @@ public class IRNodeBuilder {
     }
 
     public Factory<CastOperator> getCastOperatorFactory() {
-        return new CastOperatorFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new CastOperatorFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
@@ -390,15 +416,13 @@ public class IRNodeBuilder {
                 ProductionParams.classesLimit.value(),
                 ProductionParams.memberFunctionsLimit.value(),
                 ProductionParams.memberFunctionsArgLimit.value(),
-                flowParams().complexityLimit(),
                 flowParams().statementLimit(),
                 flowParams().operatorLimit(),
                 getLevel());
     }
 
     public Factory<MainKlass> getMainKlassFactory() {
-        return new MainKlassFactory(getName(), flowParams().complexityLimit(),
-                ProductionParams.memberFunctionsLimit.value(),
+        return new MainKlassFactory(getName(), ProductionParams.memberFunctionsLimit.value(),
                 ProductionParams.memberFunctionsArgLimit.value(),
                 flowParams().statementLimit(),
                 ProductionParams.testStatementLimit.value(),
@@ -407,12 +431,12 @@ public class IRNodeBuilder {
 
     public Factory<ConstructorDefinitionBlock> getConstructorDefinitionBlockFactory() {
         return new ConstructorDefinitionBlockFactory(getOwnerClass(), getMemberFunctionsLimit(),
-                ProductionParams.memberFunctionsArgLimit.value(), flowParams().complexityLimit(),
-                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel());
+                ProductionParams.memberFunctionsArgLimit.value(), flowParams().statementLimit(),
+                flowParams().operatorLimit(), getLevel());
     }
 
     public Factory<ConstructorDefinition> getConstructorDefinitionFactory() {
-        return new ConstructorDefinitionFactory(getOwnerClass(), flowParams().complexityLimit(),
+        return new ConstructorDefinitionFactory(getOwnerClass(),
                 flowParams().statementLimit(), flowParams().operatorLimit(),
                 getMemberFunctionsArgLimit(), getLevel());
     }
@@ -430,71 +454,73 @@ public class IRNodeBuilder {
     }
 
     public Factory<Declaration> getDeclarationFactory() {
-        return new DeclarationFactory(getOwnerClass(), flowParams().complexityLimit(), flowParams().operatorLimit(),
+        return new DeclarationFactory(getOwnerClass(), flowParams().operatorLimit(),
                 getIsLocal(), getExceptionSafe());
     }
 
     public Factory<Declaration> getConstantDeclarationFactory() {
-        return new DeclarationFactory(getOwnerClass(), flowParams().complexityLimit(), flowParams().operatorLimit(),
+        return new DeclarationFactory(getOwnerClass(), flowParams().operatorLimit(),
                 getIsLocal(), getExceptionSafe(), true);
     }
 
     public Factory<Declaration> getInitializedDeclarationFactory() {
-        return new DeclarationFactory(getOwnerClass(), flowParams().complexityLimit(), flowParams().operatorLimit(),
+        return new DeclarationFactory(getOwnerClass(), flowParams().operatorLimit(),
                 getIsLocal(), getExceptionSafe(), getIsConstant(), getResultType(), true);
     }
 
     public Declaration produceReferenceTypeDeclaration(Predicate<TypeKlass> typeFilter)
             throws ProductionFailedException {
-        return new ReferenceTypeDeclarationFactory(getOwnerClass(), flowParams().complexityLimit(),
-                flowParams().operatorLimit(), getIsLocal(), getExceptionSafe(), getIsConstant(),
-                typeFilter).produce();
+        return new ReferenceTypeDeclarationFactory(getOwnerClass(), flowParams().operatorLimit(),
+                getIsLocal(), getExceptionSafe(), getIsConstant(), typeFilter).produce();
     }
 
     public Factory<DoWhile> getDoWhileFactory() {
-        return new DoWhileFactory(getOwnerClass(), getResultType(), flowParams().complexityLimit(),
-                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), getCanHaveReturn());
+        return new DoWhileFactory(getOwnerClass(), getResultType(),
+                flowParams().statementLimit(), flowParams().operatorLimit(),
+                getLevel(), getCanHaveReturn());
     }
 
     public Factory<While> getWhileFactory() {
-        return new WhileFactory(getOwnerClass(), getResultType(), flowParams().complexityLimit(),
-                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), getCanHaveReturn());
+        return new WhileFactory(getOwnerClass(), getResultType(),
+                flowParams().statementLimit(), flowParams().operatorLimit(),
+                getLevel(), getCanHaveReturn());
     }
 
     public Factory<If> getIfFactory() {
-        return new IfFactory(getOwnerClass(), getResultType(), flowParams().complexityLimit(),
-                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), getCanHaveBreaks(),
-                getCanHaveContinues(), getCanHaveReturn());
+        return new IfFactory(getOwnerClass(), getResultType(),
+                flowParams().statementLimit(), flowParams().operatorLimit(),
+                getLevel(), getCanHaveBreaks(), getCanHaveContinues(), getCanHaveReturn());
     }
 
     public Factory<For> getForFactory() {
-        return new ForFactory(getOwnerClass(), getResultType(), flowParams().complexityLimit(),
-                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), getCanHaveReturn());
+        return new ForFactory(getOwnerClass(), getResultType(),
+                flowParams().statementLimit(), flowParams().operatorLimit(),
+                getLevel(), getCanHaveReturn());
     }
 
     public Factory<Switch> getSwitchFactory() { // TODO: switch is not used now
-        return new SwitchFactory(getOwnerClass(), flowParams().complexityLimit(), flowParams().statementLimit(),
+        return new SwitchFactory(getOwnerClass(), flowParams().statementLimit(),
                 flowParams().operatorLimit(), getLevel(), getCanHaveReturn());
     }
 
     public Factory<IRNode> getExpressionFactory() throws ProductionFailedException {
-        return new ExpressionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new ExpressionFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<IRNode> getBooleanConditionFactory() throws ProductionFailedException {
-        return new BooleanConditionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(),
+        return new BooleanConditionFactory(flowParams().operatorLimit(),
                 getOwnerClass(), getExceptionSafe());
     }
 
     public Factory<IRNode> getDenominatorExpressionFactory() throws ProductionFailedException {
-        return new DenominatorExpressionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new DenominatorExpressionFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<IRNode> getConstrainedIntegralExpressionFactory(MethodArgumentConstraint constraint)
             throws ProductionFailedException {
-        return new ConstrainedIntegralExpressionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new ConstrainedIntegralExpressionFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts(), constraint);
     }
 
@@ -511,7 +537,7 @@ public class IRNodeBuilder {
     public Factory<FunctionDefinitionBlock> getFunctionDefinitionBlockFactory() {
         Factory<FunctionDefinitionBlock> result =
             new FunctionDefinitionBlockFactory(getOwnerClass(), getMemberFunctionsLimit(),
-                getMemberFunctionsArgLimit(), flowParams().complexityLimit(), flowParams().statementLimit(),
+                getMemberFunctionsArgLimit(), flowParams().statementLimit(),
                 flowParams().operatorLimit(), getLevel(), getFlags(), isSynchronizedAllowed);
         isSynchronizedAllowed = true;
         return result;
@@ -519,24 +545,24 @@ public class IRNodeBuilder {
 
     public Factory<FunctionDefinition> getFunctionDefinitionFactory() {
         return new FunctionDefinitionFactory(getName(), getOwnerClass(), resultType.orElse(TypeList.VOID),
-                flowParams().complexityLimit(), flowParams().statementLimit(), flowParams().operatorLimit(),
+                flowParams().statementLimit(), flowParams().operatorLimit(),
                 getMemberFunctionsArgLimit(), getLevel(), getFlags());
     }
 
     public Factory<Function> getFunctionFactory() {
-        return new FunctionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new FunctionFactory(flowParams().operatorLimit(), getOwnerClass(),
                 resultType.orElse(null), getExceptionSafe());
     }
 
     public Factory<FunctionRedefinitionBlock> getFunctionRedefinitionBlockFactory(Collection<Symbol>
                                                                                         functionSet) {
         return new FunctionRedefinitionBlockFactory(functionSet, getOwnerClass(),
-                flowParams().complexityLimit(), flowParams().statementLimit(), flowParams().operatorLimit(), getLevel());
+                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel());
     }
 
     public Factory<FunctionRedefinition> getFunctionRedefinitionFactory() {
         return new FunctionRedefinitionFactory(getFunctionInfo(), getOwnerClass(),
-                flowParams().complexityLimit(), flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(),
+                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(),
                 getFlags());
     }
 
@@ -546,19 +572,19 @@ public class IRNodeBuilder {
     }
 
     public Factory<Klass> getKlassFactory() {
-        return new KlassFactory(getName(), flowParams().complexityLimit(),
-                getMemberFunctionsLimit(), getMemberFunctionsArgLimit(), flowParams().statementLimit(),
+        return new KlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
+                flowParams().statementLimit(),
                 flowParams().operatorLimit(), getLevel());
     }
 
     public Factory<ValueKlass> getValueKlassFactory() {
-        return new ValueKlassFactory(getName(), flowParams().complexityLimit(),
-                getMemberFunctionsLimit(), getMemberFunctionsArgLimit(), flowParams().statementLimit(),
+        return new ValueKlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
+                flowParams().statementLimit(),
                 flowParams().operatorLimit(), getLevel());
     }
 
     public Factory<IRNode> getLimitedExpressionFactory() throws ProductionFailedException {
-        return new ExpressionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(),
+        return new ExpressionFactory(flowParams().operatorLimit(),
                 getOwnerClass(), getResultType(), getExceptionSafe(), getNoConsts());
     }
 
@@ -571,17 +597,17 @@ public class IRNodeBuilder {
     }
 
     public Factory<Operator> getLogicOperatorFactory() throws ProductionFailedException {
-        return new LogicOperatorFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new LogicOperatorFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<LoopingCondition> getLoopingConditionFactory(Literal _limiter) {
-        return new LoopingConditionFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new LoopingConditionFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getLocalVariable(), _limiter);
     }
 
     public Factory<NonStaticMemberVariable> getNonStaticMemberVariableFactory() {
-        return new NonStaticMemberVariableFactory(flowParams().complexityLimit(), flowParams().operatorLimit(),
+        return new NonStaticMemberVariableFactory(flowParams().operatorLimit(),
                 getOwnerClass(), /*getVariableType()*/getResultType(), getFlags(), getExceptionSafe());
     }
 
@@ -594,21 +620,22 @@ public class IRNodeBuilder {
     }
 
     public Factory<Return> getReturnFactory() {
-        return new ReturnFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new ReturnFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe());
     }
 
     public Factory<Throw> getThrowFactory() {
-        return new ThrowFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(), getResultType(), getExceptionSafe());
+        return new ThrowFactory(flowParams().operatorLimit(), getOwnerClass(),
+                getResultType(), getExceptionSafe());
     }
 
     public Factory<Statement> getStatementFactory() {
-        return new StatementFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new StatementFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getExceptionSafe(), getNoConsts(), semicolon.orElse(true));
     }
 
     public Factory<StaticConstructorDefinition> getStaticConstructorDefinitionFactory() {
-        return new StaticConstructorDefinitionFactory(getOwnerClass(), flowParams().complexityLimit(),
+        return new StaticConstructorDefinitionFactory(getOwnerClass(),
                 flowParams().statementLimit(), flowParams().operatorLimit(), getLevel());
     }
 
@@ -617,13 +644,13 @@ public class IRNodeBuilder {
     }
 
     public Factory<TernaryOperator> getTernaryOperatorFactory() {
-        return new TernaryOperatorFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new TernaryOperatorFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<VariableDeclarationBlock> getVariableDeclarationBlockFactory() {
-        return new VariableDeclarationBlockFactory(getOwnerClass(), flowParams().complexityLimit(),
-                flowParams().operatorLimit(), getLevel(), getExceptionSafe(), false);
+        return new VariableDeclarationBlockFactory(getOwnerClass(), flowParams().operatorLimit(),
+                getLevel(), getExceptionSafe(), false);
     }
 
     /**
@@ -632,8 +659,8 @@ public class IRNodeBuilder {
      * @return constant-only declaration block factory
      */
     public Factory<VariableDeclarationBlock> getConstantVariableDeclarationBlockFactory() {
-        return new VariableDeclarationBlockFactory(getOwnerClass(), flowParams().complexityLimit(),
-                flowParams().operatorLimit(), getLevel(), getExceptionSafe(), true);
+        return new VariableDeclarationBlockFactory(getOwnerClass(), flowParams().operatorLimit(),
+                getLevel(), getExceptionSafe(), true);
     }
 
     public Factory<VariableDeclaration> getVariableDeclarationFactory() {
@@ -641,19 +668,19 @@ public class IRNodeBuilder {
     }
 
     public Factory<VariableBase> getVariableFactory() {
-        return new VariableFactory(flowParams().complexityLimit(), flowParams().operatorLimit(), getOwnerClass(),
+        return new VariableFactory(flowParams().operatorLimit(), getOwnerClass(),
                 /*getVariableType()*/getResultType(), getIsConstant(), getIsInitialized(), getExceptionSafe(), getNoConsts());
     }
 
     public Factory<VariableInitialization> getVariableInitializationFactory() {
         return new VariableInitializationFactory(getOwnerClass(), getIsConstant(), getIsStatic(),
-                getIsLocal(), flowParams().complexityLimit(), flowParams().operatorLimit(), getExceptionSafe(),
+                getIsLocal(), flowParams().operatorLimit(), getExceptionSafe(),
                 getResultType());
     }
 
     public Factory<TryCatchBlock> getTryCatchBlockFactory() {
         return new TryCatchBlockFactory(getOwnerClass(), getResultType(),
-                flowParams().complexityLimit(), flowParams().statementLimit(), flowParams().operatorLimit(),
+                flowParams().statementLimit(), flowParams().operatorLimit(),
                 getLevel(), subBlock.orElse(false), getCanHaveBreaks(),
                 getCanHaveContinues(), getCanHaveReturn());
     }
@@ -670,13 +697,6 @@ public class IRNodeBuilder {
 
     public IRNodeBuilder setVariableNumber(int value) {
         variableNumber = Optional.of(value);
-        return this;
-    }
-
-    public IRNodeBuilder withComplexityLimit(long value) {
-        flowParams = flowParams()
-                .withComplexityLimit(value)
-                .advance();
         return this;
     }
 

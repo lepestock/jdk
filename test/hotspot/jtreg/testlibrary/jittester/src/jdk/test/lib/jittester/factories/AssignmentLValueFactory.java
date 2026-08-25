@@ -47,16 +47,14 @@ class AssignmentLValueFactory extends Factory<IRNode> {
     private static final int LVALUE_PICK_RETRIES = 16;
     private static final double ARRAY_ELEMENT_LVALUE_WEIGHT = 3.0;
 
-    private final long complexityLimit;
     private final int operatorLimit;
     private final TypeKlass ownerClass;
     private final Type resultType;
     private final boolean exceptionSafe;
     private final boolean noconsts;
 
-    AssignmentLValueFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    AssignmentLValueFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
@@ -67,8 +65,8 @@ class AssignmentLValueFactory extends Factory<IRNode> {
     @Override
     public IRNode produce() throws ProductionFailedException {
         Rule<IRNode> rule = new Rule<>("assignment_lvalue");
-        ReadOnlyLocalLValueFactory variableFactory = variableLValueFactory(
-                complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        ReadOnlyLocalLValueFactory variableFactory = variableLValueFactory(operatorLimit, ownerClass,
+                resultType, exceptionSafe, noconsts);
         if (variableFactory.hasCandidates(v -> true)) {
             rule.add("variable_lvalue", variableFactory);
         }
@@ -82,17 +80,16 @@ class AssignmentLValueFactory extends Factory<IRNode> {
         return rule.produce();
     }
 
-    static boolean hasCandidates(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    static boolean hasCandidates(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        return variableLValueFactory(complexityLimit, operatorLimit, ownerClass,
-                resultType, exceptionSafe, noconsts).hasCandidates(v -> true)
+        return variableLValueFactory(operatorLimit, ownerClass, resultType, exceptionSafe, noconsts)
+                .hasCandidates(v -> true)
                 || new CollectionElementLValueFactory(ownerClass, resultType).hasCandidates();
     }
 
-    private static ReadOnlyLocalLValueFactory variableLValueFactory(long complexityLimit, int operatorLimit,
+    private static ReadOnlyLocalLValueFactory variableLValueFactory(int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
         return new ReadOnlyLocalLValueFactory(new IRNodeBuilder()
-                .withComplexityLimit(Math.max(1L, complexityLimit))
                 .withOperatorLimit(Math.max(1, operatorLimit))
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)

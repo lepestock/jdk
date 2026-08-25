@@ -55,12 +55,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Genocode that replays/records block genes and additionally records rule/RNG event genes.
+ * Genocode that replays/records block genes and additionally records rule/RNG/decision event genes.
  * Statement-level overrides are intentionally ignored in this genocode.
  */
 public final class FullGenocode implements GenomeBackend {
-    private static final String GENOCODE_VERSION = "full-1.3";
-    private static final String PREVIOUS_GENOCODE_VERSION = "full-1.2";
+    private static final String GENOCODE_VERSION = "full-1.4";
     private static final int MAX_EVENT_LINE_WIDTH = 120;
 
     private List<ReplayNode> replayRoots = Collections.emptyList();
@@ -134,8 +133,7 @@ public final class FullGenocode implements GenomeBackend {
         }
         if (replayMode && !isSupportedReplayVersion(replayData.genocodeVersion)) {
             throw new RuntimeException("Replay genome version mismatch: expected "
-                    + GENOCODE_VERSION + " (or " + PREVIOUS_GENOCODE_VERSION + ")"
-                    + ", got " + replayData.genocodeVersion);
+                    + GENOCODE_VERSION + ", got " + replayData.genocodeVersion);
         }
         replaySupportsStatementScopes = GENOCODE_VERSION.equals(replayData.genocodeVersion);
         replayTraceToken = normalizeTraceToken(System.getProperty("jittester.replay.trace.token"));
@@ -442,6 +440,11 @@ public final class FullGenocode implements GenomeBackend {
     }
 
     @Override
+    public synchronized void recordDecisionGene(String decisionName, long geneValue) {
+        writeEventGene("D", geneValue);
+    }
+
+    @Override
     public synchronized Long consumeRuleGene(String ruleName, long liveGeneValue) {
         Long value = consumeEventGene('R', liveGeneValue, ruleName);
         if (value == null) {
@@ -489,6 +492,15 @@ public final class FullGenocode implements GenomeBackend {
         Long value = consumeEventGene('T', liveGeneValue, templateName);
         if (value != null) {
             writeEventGene("T", value);
+        }
+        return value;
+    }
+
+    @Override
+    public synchronized Long consumeDecisionGene(String decisionName, long liveGeneValue) {
+        Long value = consumeEventGene('D', liveGeneValue, decisionName);
+        if (value != null) {
+            writeEventGene("D", value);
         }
         return value;
     }
@@ -880,7 +892,7 @@ public final class FullGenocode implements GenomeBackend {
             return false;
         }
         char c = token.charAt(0);
-        return c == 'R' || c == 'C' || c == 'N' || c == 'M' || c == 'U' || c == 'T';
+        return c == 'R' || c == 'C' || c == 'N' || c == 'M' || c == 'U' || c == 'T' || c == 'D';
     }
 
     private static ReplayEvent parseEventToken(String token) {
@@ -1262,7 +1274,7 @@ public final class FullGenocode implements GenomeBackend {
     }
 
     private static boolean isSupportedReplayVersion(String version) {
-        return GENOCODE_VERSION.equals(version) || PREVIOUS_GENOCODE_VERSION.equals(version);
+        return GENOCODE_VERSION.equals(version);
     }
 
     private static Long parseMutationTargetBlockSeed(String mutationTarget) {

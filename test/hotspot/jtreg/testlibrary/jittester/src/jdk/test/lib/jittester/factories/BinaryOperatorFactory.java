@@ -38,9 +38,9 @@ abstract class BinaryOperatorFactory extends OperatorFactory<BinaryOperator> {
     protected final Type resultType;
     protected final Type ownerClass;
 
-    protected BinaryOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
+    protected BinaryOperatorFactory(OperatorKind opKind, int operatorLimit,
             Type ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(opKind.priority, complexityLimit, operatorLimit, exceptionSafe, noconsts);
+        super(opKind.priority, operatorLimit, exceptionSafe, noconsts);
         this.opKind = opKind;
         this.resultType = resultType;
         this.ownerClass = ownerClass;
@@ -53,9 +53,7 @@ abstract class BinaryOperatorFactory extends OperatorFactory<BinaryOperator> {
     protected BinaryOperator generateProduction(Type leftType, Type rightType) throws ProductionFailedException {
         int leftOpLimit = (int) (PseudoRandom.random() * (operatorLimit - 1));
         int rightOpLimit = operatorLimit - 1 - leftOpLimit;
-        long leftComplLimit = (long) (PseudoRandom.random() * (complexityLimit - 1));
-        long rightComplLimit = complexityLimit - 1 - leftComplLimit;
-        if (leftOpLimit == 0 || rightOpLimit == 0 || leftComplLimit == 0 || rightComplLimit == 0) {
+        if (leftOpLimit == 0 || rightOpLimit == 0) {
             throw new ProductionFailedException();
         }
         boolean swap = PseudoRandom.randomBoolean();
@@ -63,11 +61,9 @@ abstract class BinaryOperatorFactory extends OperatorFactory<BinaryOperator> {
                 .setOwnerKlass((TypeKlass) ownerClass)
                 .setNoConsts(!swap && noconsts);
         IRNode leftExpr = builder.setResultType(leftType)
-                .withComplexityLimit(leftComplLimit)
                 .withOperatorLimit(leftOpLimit)
                 .produceExpression();
         IRNode rightExpr = builder.setResultType(rightType)
-                .withComplexityLimit(rightComplLimit)
                 .withOperatorLimit(rightOpLimit)
                 .produceExpression(needsSafeDenominator(leftType, rightType));
         return new BinaryOperator(opKind, resultType, leftExpr, rightExpr);

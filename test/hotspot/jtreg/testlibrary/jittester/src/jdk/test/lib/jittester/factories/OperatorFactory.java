@@ -30,16 +30,14 @@ import jdk.test.lib.jittester.Operator;
 import jdk.test.lib.jittester.Type;
 
 public abstract class OperatorFactory<T extends Operator> extends Factory<T> {
-    protected final long complexityLimit;
     protected final boolean exceptionSafe;
     protected final boolean noconsts;
     protected final int operatorPriority;
     protected int operatorLimit;
 
-    protected OperatorFactory(int operatorPriority, long complexityLimit, int operatorLimit,
+    protected OperatorFactory(int operatorPriority, int operatorLimit,
             boolean exceptionSafe, boolean noconsts) {
         this.operatorLimit = operatorLimit;
-        this.complexityLimit = complexityLimit;
         this.operatorPriority = operatorPriority;
         this.exceptionSafe = exceptionSafe;
         this.noconsts = noconsts;

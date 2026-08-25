@@ -57,17 +57,15 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
 
     private final TypeKlass ownerClass;
     private final Type returnType;
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final int level;
     private final boolean canHaveReturn;
 
-    ArrayKernelLoopFactory(TypeKlass ownerClass, Type returnType, long complexityLimit,
+    ArrayKernelLoopFactory(TypeKlass ownerClass, Type returnType,
                            int statementLimit, int operatorLimit, int level, boolean canHaveReturn) {
         this.ownerClass = ownerClass;
         this.returnType = returnType;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -76,13 +74,12 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
 
     @Override
     protected For sproduce() throws ProductionFailedException {
-        if (statementLimit <= 0 || complexityLimit <= 0) {
+        if (statementLimit <= 0) {
             throw new ProductionFailedException();
         }
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
                 .setResultType(returnType)
-                .withComplexityLimit(complexityLimit)
                 .withStatementLimit(statementLimit)
                 .withOperatorLimit(operatorLimit)
                 .setLevel(level)
@@ -109,12 +106,9 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
             Block header = BlockFactory.produceEmptyBlock(ownerClass, returnType, Math.max(0, level - 1));
             Statement statement1 = headerInit;
             Statement statement2 = headerUpdate;
-            long kernelBodyComplexityLimit = scaleLimit(complexityLimit,
-                    ProductionParams.arrayKernelBodyComplexityPercent.value());
             int kernelBodyStatementLimit = (int) scaleLimit(statementLimit,
                     ProductionParams.arrayKernelBodyStatementPercent.value());
             Block body1 = builder
-                    .withComplexityLimit(kernelBodyComplexityLimit)
                     .withStatementLimit(kernelBodyStatementLimit)
                     .setLevel(level)
                     .setSubBlock(true)

@@ -38,14 +38,13 @@ import jdk.test.lib.jittester.loops.For;
 import jdk.test.lib.jittester.loops.Loop;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
-import jdk.test.lib.jittester.Formatter;
 import jdk.test.lib.jittester.FlowParams;
 import jdk.test.lib.jittester.GenerationState;
-import jdk.test.lib.jittester.Logger;
 
 class ForFactory extends SafeFactory<For> {
+    private static final int LOOP_ITERATION_LIMIT = 100;
+
     private final Loop loop;
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final TypeKlass ownerClass;
@@ -53,11 +52,10 @@ class ForFactory extends SafeFactory<For> {
     private final int level;
     private final boolean canHaveReturn;
 
-    ForFactory(TypeKlass ownerClass, Type returnType, long complexityLimit, int statementLimit,
+    ForFactory(TypeKlass ownerClass, Type returnType, int statementLimit,
             int operatorLimit, int level, boolean canHaveReturn) {
         this.ownerClass = ownerClass;
         this.returnType = returnType;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -67,7 +65,7 @@ class ForFactory extends SafeFactory<For> {
 
     @Override
     protected For sproduce() throws ProductionFailedException {
-        if (statementLimit <= 0 || complexityLimit <= 0) {
+        if (statementLimit <= 0) {
             throw new ProductionFailedException();
         }
         IRNodeBuilder builder = new IRNodeBuilder()
@@ -77,36 +75,18 @@ class ForFactory extends SafeFactory<For> {
                 .setSemicolon(false)
                 .setExceptionSafe(false)
                 .setNoConsts(false);
-        long complexity = complexityLimit;
         // Loop header parameters
-        long headerComplLimit = (long) (0.005 * complexity * PseudoRandom.random());
-        complexity -= headerComplLimit;
         int headerStatementLimit = PseudoRandom.randomNotZero((int) (statementLimit / 4.0));
-        long statement1ComplLimit = (long) (0.005 * complexity * PseudoRandom.random());
-        complexity -= statement1ComplLimit;
         // Loop body parameters
-        long thisLoopIterLimit = (long) (0.0001 * complexity * PseudoRandom.random());
-        if (thisLoopIterLimit > Integer.MAX_VALUE || thisLoopIterLimit == 0) {
-            throw new ProductionFailedException();
-        }
-        complexity = thisLoopIterLimit > 0 ? complexity / thisLoopIterLimit : 0;
-        long condComplLimit = (long) (complexity * PseudoRandom.random());
-        complexity -= condComplLimit;
-        long statement2ComplLimit = (long) (complexity * PseudoRandom.random());
-        complexity -= statement2ComplLimit;
-        long body1ComplLimit = (long) (complexity * PseudoRandom.random());
-        complexity -= body1ComplLimit;
+        long thisLoopIterLimit = PseudoRandom.randomNotZero(LOOP_ITERATION_LIMIT);
         int body1StatementLimit = PseudoRandom.randomNotZero((int) (statementLimit / 4.0));
-        long body2ComplLimit = (long) (complexity * PseudoRandom.random());
-        complexity -= body2ComplLimit;
         int body2StatementLimit = PseudoRandom.randomNotZero((int) (statementLimit / 4.0));
-        long body3ComplLimit = complexity;
         int body3StatementLimit = PseudoRandom.randomNotZero((int) (statementLimit / 4.0));
         // Production
         loop.initialization = builder.getCounterInitializerFactory(0).produce();
         Block header;
         try {
-            header = builder.withComplexityLimit(headerComplLimit)
+            header = builder
                     .withStatementLimit(headerStatementLimit)
                     .setLevel(level - 1)
                     .setSubBlock(true)
@@ -121,7 +101,6 @@ class ForFactory extends SafeFactory<For> {
         IRNode statement1;
         try {
             Rule<IRNode> rule = new Rule<>("statement1");
-            builder.withComplexityLimit(statement1ComplLimit);
             rule.add("assignment", builder.getAssignmentOperatorFactory());
             rule.add("function", builder.getFunctionFactory(), 0.1);
             rule.add("initialization", builder.setIsConstant(false)
@@ -135,7 +114,6 @@ class ForFactory extends SafeFactory<For> {
         LocalVariable counter = new LocalVariable(loop.initialization.getVariableInfo());
         String iterationVariable = counter.getVariableInfo().name;
         Literal limiter = new Literal((int) thisLoopIterLimit, TypeList.INT);
-        long SEED = PseudoRandom.getCurrentSeed();
         IRNode statement2;
         Block body1;
         Block body2;
@@ -145,27 +123,18 @@ class ForFactory extends SafeFactory<For> {
                 .withMoreIterationVariables(iterationVariable)
                 .advance());
         try {
-            if (SEED == 131299968015990L) Logger.enableTrace();
-            loop.condition = builder.withComplexityLimit(condComplLimit)
+            loop.condition = builder
                     .setLocalVariable(counter)
                     .getLoopingConditionFactory(limiter)
                     .produce();
-            if (SEED == 131299968015990L) Logger.disableTrace();
             try {
-                statement2 = builder.withComplexityLimit(statement2ComplLimit)
+                statement2 = builder
                         .getAssignmentOperatorFactory().produce();
             } catch (ProductionFailedException e) {
                 statement2 = new Nothing();
             }
-            String formattedCondition = Formatter.format(loop.condition);
-            if (formattedCondition.contains("var_279")) {
-                System.out.println("ForFactory.sproduce :seed " + SEED +
-                        " :statement2 " + Formatter.format(statement2) +
-                        " :statement1 " + Formatter.format(statement1) +
-                        " :condition " + formattedCondition);
-            }
             try {
-                body1 = builder.withComplexityLimit(body1ComplLimit)
+                body1 = builder
                         .withStatementLimit(body1StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)
@@ -178,13 +147,12 @@ class ForFactory extends SafeFactory<For> {
             } catch (ProductionFailedException e) {
                 body1 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
             }
-    //        loop.manipulator = builder.setLocalVariable(counter).getCounterManipulatorFactory().produce();
             loop.manipulator = builder.setLocalVariable(counter)
                                       .getCounterManipulatorFactory()
                                       .calculateDirection((Literal)(loop.initialization.getChild(0)), limiter)
                                       .produce();
             try {
-                body2 = builder.withComplexityLimit(body2ComplLimit)
+                body2 = builder
                         .withStatementLimit(body2StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)
@@ -198,7 +166,7 @@ class ForFactory extends SafeFactory<For> {
                 body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
             }
             try {
-                body3 = builder.withComplexityLimit(body3ComplLimit)
+                body3 = builder
                         .withStatementLimit(body3StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)
@@ -220,7 +188,6 @@ class ForFactory extends SafeFactory<For> {
                 new Statement(statement2, false),
                 body1,
                 body2, body3);
-        if (SEED == 131299968015990L) System.out.println("For.produce :result " + Formatter.format(result));
         return result;
     }
 }

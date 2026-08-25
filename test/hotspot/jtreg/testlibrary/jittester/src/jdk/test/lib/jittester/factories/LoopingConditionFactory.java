@@ -41,15 +41,13 @@ class LoopingConditionFactory extends Factory<LoopingCondition> {
     private final LocalVariable counter;
     private final Literal limiter;
     private final int operatorLimit;
-    private final long complexityLimit;
     private final TypeKlass ownerClass;
 
     public static enum Direction { INCREASING, DECREASING, UNKNOWN };
     private Direction direction = Direction.UNKNOWN;
 
-    LoopingConditionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    LoopingConditionFactory(int operatorLimit, TypeKlass ownerClass,
             LocalVariable counter, Literal limiter) {
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.counter = counter;
         this.limiter = limiter;
@@ -67,7 +65,6 @@ class LoopingConditionFactory extends Factory<LoopingCondition> {
         IRNode rightExpression = null;
         Factory<IRNode> exprFactory = new IRNodeBuilder()
                 .setResultType(TypeList.BOOLEAN)
-                .withComplexityLimit((complexityLimit - 1) / 2)
                 .withOperatorLimit((operatorLimit - 1) / 2)
                 .setOwnerKlass(ownerClass)
                 .setExceptionSafe(false)

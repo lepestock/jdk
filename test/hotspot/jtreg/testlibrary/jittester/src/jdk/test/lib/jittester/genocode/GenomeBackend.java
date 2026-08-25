@@ -103,6 +103,9 @@ public interface GenomeBackend {
     default void recordTemplateGene(String templateName, long geneValue) {
     }
 
+    default void recordDecisionGene(String decisionName, long geneValue) {
+    }
+
     default Long consumeRuleGene(String ruleName, long liveGeneValue) {
         return null;
     }
@@ -124,6 +127,10 @@ public interface GenomeBackend {
     }
 
     default Long consumeTemplateGene(String templateName, long liveGeneValue) {
+        return null;
+    }
+
+    default Long consumeDecisionGene(String decisionName, long liveGeneValue) {
         return null;
     }
 

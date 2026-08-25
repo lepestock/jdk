@@ -40,14 +40,12 @@ import jdk.test.lib.jittester.VariableInitialization;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
-import jdk.test.lib.jittester.utils.GenomeChoice;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class VariableInitializationFactory extends SafeFactory<VariableInitialization> {
     private static final double NUMERIC_INIT_TYPE_PREFERENCE = 0.85;
     private static final double FIELD_ARRAY_INIT_BASE_PROBABILITY = 0.08;
     private final int operatorLimit;
-    private final long complexityLimit;
     private final boolean constant;
     private final boolean isStatic;
     private final boolean isLocal;
@@ -56,12 +54,11 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
     private final Type requestedType;
 
     VariableInitializationFactory(TypeKlass ownerClass, boolean constant, boolean isStatic,
-            boolean isLocal, long complexityLimit, int operatorLimit, boolean exceptionSafe, Type requestedType) {
+            boolean isLocal, int operatorLimit, boolean exceptionSafe, Type requestedType) {
         this.ownerClass = ownerClass;
         this.constant = constant;
         this.isStatic = isStatic;
         this.isLocal = isLocal;
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.exceptionSafe = exceptionSafe;
         this.requestedType = requestedType;
@@ -71,11 +68,9 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
     protected VariableInitialization sproduce() throws ProductionFailedException {
         Type resultType = requestedType.equals(TypeList.VOID) ? pickInitializationType() : requestedType;
         int effectiveOperatorLimit = Math.max(1, operatorLimit);
-        long effectiveComplexityLimit = Math.max(1, complexityLimit);
         int scopeDepth = Math.max(1, SymbolTable.getScopeDepth());
         boolean noConstsForInitExpr = shouldDisallowConstsByDepth(scopeDepth);
-        IRNodeBuilder b = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
-                .withOperatorLimit(effectiveOperatorLimit)
+        IRNodeBuilder b = new IRNodeBuilder().withOperatorLimit(effectiveOperatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)
@@ -109,8 +104,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                     // Prefer non-literal initializer expressions; fall back to literal when expression fails.
                     try {
                         if (resultType instanceof TypeArray) {
-                            init = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
-                                    .withOperatorLimit(effectiveOperatorLimit)
+                            init = new IRNodeBuilder().withOperatorLimit(effectiveOperatorLimit)
                                     .setOwnerKlass(ownerClass)
                                     .setResultType(resultType)
                                     .setExceptionSafe(exceptionSafe)
@@ -118,22 +112,20 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                                     .getCollectionInitializerFactory(varInfo)
                                     .produce();
                         } else {
-                        IRNodeBuilder exprBuilder = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
-                                .withOperatorLimit(effectiveOperatorLimit)
-                                .setOwnerKlass(ownerClass)
-                                .setResultType(resultType)
-                                .setExceptionSafe(exceptionSafe)
-                                .setNoConsts(noConstsForInitExpr);
-                        if (isArithmeticFriendly(resultType)) {
-                            init = exprBuilder.getArithmeticOperatorFactory().produce();
-                        } else {
-                            init = exprBuilder.getLimitedExpressionFactory().produce();
-                        }
+                            IRNodeBuilder exprBuilder = new IRNodeBuilder().withOperatorLimit(effectiveOperatorLimit)
+                                    .setOwnerKlass(ownerClass)
+                                    .setResultType(resultType)
+                                    .setExceptionSafe(exceptionSafe)
+                                    .setNoConsts(noConstsForInitExpr);
+                            if (isArithmeticFriendly(resultType)) {
+                                init = exprBuilder.getArithmeticOperatorFactory().produce();
+                            } else {
+                                init = exprBuilder.getLimitedExpressionFactory().produce();
+                            }
                         }
                     } catch (ProductionFailedException ignored) {
                         try {
-                            init = new IRNodeBuilder().withComplexityLimit(effectiveComplexityLimit)
-                                    .withOperatorLimit(effectiveOperatorLimit)
+                            init = new IRNodeBuilder().withOperatorLimit(effectiveOperatorLimit)
                                     .setOwnerKlass(ownerClass)
                                     .setResultType(resultType)
                                     .setExceptionSafe(exceptionSafe)
@@ -180,8 +172,7 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
         double base = Math.max(0.0, Math.min(1.0, ProductionParams.constBiasBasePercent.value() / 100.0));
         int halfDepth = Math.max(1, ProductionParams.constBiasHalfDepth.value());
         double noConstsProbability = DepthProbabilityTaper.decayingAsymptote(depth, base, halfDepth);
-        boolean noConstsLive = PseudoRandom.randomSilent() < noConstsProbability;
-        return GenomeChoice.bool(noConstsLive);
+        return PseudoRandom.randomBoolean(noConstsProbability);
     }
 
     private Type pickInitializationType() throws ProductionFailedException {

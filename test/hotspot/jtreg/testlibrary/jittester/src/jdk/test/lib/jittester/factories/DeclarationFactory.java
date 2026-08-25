@@ -36,7 +36,6 @@ class DeclarationFactory extends Factory<Declaration> {
     private static final double LOCAL_DECLARATION_ONLY_WEIGHT = 0.05;
 
     private final int operatorLimit;
-    private final long complexityLimit;
     private final boolean isLocal;
     private final boolean exceptionSafe;
     private final TypeKlass ownerClass;
@@ -44,25 +43,24 @@ class DeclarationFactory extends Factory<Declaration> {
     private final Type resultType;
     private final boolean initializedOnly;
 
-    DeclarationFactory(TypeKlass ownerClass, long complexityLimit,
+    DeclarationFactory(TypeKlass ownerClass,
             int operatorLimit, boolean isLocal, boolean safe) {
-        this(ownerClass, complexityLimit, operatorLimit, isLocal, safe, /* isConstant */ false,
+        this(ownerClass, operatorLimit, isLocal, safe, /* isConstant */ false,
                 TypeList.VOID, false);
     }
 
-    DeclarationFactory(TypeKlass ownerClass, long complexityLimit,
+    DeclarationFactory(TypeKlass ownerClass,
             int operatorLimit, boolean isLocal, boolean safe, boolean isConstant) {
-        this(ownerClass, complexityLimit, operatorLimit, isLocal, safe, isConstant,
+        this(ownerClass, operatorLimit, isLocal, safe, isConstant,
                 TypeList.VOID, false);
     }
 
-    DeclarationFactory(TypeKlass ownerClass, long complexityLimit,
+    DeclarationFactory(TypeKlass ownerClass,
             int operatorLimit, boolean isLocal, boolean safe, boolean isConstant,
             Type resultType, boolean initializedOnly) {
         this.ownerClass = ownerClass;
         this.isLocal = isLocal;
         this.exceptionSafe = safe;
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.isConstant = isConstant;
         this.resultType = resultType;
@@ -75,7 +73,6 @@ class DeclarationFactory extends Factory<Declaration> {
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setResultType(resultType)
                 .setIsLocal(isLocal)
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setIsLocal(isLocal)
                 .setExceptionSafe(exceptionSafe);

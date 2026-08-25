@@ -33,9 +33,9 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class BitwiseInversionOperatorFactory extends UnaryOperatorFactory {
-    BitwiseInversionOperatorFactory(long complexityLimit, int operatorLimit, Type ownerClass,
+    BitwiseInversionOperatorFactory(int operatorLimit, Type ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(OperatorKind.BIT_NOT, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(OperatorKind.BIT_NOT, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override
@@ -61,8 +61,7 @@ class BitwiseInversionOperatorFactory extends UnaryOperatorFactory {
 
     @Override
     protected UnaryOperator generateProduction(Type resultType) throws ProductionFailedException {
-        return new UnaryOperator(opKind, new IRNodeBuilder().withComplexityLimit(complexityLimit - 1)
-                .withOperatorLimit(operatorLimit - 1)
+        return new UnaryOperator(opKind, new IRNodeBuilder().withOperatorLimit(operatorLimit - 1)
                 .setOwnerKlass((TypeKlass) ownerClass)
                 .setResultType(resultType)
                 .setExceptionSafe(exceptionSafe)

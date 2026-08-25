@@ -31,9 +31,9 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class BinaryStringPlusFactory extends BinaryOperatorFactory {
-    BinaryStringPlusFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    BinaryStringPlusFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(OperatorKind.STRADD, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(OperatorKind.STRADD, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override

@@ -38,8 +38,8 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class TryCatchBlockFactory extends Factory<TryCatchBlock> {
     private final static double CATCH_SELECTION_COEF = 0.1d;
+
     private final Type returnType;
-    private final long complexityLimit;
     private final int statementLimit, operatorLimit;
     private final boolean subBlock;
     private final boolean canHaveBreaks;
@@ -48,13 +48,11 @@ class TryCatchBlockFactory extends Factory<TryCatchBlock> {
     private final int level;
     private final TypeKlass ownerClass;
 
-    TryCatchBlockFactory(TypeKlass ownerClass, Type returnType,
-            long complexityLimit, int statementLimit, int operatorLimit,
+    TryCatchBlockFactory(TypeKlass ownerClass, Type returnType, int statementLimit, int operatorLimit,
             int level, boolean subBlock, boolean canHaveBreaks,
             boolean canHaveContinues, boolean canHaveReturn) {
         this.ownerClass = ownerClass;
         this.returnType = returnType;
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -66,7 +64,7 @@ class TryCatchBlockFactory extends Factory<TryCatchBlock> {
 
     @Override
     public TryCatchBlock produce() throws ProductionFailedException {
-        if (complexityLimit < 1 || statementLimit < 1) {
+        if (statementLimit < 1) {
             throw new ProductionFailedException();
         }
         List<Type> uncheckedThrowables = getUncheckedThrowables();
@@ -109,12 +107,9 @@ class TryCatchBlockFactory extends Factory<TryCatchBlock> {
 
     private Block getBlock(IRNodeBuilder builder, double weight)
             throws ProductionFailedException {
-        long actualComplexityLim = (long) (weight * PseudoRandom.random()
-                * complexityLimit);
         int actualStatementLim = (int) (weight * PseudoRandom.random()
                 * statementLimit);
         return builder.withStatementLimit(actualStatementLim)
-                .withComplexityLimit(actualComplexityLim)
                 .produceBlock();
     }
 

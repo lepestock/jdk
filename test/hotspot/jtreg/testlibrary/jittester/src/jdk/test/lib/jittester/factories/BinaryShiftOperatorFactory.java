@@ -33,9 +33,9 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 import jdk.test.lib.jittester.utils.TypeUtil;
 
 class BinaryShiftOperatorFactory extends BinaryOperatorFactory {
-    BinaryShiftOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
+    BinaryShiftOperatorFactory(OperatorKind opKind, int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(opKind, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(opKind, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override

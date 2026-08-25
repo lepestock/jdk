@@ -42,7 +42,7 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
     private final int flags;
     private final TypeKlass ownerClass;
 
-    VariableFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass, Type resultType,
+    VariableFactory(int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean constant, boolean initialized, boolean exceptionSafe, boolean noconsts) {
         int flags = VariableInfo.NONE;
         if (constant) {
@@ -57,7 +57,6 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
         rule = new Rule<>("variable");
         IRNodeBuilder b = new IRNodeBuilder().setResultType(resultType)
                 .setFlags(flags)
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe);

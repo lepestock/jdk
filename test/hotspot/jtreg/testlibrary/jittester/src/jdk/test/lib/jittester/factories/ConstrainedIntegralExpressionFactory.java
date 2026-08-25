@@ -79,7 +79,6 @@ class ConstrainedIntegralExpressionFactory extends Factory<IRNode> {
             32, 33, 34, 35, 36, 40, 48
     };
 
-    private final long complexityLimit;
     private final int operatorLimit;
     private final TypeKlass ownerClass;
     private final Type resultType;
@@ -87,9 +86,8 @@ class ConstrainedIntegralExpressionFactory extends Factory<IRNode> {
     private final boolean noconsts;
     private final MethodArgumentConstraint constraint;
 
-    ConstrainedIntegralExpressionFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    ConstrainedIntegralExpressionFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts, MethodArgumentConstraint constraint) {
-        this.complexityLimit = complexityLimit;
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
@@ -101,7 +99,6 @@ class ConstrainedIntegralExpressionFactory extends Factory<IRNode> {
     @Override
     public IRNode produce() throws ProductionFailedException {
         IRNode raw = new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(Math.max(0, operatorLimit - 1))
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)

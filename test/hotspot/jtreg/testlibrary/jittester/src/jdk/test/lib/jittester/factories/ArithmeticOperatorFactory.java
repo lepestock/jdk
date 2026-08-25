@@ -34,10 +34,9 @@ class ArithmeticOperatorFactory extends Factory<Operator> {
     private static final double DIVISION_LIKE_WEIGHT = 0.05;
     private final Rule<Operator> rule;
 
-    ArithmeticOperatorFactory(long complexityLimit, int operatorLimit, TypeKlass ownerClass,
+    ArithmeticOperatorFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe, boolean noconsts) throws ProductionFailedException {
         IRNodeBuilder builder = new IRNodeBuilder()
-                .withComplexityLimit(complexityLimit)
                 .withOperatorLimit(operatorLimit)
                 .setOwnerKlass(ownerClass)
                 .setResultType(resultType)

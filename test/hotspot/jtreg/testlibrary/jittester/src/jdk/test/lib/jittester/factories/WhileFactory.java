@@ -38,8 +38,9 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class WhileFactory extends SafeFactory<While> {
+    private static final int LOOP_ITERATION_LIMIT = 100;
+
     private final Loop loop;
-    private final long complexityLimit;
     private final int statementLimit;
     private final int operatorLimit;
     private final TypeKlass ownerClass;
@@ -48,12 +49,11 @@ class WhileFactory extends SafeFactory<While> {
     private long thisLoopIterLimit = 0;
     private final boolean canHaveReturn;
 
-    WhileFactory(TypeKlass ownerClass, Type returnType, long complexityLimit, int statementLimit,
+    WhileFactory(TypeKlass ownerClass, Type returnType, int statementLimit,
             int operatorLimit, int level, boolean canHaveReturn) {
         this.ownerClass = ownerClass;
         this.returnType = returnType;
         loop = new Loop();
-        this.complexityLimit = complexityLimit;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
@@ -62,29 +62,15 @@ class WhileFactory extends SafeFactory<While> {
 
     @Override
     protected While sproduce() throws ProductionFailedException {
-        if (statementLimit <= 0 || complexityLimit <= 0) {
+        if (statementLimit <= 0) {
             throw new ProductionFailedException();
         }
-        long complexity = complexityLimit;
         // Loop header parameters
-        long headerComplLimit = (long) (0.005 * complexity * PseudoRandom.random());
-        complexity -= headerComplLimit;
         int headerStatementLimit = PseudoRandom.randomNotZero((int) (statementLimit / 3.0));
         // Loop body parameters
-        thisLoopIterLimit = (long) (0.0001 * complexity * PseudoRandom.random());
-        if (thisLoopIterLimit > Integer.MAX_VALUE || thisLoopIterLimit == 0) {
-            throw new ProductionFailedException();
-        }
-        complexity = thisLoopIterLimit > 0 ? complexity / thisLoopIterLimit : 0;
-        long condComplLimit = (long) (complexity * PseudoRandom.random());
-        complexity -= condComplLimit;
-        long body1ComplLimit = (long) (complexity * PseudoRandom.random());
-        complexity -= body1ComplLimit;
+        thisLoopIterLimit = PseudoRandom.randomNotZero(LOOP_ITERATION_LIMIT);
         int body1StatementLimit = PseudoRandom.randomNotZero((int) (statementLimit / 4.0));
-        long body2ComplLimit = (long) (complexity * PseudoRandom.random());
-        complexity -= body2ComplLimit;
         int body2StatementLimit = PseudoRandom.randomNotZero((int) (statementLimit / 4.0));
-        long body3ComplLimit = complexity;
         int body3StatementLimit = PseudoRandom.randomNotZero((int) (statementLimit / 4.0));
         // Production
         IRNodeBuilder builder =  new IRNodeBuilder().setOwnerKlass(ownerClass)
@@ -93,7 +79,7 @@ class WhileFactory extends SafeFactory<While> {
         loop.initialization = builder.getCounterInitializerFactory(0).produce();
         Block header;
         try {
-            header = builder.withComplexityLimit(headerComplLimit)
+            header = builder
                     .withStatementLimit(headerStatementLimit)
                     .setLevel(level - 1)
                     .setSubBlock(true)
@@ -116,12 +102,12 @@ class WhileFactory extends SafeFactory<While> {
                 .withMoreIterationVariables(iterationVariable)
                 .advance());
         try {
-            loop.condition = builder.withComplexityLimit(condComplLimit)
+            loop.condition = builder
                     .setLocalVariable(counter)
                     .getLoopingConditionFactory(limiter)
                     .produce();
             try {
-                body1 = builder.withComplexityLimit(body1ComplLimit)
+                body1 = builder
                         .withStatementLimit(body1StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)
@@ -140,7 +126,7 @@ class WhileFactory extends SafeFactory<While> {
                                       .produce();
 
             try {
-                body2 = builder.withComplexityLimit(body2ComplLimit)
+                body2 = builder
                         .withStatementLimit(body2StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)
@@ -154,7 +140,7 @@ class WhileFactory extends SafeFactory<While> {
                 body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level - 1);
             }
             try {
-                body3 = builder.withComplexityLimit(body3ComplLimit)
+                body3 = builder
                         .withStatementLimit(body3StatementLimit)
                         .setLevel(level)
                         .setSubBlock(true)

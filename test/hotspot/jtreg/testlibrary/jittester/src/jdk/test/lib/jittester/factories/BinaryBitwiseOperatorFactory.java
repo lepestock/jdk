@@ -35,9 +35,9 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 import java.util.Collection;
 
 class BinaryBitwiseOperatorFactory extends BinaryOperatorFactory {
-    BinaryBitwiseOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
+    BinaryBitwiseOperatorFactory(OperatorKind opKind, int operatorLimit,
             TypeKlass ownerClass, Type resultType, boolean exceptionSafe, boolean noconsts) {
-        super(opKind, complexityLimit, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
+        super(opKind, operatorLimit, ownerClass, resultType, exceptionSafe, noconsts);
     }
 
     @Override

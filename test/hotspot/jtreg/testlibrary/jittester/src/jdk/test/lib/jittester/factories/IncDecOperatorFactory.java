@@ -31,9 +31,9 @@ import jdk.test.lib.jittester.UnaryOperator;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class IncDecOperatorFactory extends UnaryOperatorFactory {
-    IncDecOperatorFactory(OperatorKind opKind, long complexityLimit, int operatorLimit,
+    IncDecOperatorFactory(OperatorKind opKind, int operatorLimit,
                           Type klass, Type resultType, boolean safe, boolean noconsts) {
-        super(opKind, complexityLimit, operatorLimit, klass, resultType, safe, noconsts);
+        super(opKind, operatorLimit, klass, resultType, safe, noconsts);
     }
 
     @Override
@@ -44,7 +44,6 @@ class IncDecOperatorFactory extends UnaryOperatorFactory {
     @Override
     protected UnaryOperator generateProduction(Type l) throws ProductionFailedException {
         return new UnaryOperator(opKind, new AssignmentLValueFactory(
-                Math.max(1L, complexityLimit - 1),
                 Math.max(1, operatorLimit - 1),
                 (TypeKlass) ownerClass,
                 l,
