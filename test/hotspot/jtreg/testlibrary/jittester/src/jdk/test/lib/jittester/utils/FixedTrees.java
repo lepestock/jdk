@@ -77,10 +77,10 @@ public class FixedTrees {
     }
 
     public static Function wrapWithNormalizeNaN(TypeKlass callOwner, TypeKlass helperOwner, IRNode value) {
-        Type type = value.getResultType();
-        if (!type.equals(TypeList.DOUBLE) && !type.equals(TypeList.FLOAT)) {
+        Type type = TypeBoxingUtil.toPrimitiveType(value.getResultType());
+        if (type == null || (!type.equals(TypeList.DOUBLE) && !type.equals(TypeList.FLOAT))) {
             throw new IllegalArgumentException("normalizeNaN wrapper requires float or double, got "
-                    + type.getName());
+                    + value.getResultType().getName());
         }
         VariableInfo argInfo = new VariableInfo("value", helperOwner, type,
                 VariableInfo.LOCAL | VariableInfo.INITIALIZED);

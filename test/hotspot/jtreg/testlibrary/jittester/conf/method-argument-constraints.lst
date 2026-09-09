@@ -61,4 +61,8 @@ java/lang/Long::divideUnsigned(JJ) -> arg#2=nonzero
 java/lang/Long::remainderUnsigned(JJ) -> arg#2=nonzero
 
 java/lang/Double::doubleToRawLongBits(D) -> arg#1=nan-normalized
+java/lang/Float::floatToFloat16(F) -> arg#1=nan-normalized
 java/lang/Float::floatToRawIntBits(F) -> arg#1=nan-normalized
+
+java/lang/Math::copySign(DD)D -> arg#2=nan-normalized
+java/lang/Math::copySign(FF)F -> arg#2=nan-normalized

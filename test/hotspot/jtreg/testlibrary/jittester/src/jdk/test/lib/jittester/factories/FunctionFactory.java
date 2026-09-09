@@ -37,6 +37,7 @@ import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.functions.Function;
 import jdk.test.lib.jittester.functions.FunctionInfo;
@@ -44,6 +45,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 import jdk.test.lib.jittester.Logger;
 
 public class FunctionFactory extends SafeFactory<Function> {
@@ -193,7 +195,7 @@ public class FunctionFactory extends SafeFactory<Function> {
                                     .setExceptionSafe(exceptionSafe)
                                     .setNoConsts(noconsts)
                                     .setResultType(argType.type);
-                            accum.add(produceArgument(b,
+                            accum.add(produceArgument(ownerClass, b,
                                     functionInfo.getArgumentConstraint(argIndex), argType.type));
                             Logger.log(ownerClass, "(FunctionFactory :point1 :function " + functionInfo + ")", accum);
                         }
@@ -245,10 +247,18 @@ public class FunctionFactory extends SafeFactory<Function> {
         throw new ProductionFailedException();
     }
 
-    private static IRNode produceArgument(IRNodeBuilder builder, MethodArgumentConstraint constraint, Type type)
+    private static IRNode produceArgument(TypeKlass ownerClass, IRNodeBuilder builder,
+            MethodArgumentConstraint constraint, Type type)
             throws ProductionFailedException {
         if (constraint == MethodArgumentConstraint.NAN_NORMALIZED) {
-            return builder.withNormalizeNaN(true).produceExpression();
+            IRNode argument = builder.produceExpression();
+            Type primitiveType = TypeBoxingUtil.toPrimitiveType(type);
+            if (primitiveType != null && (primitiveType.equals(TypeList.DOUBLE)
+                    || primitiveType.equals(TypeList.FLOAT))) {
+                return FixedTrees.wrapWithNormalizeNaN(ownerClass,
+                        new TypeKlass(ProductionParams.runtimeSupportClassName()), argument);
+            }
+            return argument;
         }
         if (constraint == MethodArgumentConstraint.NONZERO && DenominatorExpressionFactory.canThrowFor(type, type)) {
             return builder.produceExpression(true);
