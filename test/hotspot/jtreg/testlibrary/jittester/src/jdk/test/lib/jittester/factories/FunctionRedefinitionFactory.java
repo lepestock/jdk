@@ -87,18 +87,28 @@ class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
                     .setResultType(functionInfo.type)
                     .withStatementLimit(statementLimit)
                     .withOperatorLimit(operatorLimit);
-            body = builder.setLevel(level)
-                    .setSubBlock(true)
-                    .setCanHaveBreaks(false)
-                    .setCanHaveContinues(false)
-                    .setCanHaveReturn(true)
-                    .produceBlock();
-            if (!functionInfo.type.equals(TypeList.VOID)) {
-                returnNode = builder.setExceptionSafe(false)
-                        .getReturnFactory()
-                        .produce();
-            } else {
-                returnNode = new Return(new Nothing());
+            boolean staticMethod = functionInfo.isStatic();
+            if (staticMethod) {
+                ThisVariableControl.pushForbidThis();
+            }
+            try {
+                body = builder.setLevel(level)
+                        .setSubBlock(true)
+                        .setCanHaveBreaks(false)
+                        .setCanHaveContinues(false)
+                        .setCanHaveReturn(true)
+                        .produceBlock();
+                if (!functionInfo.type.equals(TypeList.VOID)) {
+                    returnNode = builder.setExceptionSafe(false)
+                            .getReturnFactory()
+                            .produce();
+                } else {
+                    returnNode = new Return(new Nothing());
+                }
+            } finally {
+                if (staticMethod) {
+                    ThisVariableControl.popForbidThis();
+                }
             }
         } catch (ProductionFailedException e) {
             SymbolTable.pop();
