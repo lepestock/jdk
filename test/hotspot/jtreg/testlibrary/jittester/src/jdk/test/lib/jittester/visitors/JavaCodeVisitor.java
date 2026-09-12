@@ -279,6 +279,10 @@ public class JavaCodeVisitor implements Visitor<String> {
         if (isAssignmentLValueCollectionElement(node)) {
             return access;
         }
+        if (node.getStorageKind() == IndexedStorageKind.LIST
+                && !TypeBoxingUtil.isWrapperType(node.getResultType())) {
+            return unboxedValueExpression(node.getResultType(), access);
+        }
         if (!ProductionParams.pulsemap.value()
                 || !node.getStorageKind().supportsPulseArrayRead()
                 || node.getChildren().size() < 2
@@ -606,8 +610,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     public String visit(CastOperator node) {
         IRNode operand = node.getChild(0);
         return "(" + node.getResultType().accept(this)+ ")"
-                + primitiveCastOperandExpression(node.getResultType(), operand,
-                        expressionToJavaCode(node, operand, Operator.Order.LEFT));
+                + expressionToJavaCode(node, operand, Operator.Order.LEFT);
     }
 
     @Override
@@ -750,10 +753,12 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(Function node) {
         FunctionInfo value = node.getValue();
-        List<String> args = node.getChildren().stream()
-                .skip(value.isStatic() || value.isConstructor() ? 0 : 1)
-                .map(c -> c.accept(this))
-                .collect(Collectors.toCollection(ArrayList::new));
+        int firstArg = value.isStatic() || value.isConstructor() ? 0 : 1;
+        List<String> args = new ArrayList<>();
+        for (int childIndex = firstArg; childIndex < node.getChildren().size(); childIndex++) {
+            IRNode arg = node.getChild(childIndex);
+            args.add(functionArgumentExpression(value, childIndex - firstArg, arg));
+        }
         maybeWrapDebugMethodCallArg(node, value, args);
         String nameAndArgs = value.name + "(" + String.join(", ", args) + ")";
         String prefix = "";
@@ -776,6 +781,23 @@ public class JavaCodeVisitor implements Visitor<String> {
             }
         }
         return prefix + nameAndArgs;
+    }
+
+    private String functionArgumentExpression(FunctionInfo functionInfo, int argIndex, IRNode argument) {
+        String expression = argument.accept(this);
+        if (functionInfo.owner == null
+                || !functionInfo.owner.getName().startsWith("java.")
+                || argIndex >= functionInfo.argTypes.size()
+                || !(functionInfo.argTypes.get(argIndex).type instanceof TypeArray)
+                || !(argument.getResultType() instanceof TypeArray argumentType)
+                || argumentType.getStorageKind() != IndexedStorageKind.LIST) {
+            return expression;
+        }
+        if (argumentType.dimensions == 1 && argumentType.type.equals(TypeList.CHAR)) {
+            return expression + ".stream().map(String::valueOf)"
+                    + ".collect(java.util.stream.Collectors.joining()).toCharArray()";
+        }
+        return expression;
     }
 
     private void maybeWrapDebugMethodCallArg(Function node, FunctionInfo value, List<String> args) {
@@ -1365,18 +1387,6 @@ public class JavaCodeVisitor implements Visitor<String> {
             return selector.accept(this);
         }
         return "(int)(" + selector.accept(this) + ")";
-    }
-
-    private String primitiveCastOperandExpression(Type castType, IRNode operand, String expression) {
-        if (TypeBoxingUtil.toPrimitiveType(castType) == null || !sourceExpressionIsBoxedListElement(operand)) {
-            return expression;
-        }
-        return unboxedValueExpression(operand.getResultType(), expression);
-    }
-
-    private boolean sourceExpressionIsBoxedListElement(IRNode node) {
-        return node instanceof CollectionElement collectionElement
-                && collectionElement.getStorageKind() == IndexedStorageKind.LIST;
     }
 
     @Override

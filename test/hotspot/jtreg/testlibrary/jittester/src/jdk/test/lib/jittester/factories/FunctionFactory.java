@@ -39,8 +39,10 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.functions.Function;
 import jdk.test.lib.jittester.functions.FunctionInfo;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
 import jdk.test.lib.jittester.utils.Genome;
@@ -190,13 +192,14 @@ public class FunctionFactory extends SafeFactory<Function> {
                         int argumentOperatorLimit = Math.max(1, (operatorLimit - 1) / functionInfo.argTypes.size());
                         for (int argIndex = 0; argIndex < functionInfo.argTypes.size(); argIndex++) {
                             VariableInfo argType = functionInfo.argTypes.get(argIndex);
+                            Type argumentType = effectiveArgumentType(functionInfo, argType.type);
                             IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
                                     .withOperatorLimit(argumentOperatorLimit)
                                     .setExceptionSafe(exceptionSafe)
                                     .setNoConsts(noconsts)
-                                    .setResultType(argType.type);
+                                    .setResultType(argumentType);
                             accum.add(produceArgument(ownerClass, b,
-                                    functionInfo.getArgumentConstraint(argIndex), argType.type));
+                                    functionInfo.getArgumentConstraint(argIndex), argumentType));
                             Logger.log(ownerClass, "(FunctionFactory :point1 :function " + functionInfo + ")", accum);
                         }
                     }
@@ -267,6 +270,15 @@ public class FunctionFactory extends SafeFactory<Function> {
             return builder.getConstrainedIntegralExpressionFactory(constraint).produce();
         }
         return builder.getExpressionFactory().produce();
+    }
+
+    private static Type effectiveArgumentType(FunctionInfo functionInfo, Type argumentType) {
+        if (functionInfo.owner != null
+                && functionInfo.owner.getName().startsWith("java.")
+                && argumentType instanceof TypeArray arrayType) {
+            return arrayType.withStorageKind(IndexedStorageKind.ARRAY);
+        }
+        return argumentType;
     }
 
     private static Function wrapResultIfNeeded(TypeKlass ownerClass, FunctionInfo functionInfo, Function result) {

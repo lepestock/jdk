@@ -71,9 +71,11 @@ class CollectionElementFactory extends SafeFactory<CollectionElement> {
         IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(ownerClass)
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(noconsts);
+        TypeArray collectionType = CollectionCreationFactory.withSelectedStorageKind(
+                new TypeArray(resultType, dimensionsCount));
         VariableBase collectionVariable = builder
                 .withOperatorLimit(0)
-                .setResultType(new TypeArray(resultType, dimensionsCount))
+                .setResultType(collectionType)
                 .setIsConstant(false)
                 .setIsInitialized(true)
                 .getVariableFactory()

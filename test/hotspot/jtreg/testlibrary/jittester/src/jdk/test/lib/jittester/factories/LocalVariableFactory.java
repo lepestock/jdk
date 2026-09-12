@@ -60,6 +60,7 @@ class LocalVariableFactory extends Factory<LocalVariable> {
                 }
                 if ((varInfo.flags & VariableInfo.FINAL) == (flags & VariableInfo.FINAL)
                         && (varInfo.flags & VariableInfo.INITIALIZED) == (flags & VariableInfo.INITIALIZED)
+                        && VariableFactory.matchesArrayStorageKind(type, varInfo)
                         && (varInfo.flags & VariableInfo.LOCAL) > 0) {
                     eligible.add(varInfo);
                 }

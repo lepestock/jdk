@@ -33,6 +33,7 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableBase;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.functions.FunctionInfo;
+import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 
@@ -115,7 +116,16 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
 
     private boolean isFactoryCandidate(VariableInfo varInfo) {
         return matchesFlags(varInfo)
+                && matchesArrayStorageKind(resultType, varInfo)
                 && (isNonStaticCandidate(varInfo) || isStaticCandidate(varInfo) || isLocalCandidate(varInfo));
+    }
+
+    static boolean matchesArrayStorageKind(Type resultType, VariableInfo varInfo) {
+        if (!(resultType instanceof TypeArray requestedArray)
+                || !(varInfo.type instanceof TypeArray candidateArray)) {
+            return true;
+        }
+        return requestedArray.getStorageKind() == candidateArray.getStorageKind();
     }
 
     private boolean isLocalCandidate(VariableInfo varInfo) {
