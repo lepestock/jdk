@@ -185,6 +185,10 @@ public:
 #endif
     return new_node;
   }
+
+  // Support for reinterpret variants used by StoreNode and LoadNode
+  static BasicType get_reinterpret_variant(BasicType bt);
+  bool has_reinterpret_variant(const Type* vt) const;
 };
 
 // Analyze a MemNode to try to prove that it is independent from other memory accesses
@@ -271,6 +275,7 @@ protected:
 
   virtual Node* find_previous_arraycopy(PhaseValues* phase, Node* ld_alloc, Node*& mem, bool can_see_stored_value) const;
   Node* can_see_stored_value_through_membars(Node* st, PhaseValues* phase) const;
+  Node* Ideal_load_common(PhaseGVN* phase, bool can_reshape);
 public:
 
   LoadNode(Node *c, Node *mem, Node *adr, const TypePtr* at, const Type *rt, MemOrd mo, ControlDependency control_dependency)
@@ -322,6 +327,7 @@ public:
   // Common methods for LoadKlass and LoadNKlass nodes.
   const Type* klass_value_common(PhaseGVN* phase) const;
   Node* klass_identity_common(PhaseGVN* phase);
+  Node* find_known_klass(PhaseGVN* phase) const;
 
   virtual uint ideal_reg() const;
   virtual const Type *bottom_type() const;
@@ -347,7 +353,6 @@ public:
   Node* convert_to_unsigned_load(PhaseGVN& gvn);
   Node* convert_to_signed_load(PhaseGVN& gvn);
 
-  bool  has_reinterpret_variant(const Type* rt);
   Node* convert_to_reinterpret_load(PhaseGVN& gvn, const Type* rt);
 
   ControlDependency control_dependency() const { return _control_dependency; }
@@ -618,6 +623,7 @@ public:
 
   virtual const Type* Value(PhaseGVN* phase) const;
   virtual Node* Identity(PhaseGVN* phase);
+  virtual Node* Ideal(PhaseGVN* phase, bool can_reshape);
 };
 
 //------------------------------StoreNode--------------------------------------
@@ -708,7 +714,6 @@ public:
   // have all possible loads of the value stored been optimized away?
   bool value_never_loaded(PhaseValues* phase) const;
 
-  bool  has_reinterpret_variant(const Type* vt);
   Node* convert_to_reinterpret_store(PhaseGVN& gvn, Node* val, const Type* vt);
 
   MemBarNode* trailing_membar() const;
@@ -1151,13 +1156,16 @@ public:
 //------------------------------ClearArray-------------------------------------
 class ClearArrayNode: public Node {
 private:
+  // True if cnt is larger than InitArrayShortSize
   bool _is_large;
-  bool _word_copy_only;
+  // True if the fill value is a non-constant or non-zero 64-bit value. Such a
+  // value must be copied as a complete word and cannot use byte-wise zeroing.
+  bool _requires_word_fill;
   static Node* make_address(Node* dest, Node* offset, bool raw_base, PhaseGVN* phase);
 public:
   ClearArrayNode( Node *ctrl, Node *arymem, Node *word_cnt, Node *base, Node* val, bool is_large)
     : Node(ctrl, arymem, word_cnt, base, val), _is_large(is_large),
-      _word_copy_only(val->bottom_type()->isa_long() && (!val->bottom_type()->is_long()->is_con() || val->bottom_type()->is_long()->get_con() != 0)) {
+      _requires_word_fill(val->bottom_type()->isa_long() && (!val->bottom_type()->is_long()->is_con() || val->bottom_type()->is_long()->get_con() != 0)) {
     init_class_id(Class_ClearArray);
   }
   virtual int         Opcode() const;
@@ -1169,7 +1177,8 @@ public:
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
   virtual uint match_edge(uint idx) const;
   bool is_large() const { return _is_large; }
-  bool word_copy_only() const { return _word_copy_only; }
+  bool is_zero_fill() const { return !_requires_word_fill; }
+  bool requires_word_fill() const { return _requires_word_fill; }
   virtual uint size_of() const { return sizeof(ClearArrayNode); }
   virtual uint hash() const { return Node::hash() + _is_large; }
   virtual bool cmp(const Node& n) const {
@@ -1251,7 +1260,7 @@ public:
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
   virtual uint match_edge(uint idx) const { return 0; }
   virtual const Type *bottom_type() const { return TypeTuple::MEMBAR; }
-  virtual Node *match(const ProjNode *proj, const Matcher *m, const RegMask* mask);
+  virtual Node* match(const ProjNode* proj, const Matcher* m);
   // Factory method.  Builds a wide or narrow membar.
   // Optional 'precedent' becomes an extra edge if not null.
   static MemBarNode* make(Compile* C, int opcode,
@@ -1277,6 +1286,10 @@ public:
   static void set_load_store_pair(MemBarNode* leading, MemBarNode* trailing);
 
   void remove(PhaseIterGVN *igvn);
+
+#ifndef PRODUCT
+  virtual void dump_spec(outputStream *st) const;
+#endif
 };
 
 // "Acquire" - no following ref can move before (but earlier refs can
