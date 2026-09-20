@@ -429,7 +429,8 @@ void ValueTypeNode::load(GraphKit* kit, Node* base, Node* ptr, bool immutable_me
       ciValueKlass* fvk = ft->as_value_klass();
       bool atomic = field->is_atomic();
       value = make_from_flat_impl(kit, fvk, base, field_ptr, atomic, immutable_memory,
-                                  field_null_free, trust_null_free_oop && field_null_free, decorators);
+                                  field_null_free, trust_null_free_oop && field_null_free, decorators,
+                                  FlatAccessOrigin::General);
     } else {
       // Load field value from memory
       BasicType bt = type2field[ft->basic_type()];
@@ -445,8 +446,12 @@ void ValueTypeNode::load(GraphKit* kit, Node* base, Node* ptr, bool immutable_me
   }
 }
 
-void ValueTypeNode::store_flat(GraphKit* kit, Node* base, Node* ptr, bool atomic, bool immutable_memory, bool null_free, DecoratorSet decorators) {
-  kit->C->record_optimization_event(OptEvent_InlineTypeFlatStore);
+void ValueTypeNode::store_flat(GraphKit* kit, Node* base, Node* ptr, bool atomic, bool immutable_memory, bool null_free,
+                               DecoratorSet decorators, FlatAccessOrigin origin) {
+  OptimizationEvent event = origin == FlatAccessOrigin::Array
+                            ? OptEvent_InlineTypeFlatArrayStore
+                            : OptEvent_InlineTypeFlatStore;
+  kit->C->record_optimization_event(event);
   ciValueKlass* vk = value_klass();
   bool do_atomic = atomic;
   // With immutable memory, a non-atomic load and an atomic load are the same
@@ -504,7 +509,7 @@ void ValueTypeNode::store_flat_array(GraphKit* kit, Node* base, Node* idx) {
     kit->set_all_memory(input_memory_state);
     Node* cast = kit->cast_to_flat_array_exact(base, vk, false, true);
     Node* ptr = kit->array_element_address(cast, idx, T_FLAT_ELEMENT);
-    store_flat(kit, cast, ptr, true, false, false, decorators);
+    store_flat(kit, cast, ptr, true, false, false, decorators, FlatAccessOrigin::Array);
 
     region->init_req(1, kit->control());
     mem->set_req(1, kit->reset_memory());
@@ -526,7 +531,7 @@ void ValueTypeNode::store_flat_array(GraphKit* kit, Node* base, Node* idx) {
       kit->set_all_memory(input_memory_state);
       Node* cast = kit->cast_to_flat_array_exact(base, vk, true, true);
       Node* ptr = kit->array_element_address(cast, idx, T_FLAT_ELEMENT);
-      store_flat(kit, cast, ptr, true, false, true, decorators);
+      store_flat(kit, cast, ptr, true, false, true, decorators, FlatAccessOrigin::Array);
 
       region->init_req(2, kit->control());
       mem->set_req(2, kit->reset_memory());
@@ -540,7 +545,7 @@ void ValueTypeNode::store_flat_array(GraphKit* kit, Node* base, Node* idx) {
       kit->set_all_memory(input_memory_state);
       Node* cast = kit->cast_to_flat_array_exact(base, vk, true, false);
       Node* ptr = kit->array_element_address(cast, idx, T_FLAT_ELEMENT);
-      store_flat(kit, cast, ptr, false, false, true, decorators);
+      store_flat(kit, cast, ptr, false, false, true, decorators, FlatAccessOrigin::Array);
 
       region->init_req(3, kit->control());
       mem->set_req(3, kit->reset_memory());
@@ -1515,14 +1520,19 @@ ValueTypeNode* ValueTypeNode::make_from_oop_impl(GraphKit* kit, Node* oop, ciVal
 }
 
 ValueTypeNode* ValueTypeNode::make_from_flat(GraphKit* kit, ciValueKlass* vk, Node* base, Node* ptr,
-                                               bool atomic, bool immutable_memory, bool null_free, DecoratorSet decorators) {
-  return make_from_flat_impl(kit, vk, base, ptr, atomic, immutable_memory, null_free, null_free, decorators);
+                                               bool atomic, bool immutable_memory, bool null_free, DecoratorSet decorators,
+                                               FlatAccessOrigin origin) {
+  return make_from_flat_impl(kit, vk, base, ptr, atomic, immutable_memory, null_free, null_free, decorators, origin);
 }
 
 // GraphKit wrapper for the 'make_from_flat' method
 ValueTypeNode* ValueTypeNode::make_from_flat_impl(GraphKit* kit, ciValueKlass* vk, Node* base, Node* ptr, bool atomic, bool immutable_memory,
-                                                    bool null_free, bool trust_null_free_oop, DecoratorSet decorators) {
-  kit->C->record_optimization_event(OptEvent_InlineTypeFlatLoad);
+                                                    bool null_free, bool trust_null_free_oop, DecoratorSet decorators,
+                                                    FlatAccessOrigin origin) {
+  OptimizationEvent event = origin == FlatAccessOrigin::Array
+                            ? OptEvent_InlineTypeFlatArrayLoad
+                            : OptEvent_InlineTypeFlatLoad;
+  kit->C->record_optimization_event(event);
   assert(null_free || !trust_null_free_oop, "cannot trust null-free oop when the holder object is not null-free");
   PhaseGVN& gvn = kit->gvn();
   bool do_atomic = atomic;
@@ -1588,7 +1598,7 @@ ValueTypeNode* ValueTypeNode::make_from_flat_array(GraphKit* kit, ciValueKlass* 
     kit->set_all_memory(input_memory_state);
     Node* cast = kit->cast_to_flat_array_exact(base, vk, false, true);
     Node* ptr = kit->array_element_address(cast, idx, T_FLAT_ELEMENT);
-    vt_nullable = ValueTypeNode::make_from_flat(kit, vk, cast, ptr, true, false, false, decorators);
+    vt_nullable = ValueTypeNode::make_from_flat(kit, vk, cast, ptr, true, false, false, decorators, FlatAccessOrigin::Array);
 
     region->init_req(1, kit->control());
     mem->set_req(1, kit->reset_memory());
@@ -1610,7 +1620,7 @@ ValueTypeNode* ValueTypeNode::make_from_flat_array(GraphKit* kit, ciValueKlass* 
       kit->set_all_memory(input_memory_state);
       Node* cast = kit->cast_to_flat_array_exact(base, vk, true, true);
       Node* ptr = kit->array_element_address(cast, idx, T_FLAT_ELEMENT);
-      vt_null_free = ValueTypeNode::make_from_flat(kit, vk, cast, ptr, true, false, true, decorators);
+      vt_null_free = ValueTypeNode::make_from_flat(kit, vk, cast, ptr, true, false, true, decorators, FlatAccessOrigin::Array);
 
       region->init_req(2, kit->control());
       mem->set_req(2, kit->reset_memory());
@@ -1624,7 +1634,7 @@ ValueTypeNode* ValueTypeNode::make_from_flat_array(GraphKit* kit, ciValueKlass* 
       kit->set_all_memory(input_memory_state);
       Node* cast = kit->cast_to_flat_array_exact(base, vk, true, false);
       Node* ptr = kit->array_element_address(cast, idx, T_FLAT_ELEMENT);
-      vt_non_atomic = ValueTypeNode::make_from_flat(kit, vk, cast, ptr, false, false, true, decorators);
+      vt_non_atomic = ValueTypeNode::make_from_flat(kit, vk, cast, ptr, false, false, true, decorators, FlatAccessOrigin::Array);
 
       region->init_req(3, kit->control());
       mem->set_req(3, kit->reset_memory());

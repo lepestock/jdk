@@ -75,8 +75,16 @@ private:
   static ValueTypeNode* make_all_zero_impl(PhaseGVN& gvn, ciValueKlass* vk);
   static ValueTypeNode* make_from_oop_impl(GraphKit* kit, Node* oop, ciValueKlass* vk);
   static ValueTypeNode* make_null_impl(PhaseGVN& gvn, ciValueKlass* vk, bool transform = true);
+public:
+  enum class FlatAccessOrigin {
+    General,
+    Array
+  };
+
+private:
   static ValueTypeNode* make_from_flat_impl(GraphKit* kit, ciValueKlass* vk, Node* base, Node* ptr, bool atomic, bool immutable_memory,
-                                             bool null_free, bool trust_null_free_oop, DecoratorSet decorators);
+                                             bool null_free, bool trust_null_free_oop, DecoratorSet decorators,
+                                             FlatAccessOrigin origin);
 
 public:
   // Create with all-zero field values
@@ -87,7 +95,8 @@ public:
   static ValueTypeNode* make_from_oop(GraphKit* kit, Node* oop, ciValueKlass* vk);
   // Create and initialize by loading the field values from a flat field or array
   static ValueTypeNode* make_from_flat(GraphKit* kit, ciValueKlass* vk, Node* base, Node* ptr,
-                                        bool atomic, bool immutable_memory, bool null_free, DecoratorSet decorators);
+                                        bool atomic, bool immutable_memory, bool null_free, DecoratorSet decorators,
+                                        FlatAccessOrigin origin = FlatAccessOrigin::General);
   static ValueTypeNode* make_from_flat_array(GraphKit* kit, ciValueKlass* vk, Node* base, Node* idx);
   // Create and initialize with the inputs or outputs of a MultiNode (method entry or call)
   static ValueTypeNode* make_from_multi(GraphKit* kit, MultiNode* multi, ciValueKlass* vk, uint& base_input, bool in, bool null_free = true);
@@ -127,7 +136,8 @@ public:
   [[nodiscard]] bool make_scalar_in_safepoints(PhaseIterGVN* igvn, bool allow_oop, SafePointNode* safepoint);
 
   // Store the value type as a flat (headerless) representation
-  void store_flat(GraphKit* kit, Node* base, Node* ptr, bool atomic, bool immutable_memory, bool null_free, DecoratorSet decorators);
+  void store_flat(GraphKit* kit, Node* base, Node* ptr, bool atomic, bool immutable_memory, bool null_free,
+                  DecoratorSet decorators, FlatAccessOrigin origin = FlatAccessOrigin::General);
   // Store the value type as a flat (headerless) representation into an array
   void store_flat_array(GraphKit* kit, Node* base, Node* idx);
 

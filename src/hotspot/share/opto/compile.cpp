@@ -133,7 +133,9 @@ static const char* const optimization_event_names[OptEvent_Count] = {
   "Inline Type Reallocation Elimination",
   "Inline Type Scalarization Adjustment",
   "Inline Type Flat Load",
-  "Inline Type Flat Store"
+  "Inline Type Flat Array Load",
+  "Inline Type Flat Store",
+  "Inline Type Flat Array Store"
 };
 #endif
 

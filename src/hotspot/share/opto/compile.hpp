@@ -146,7 +146,9 @@ enum OptimizationEvent {
   OptEvent_InlineTypeReallocationElimination,
   OptEvent_InlineTypeScalarizationAdjustment,
   OptEvent_InlineTypeFlatLoad,
+  OptEvent_InlineTypeFlatArrayLoad,
   OptEvent_InlineTypeFlatStore,
+  OptEvent_InlineTypeFlatArrayStore,
   OptEvent_Count
 };
 
