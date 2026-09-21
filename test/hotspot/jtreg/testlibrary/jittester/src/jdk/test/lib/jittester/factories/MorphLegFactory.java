@@ -47,19 +47,19 @@ class MorphLegFactory extends Factory<IRNode> {
     }
 
     static boolean hasApplicableLeg(MorphContext context, MorphLegTarget target, IRNodeBuilder builder) {
-        return !applicableTemplates(context, target, builder).isEmpty();
+        return !selectableTemplates(context, target, builder).isEmpty();
     }
 
     static double weight(MorphContext context, double baseWeight, MorphLegTarget target, IRNodeBuilder builder) {
         double multiplier = 0.0;
-        for (MorphTemplate template : applicableTemplates(context, target, builder)) {
+        for (MorphTemplate template : selectableTemplates(context, target, builder)) {
             multiplier = Math.max(multiplier, template.legWeightMultiplier());
         }
         return baseWeight * multiplier;
     }
 
     static boolean hasWholeBlockLeg(MorphContext context, IRNodeBuilder builder) {
-        for (MorphTemplate template : applicableTemplates(context, MorphLegTarget.BLOCK, builder)) {
+        for (MorphTemplate template : selectableTemplates(context, MorphLegTarget.BLOCK, builder)) {
             if (template.takesWholeTarget(MorphLegTarget.BLOCK)) {
                 return true;
             }
@@ -70,12 +70,11 @@ class MorphLegFactory extends Factory<IRNode> {
     @Override
     public IRNode produce() throws ProductionFailedException {
         MorphContext context = GenerationState.currentMorphContext();
-        List<MorphTemplate> applicableTemplates = applicableTemplates(context, target, builder);
-        if (applicableTemplates.isEmpty()) {
+        List<MorphTemplate> selectableTemplates = selectableTemplates(context, target, builder);
+        if (selectableTemplates.isEmpty()) {
             throw new ProductionFailedException();
         }
-        int liveTemplateIndex = (int) (PseudoRandom.randomSilent() * applicableTemplates.size());
-        MorphTemplate liveTemplate = applicableTemplates.get(liveTemplateIndex);
+        MorphTemplate liveTemplate = pickLiveTemplate(selectableTemplates);
         long templateId = createOrConsumeTemplateEvent(TEMPLATE_ID_EVENT, liveTemplate::id);
         int templateIndex = context.indexOfId(templateId);
         if (templateIndex < 0 || templateIndex >= context.size()) {
@@ -94,16 +93,44 @@ class MorphLegFactory extends Factory<IRNode> {
         return result.node();
     }
 
-    private static List<MorphTemplate> applicableTemplates(MorphContext context,
+    private static List<MorphTemplate> selectableTemplates(MorphContext context,
             MorphLegTarget target, IRNodeBuilder builder) {
         ArrayList<MorphTemplate> result = new ArrayList<>();
         for (int i = 0; i < context.size(); i++) {
             MorphTemplate template = context.get(i);
-            if (template.canProduceLeg(target, builder)) {
+            if (template.canProduceLeg(target, builder) && selectionWeight(template) > 0.0) {
                 result.add(template);
             }
         }
         return result;
+    }
+
+    private static MorphTemplate pickLiveTemplate(List<MorphTemplate> applicableTemplates)
+            throws ProductionFailedException {
+        double totalWeight = 0.0;
+        for (MorphTemplate template : applicableTemplates) {
+            totalWeight += selectionWeight(template);
+        }
+        if (totalWeight <= 0.0) {
+            throw new ProductionFailedException();
+        }
+        double liveChoice = PseudoRandom.randomSilent() * totalWeight;
+        double weightAccumulator = 0.0;
+        for (MorphTemplate template : applicableTemplates) {
+            weightAccumulator += selectionWeight(template);
+            if (weightAccumulator > liveChoice) {
+                return template;
+            }
+        }
+        return applicableTemplates.get(applicableTemplates.size() - 1);
+    }
+
+    private static double selectionWeight(MorphTemplate template) {
+        double weight = template.legSelectionWeight();
+        if (Double.isNaN(weight)) {
+            return 0.0;
+        }
+        return Math.max(0.0, weight);
     }
 
     private static long createOrConsumeTemplateEvent(String name, ChoiceSupplier liveChoice) {

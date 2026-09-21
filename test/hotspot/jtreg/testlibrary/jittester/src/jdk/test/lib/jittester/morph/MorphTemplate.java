@@ -39,6 +39,10 @@ public interface MorphTemplate {
         return 2.0;
     }
 
+    default double legSelectionWeight() {
+        return 1.0;
+    }
+
     default boolean takesWholeBlock() {
         return false;
     }
