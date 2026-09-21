@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import jdk.test.lib.jittester.Block;
+import jdk.test.lib.jittester.FlowParams;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
@@ -93,6 +94,7 @@ class MainKlassFactory extends Factory<MainKlass> {
         functionDefinitions = ensureMainClassStaticCollectionInitializer(builder, functionDefinitions);
         IRNode testFunction = builder.setResultType(TypeList.VOID)
                 .withStatementLimit(statementsInTestFunctionLimit)
+                .withCodeContext(FlowParams.CodeContext.TEST)
                 .produceBlock();
         SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
         IRNode printVariables = builder.setLevel(2)
@@ -181,7 +183,7 @@ class MainKlassFactory extends Factory<MainKlass> {
                         .produceBlock();
                 List<IRNode> siblings = randomLeaf.getChildren();
                 // to avoid break;
-                int index = PseudoRandom.randomNotZero(siblings.size() - 1);
+                int index = siblings.isEmpty() ? 0 : PseudoRandom.randomNotZero(siblings.size() - 1);
                 siblings.add(index, newBlock);
             }
         }

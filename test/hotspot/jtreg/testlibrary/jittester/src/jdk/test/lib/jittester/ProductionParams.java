@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -152,6 +152,8 @@ public class ProductionParams {
     public static Option<Integer> debugArrayAssignmentCandidatesMax = null;
     public static Option<Boolean> debugMorphSourceDiagnostics = null;
     public static Option<Integer> lockEliminationMorphTemplateProbability = null;
+    public static Option<Integer> morphTemplateLoopIntrinsificationProbability = null;
+    public static Option<Integer> arrayKernelEmptyBodyKeepProbability = null;
     public static Option<Integer> morphLockEliminationCreateLockVarProbability = null;
     public static Option<Integer> morphTemplateLegWeight = null;
     public static Option<Integer> morphTemplateReferenceDeteriorationPercent = null;
@@ -405,6 +407,14 @@ public class ProductionParams {
                 "lock-elimination-morph-template-probability",
                 20,
                 "Probability (0..100) to create a lock-elimination morph template on produceBlock()");
+        morphTemplateLoopIntrinsificationProbability = optionResolver.addIntegerOption(
+                "morph-template-loop-intrinsification-probability",
+                0,
+                "Probability (0..100) to create a loop-intrinsification morph template in array-kernel blocks");
+        arrayKernelEmptyBodyKeepProbability = optionResolver.addIntegerOption(
+                "array-kernel-empty-body-keep-probability",
+                5,
+                "Probability (0..100) to keep an array-kernel loop with an empty body");
         morphLockEliminationCreateLockVarProbability = optionResolver.addIntegerOption(
                 "morph-lock-elimination-create-lock-var-probability",
                 50,

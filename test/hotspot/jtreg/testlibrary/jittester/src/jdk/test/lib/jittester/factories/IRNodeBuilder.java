@@ -93,6 +93,7 @@ import jdk.test.lib.jittester.loops.While;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.diagnostics.SourceDiagnostics;
 import jdk.test.lib.jittester.morph.LockEliminationMorphTemplate;
+import jdk.test.lib.jittester.morph.LoopIntrinsificationMorphTemplate;
 import jdk.test.lib.jittester.morph.MorphTemplate;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -130,8 +131,11 @@ public class IRNodeBuilder {
     private Optional<FunctionInfo> functionInfo = Optional.empty();
     private Optional<Boolean> semicolon = Optional.empty();
     private Optional<String> arrayKernelIterationVariable = Optional.empty();
+    private Optional<Type> arrayKernelIterationVariableType = Optional.empty();
+    private Optional<Integer> arrayKernelIterationStart = Optional.empty();
     private Optional<Integer> arrayKernelIterationLimit = Optional.empty();
     private Optional<Boolean> inArrayKernel = Optional.empty();
+    private Optional<Boolean> arrayKernelForward = Optional.empty();
     private Optional<Boolean> preferIterationIndexedArrayTerminal = Optional.empty();
     private Optional<Type> fixedOperandType = Optional.empty();
     private boolean clearFixedOperandType = false;
@@ -158,6 +162,16 @@ public class IRNodeBuilder {
     public Factory<CollectionElement> getCollectionElementFactory() {
         return new CollectionElementFactory(flowParams().operatorLimit(), getOwnerClass(),
                 getResultType(), getExceptionSafe(), getNoConsts());
+    }
+
+    public Factory<IRNode> getOffsetIterationIndexedArrayElementFactory(Type elementType, int offset) {
+        return new IterationIndexedCollectionElementFactory(getOwnerClass(), elementType,
+                false, true, offset);
+    }
+
+    public boolean hasOffsetIterationIndexedArrayElementCandidates(Type elementType, int offset) {
+        return new IterationIndexedCollectionElementFactory(getOwnerClass(), elementType,
+                false, true, offset).hasCandidates();
     }
 
     public Factory<CollectionExtraction> getCollectionExtractionFactory() {
@@ -292,22 +306,29 @@ public class IRNodeBuilder {
         flowBuilder.withTaperingBlockTerminalProbability(
                 nextTaperingBlockTerminalProbability(current.taperingBlockTerminalProbability()));
         arrayKernelIterationVariable.ifPresent(flowBuilder::withIterationVariable);
+        arrayKernelIterationVariableType.ifPresent(flowBuilder::withIterationVariableType);
+        arrayKernelIterationStart.ifPresent(flowBuilder::withArrayKernelIterationStart);
         arrayKernelIterationLimit.ifPresent(flowBuilder::withArrayKernelIterationLimit);
         inArrayKernel.ifPresent(flowBuilder::withInArrayKernel);
+        arrayKernelForward.ifPresent(flowBuilder::withArrayKernelForward);
         arrayElementExpressionWeightPercent.ifPresent(flowBuilder::withCollectionElementExpressionWeightPercent);
         arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withCollectionExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
         normalizeNaN.ifPresent(flowBuilder::withNormalizeNaN);
-        MorphTemplate createdTemplate = createMorphTemplate(flowParams());
+        FlowParams nextFlowParams = flowBuilder.advance();
+        GenerationState.setCurrentFlowParams(nextFlowParams);
+        MorphTemplate createdTemplate = createMorphTemplate(nextFlowParams, this);
         if (createdTemplate != null) {
             GenerationState.setCurrentMorphContext(
                     GenerationState.currentMorphContext().withAdded(createdTemplate));
         }
-        GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
             Block block = getBlockFactory().produce();
             maybeAddMtDiagnostic(block, createdTemplate);
+            if (!(createdTemplate instanceof LoopIntrinsificationMorphTemplate)) {
+                maybeAddLoopIntrinsificationRejectionDiagnostic(block, nextFlowParams, this);
+            }
             return block;
         } finally {
             GenerationState.setCurrentFlowParams(previous);
@@ -345,7 +366,12 @@ public class IRNodeBuilder {
         return Math.max(0.0, Math.min(1.0, 1.0 - nextNonEmptyPercent / 100.0));
     }
 
-    private static MorphTemplate createMorphTemplate(FlowParams flowParams) {
+    private static MorphTemplate createMorphTemplate(FlowParams flowParams, IRNodeBuilder builder) {
+        MorphTemplate loopIntrinsificationTemplate = LoopIntrinsificationMorphTemplate.createOrNull(
+                flowParams, builder);
+        if (loopIntrinsificationTemplate != null) {
+            return loopIntrinsificationTemplate;
+        }
         if (LockEliminationMorphTemplate.canBeCreated(flowParams)
                 && createLockEliminationMorphTemplateDecision(flowParams.mtCreationProbability())) {
             return new LockEliminationMorphTemplate();
@@ -358,6 +384,15 @@ public class IRNodeBuilder {
             return;
         }
         SourceDiagnostics.attach(block, template.creationDiagnostic());
+    }
+
+    private static void maybeAddLoopIntrinsificationRejectionDiagnostic(Block block, FlowParams flowParams,
+            IRNodeBuilder builder) {
+        if (!ProductionParams.debugMorphSourceDiagnostics.value()) {
+            return;
+        }
+        LoopIntrinsificationMorphTemplate.rejectionDiagnostic(flowParams, builder)
+                .ifPresent(diagnostic -> SourceDiagnostics.attach(block, diagnostic));
     }
 
     private static boolean createLockEliminationMorphTemplateDecision(double probability) {
@@ -592,6 +627,10 @@ public class IRNodeBuilder {
         return new LiteralFactory(getResultType());
     }
 
+    public IRNode produceStableExpression(Type type) throws ProductionFailedException {
+        return new StableExpressionFactory(type).produce();
+    }
+
     public Factory<LocalVariable> getLocalVariableFactory() {
         return new LocalVariableFactory(/*getVariableType()*/getResultType(), getFlags());
     }
@@ -724,6 +763,13 @@ public class IRNodeBuilder {
     public IRNodeBuilder withMtCreationProbability(double value) {
         flowParams = flowParams()
                 .withMtCreationProbability(value)
+                .advance();
+        return this;
+    }
+
+    public IRNodeBuilder withLoopIntrinsificationMorphTemplateCreationProbability(double value) {
+        flowParams = flowParams()
+                .withLoopIntrinsificationMorphTemplateCreationProbability(value)
                 .advance();
         return this;
     }
@@ -871,6 +917,24 @@ public class IRNodeBuilder {
         return setArrayKernelIterationVariable(value);
     }
 
+    public IRNodeBuilder setArrayKernelIterationVariableType(Type value) {
+        arrayKernelIterationVariableType = Optional.ofNullable(value);
+        return this;
+    }
+
+    public IRNodeBuilder withArrayKernelVariableType(Type value) {
+        return setArrayKernelIterationVariableType(value);
+    }
+
+    public IRNodeBuilder setArrayKernelIterationStart(int value) {
+        arrayKernelIterationStart = Optional.of(value);
+        return this;
+    }
+
+    public IRNodeBuilder withArrayKernelIterationStart(int value) {
+        return setArrayKernelIterationStart(value);
+    }
+
     public IRNodeBuilder setArrayKernelIterationLimit(int value) {
         arrayKernelIterationLimit = Optional.of(value);
         return this;
@@ -887,6 +951,15 @@ public class IRNodeBuilder {
 
     public IRNodeBuilder withInArrayKernel(boolean value) {
         return setInArrayKernel(value);
+    }
+
+    public IRNodeBuilder setArrayKernelForward(boolean value) {
+        arrayKernelForward = Optional.of(value);
+        return this;
+    }
+
+    public IRNodeBuilder withArrayKernelForward(boolean value) {
+        return setArrayKernelForward(value);
     }
 
     public IRNodeBuilder setPreferIterationIndexedArrayTerminal(boolean value) {

@@ -35,6 +35,14 @@ public interface MorphTemplate {
         return "";
     }
 
+    default double legWeightMultiplier() {
+        return 2.0;
+    }
+
+    default boolean takesWholeBlock() {
+        return false;
+    }
+
     MorphLegResult produceLeg(int leg, IRNodeBuilder builder)
             throws ProductionFailedException;
 }

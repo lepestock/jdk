@@ -133,7 +133,7 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                 IRNode newBlock = b.produceBlock();
                 List<IRNode> siblings = randomLeaf.getChildren();
                 // to avoid break;
-                int index = PseudoRandom.randomNotZero(siblings.size() - 1);
+                int index = siblings.isEmpty() ? 0 : PseudoRandom.randomNotZero(siblings.size() - 1);
                 siblings.add(index, newBlock);
             }
         }

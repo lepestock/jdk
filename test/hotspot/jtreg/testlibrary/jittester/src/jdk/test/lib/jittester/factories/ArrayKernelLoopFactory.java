@@ -26,7 +26,6 @@ package jdk.test.lib.jittester.factories;
 import jdk.test.lib.jittester.BinaryOperator;
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.LiteralInitializer;
-import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.KernelTripCountPicker;
 import jdk.test.lib.jittester.LocalVariable;
 import jdk.test.lib.jittester.Nothing;
@@ -39,17 +38,18 @@ import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.UnaryOperator;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.SymbolTable;
+import jdk.test.lib.jittester.diagnostics.SourceDiagnostics;
 import jdk.test.lib.jittester.loops.CounterInitializer;
 import jdk.test.lib.jittester.loops.CounterManipulator;
 import jdk.test.lib.jittester.loops.For;
 import jdk.test.lib.jittester.loops.Loop;
 import jdk.test.lib.jittester.loops.LoopingCondition;
+import jdk.test.lib.jittester.morph.LoopIntrinsificationMorphTemplate;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 /**
- * Initial array-kernel factory scaffold.
- * It emits a canonical for-loop shape and marks kernel body blocks for source-level probing.
+ * Emits canonical array-kernel for-loop shapes.
  */
 class ArrayKernelLoopFactory extends SafeFactory<For> {
     private static final int KERNEL_ARRAY_ELEMENT_EXPRESSION_WEIGHT_PERCENT = 10;
@@ -89,15 +89,26 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
                 .setCanHaveReturn(canHaveReturn)
                 .setCanHaveThrow(false);
 
-        Type counterType = pickCounterType();
-        int thisLoopIterLimit = clampTripCount(counterType, KernelTripCountPicker.pick());
-        boolean reverse = PseudoRandom.randomBoolean();
+        boolean preferLoopIntrinsificationShape = preferLoopIntrinsificationShape();
+        Type counterType = pickCounterType(preferLoopIntrinsificationShape);
+        int iterationCount = clampTripCount(counterType, KernelTripCountPicker.pick());
+        boolean reverse = !counterType.equals(TypeList.CHAR) && pickReverse(preferLoopIntrinsificationShape);
+        if (isLoopIntrinsificationEnabled() && !reverse
+                && (counterType.equals(TypeList.INT) || counterType.equals(TypeList.SHORT))) {
+            iterationCount = Math.max(iterationCount, 128);
+        }
+        boolean negativeOffsetCompatibleRange = preferLoopIntrinsificationShape && !reverse
+                && LoopIntrinsificationMorphTemplate.shouldUseNegativeOffsetCompatibleRange();
+        int iterationStart = negativeOffsetCompatibleRange
+                ? LoopIntrinsificationMorphTemplate.maxNegativeOffset()
+                : reverse ? iterationCount - 1 : 0;
+        int iterationLimit = reverse ? 0 : iterationStart + iterationCount;
         Loop loop = new Loop();
-        loop.initialization = createCounterInitializer(counterType, reverse ? thisLoopIterLimit - 1 : 0);
+        loop.initialization = createCounterInitializer(counterType, iterationStart);
         LocalVariable counter = new LocalVariable(loop.initialization.getVariableInfo());
         String iterationVariable = counter.getVariableInfo().name;
-        loop.condition = createLoopCondition(counter, counterType, thisLoopIterLimit, reverse);
-        Statement headerInit = createCounterHeaderInitializer(counter, counterType, reverse ? thisLoopIterLimit - 1 : 0);
+        loop.condition = createLoopCondition(counter, counterType, iterationLimit, reverse);
+        Statement headerInit = createCounterHeaderInitializer(counter, counterType, iterationStart);
         Statement headerUpdate = createCounterHeaderUpdate(counter, reverse);
         loop.manipulator = new CounterManipulator(new Statement(new Nothing(), false));
 
@@ -117,25 +128,48 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
                     .setCanHaveReturn(false)
                     .setCanHaveThrow(false)
                     .withArrayKernelVariable(iterationVariable)
-                    .withArrayKernelIterationLimit(thisLoopIterLimit)
+                    .withArrayKernelVariableType(counterType)
+                    .withArrayKernelIterationStart(iterationStart)
+                    .withArrayKernelIterationLimit(iterationLimit)
                     .withInArrayKernel(true)
+                    .withArrayKernelForward(!reverse)
                     // Generic array expression roots tend to collapse kernel RHS into simple loads.
                     .withCollectionElementExpressionWeightPercent(KERNEL_ARRAY_ELEMENT_EXPRESSION_WEIGHT_PERCENT)
                     .withCollectionExtractionExpressionWeightPercent(KERNEL_ARRAY_EXTRACTION_EXPRESSION_WEIGHT_PERCENT)
                     .withMoreReadOnlyVars(iterationVariable)
                     .withMoreIterationVariables(iterationVariable)
                     .produceBlock();
+            if (body1.getChildren().isEmpty() && !shouldKeepEmptyBody()) {
+                throw new ProductionFailedException();
+            }
             Block body2 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level);
             Block body3 = BlockFactory.produceEmptyBlock(ownerClass, returnType, level);
-            return new For(level, loop, thisLoopIterLimit, header, statement1, statement2, body1, body2, body3);
+            For result = new For(level, loop, iterationCount, header, statement1, statement2, body1, body2, body3);
+            attachDiagnostic(result, counterType, !reverse, iterationStart, iterationLimit, iterationCount);
+            return result;
         } finally {
             SymbolTable.pop();
         }
     }
 
-    private static Type pickCounterType() {
-        Type[] candidates = {TypeList.INT, TypeList.SHORT, TypeList.BYTE};
+    private static void attachDiagnostic(For node, Type counterType, boolean forward,
+            int start, int limit, int tripCount) {
+        if (ProductionParams.debugMorphSourceDiagnostics.value()) {
+            SourceDiagnostics.attach(node, "ArrayKernel created counterType="
+                    + counterType.getName() + " forward=" + forward
+                    + " start=" + start + " limit=" + limit + " tripCount=" + tripCount);
+        }
+    }
+
+    private static Type pickCounterType(boolean preferLoopIntrinsificationShape) {
+        Type[] candidates = preferLoopIntrinsificationShape
+                ? new Type[] {TypeList.INT, TypeList.SHORT}
+                : new Type[] {TypeList.INT, TypeList.SHORT, TypeList.BYTE, TypeList.CHAR};
         return candidates[PseudoRandom.randomNotNegative(candidates.length)];
+    }
+
+    private static boolean pickReverse(boolean preferLoopIntrinsificationShape) {
+        return !preferLoopIntrinsificationShape && PseudoRandom.randomBoolean();
     }
 
     private static int clampTripCount(Type counterType, int preferredIntCount) {
@@ -144,6 +178,9 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
             return Math.min(preferred, 120);
         }
         if (counterType.equals(TypeList.SHORT)) {
+            return Math.min(preferred, 30_000);
+        }
+        if (counterType.equals(TypeList.CHAR)) {
             return Math.min(preferred, 30_000);
         }
         return preferred;
@@ -182,6 +219,9 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
         if (type.equals(TypeList.SHORT)) {
             return (short) value;
         }
+        if (type.equals(TypeList.CHAR)) {
+            return (char) value;
+        }
         return value;
     }
 
@@ -189,5 +229,22 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
         int clampedPercent = Math.max(1, percent);
         long scaled = (long) Math.ceil(base * (clampedPercent / 100.0));
         return Math.max(1L, scaled);
+    }
+
+    private static boolean isLoopIntrinsificationEnabled() {
+        return ProductionParams.morphTemplateLoopIntrinsificationProbability.value() > 0;
+    }
+
+    private static boolean preferLoopIntrinsificationShape() {
+        if (!isLoopIntrinsificationEnabled()) {
+            return false;
+        }
+        return LoopIntrinsificationMorphTemplate.shouldPreferViableArrayKernelShape();
+    }
+
+    private static boolean shouldKeepEmptyBody() {
+        double probability = Math.max(0, Math.min(100,
+                ProductionParams.arrayKernelEmptyBodyKeepProbability.value())) / 100.0;
+        return probability > 0.0 && PseudoRandom.randomBoolean(probability);
     }
 }

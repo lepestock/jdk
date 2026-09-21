@@ -25,18 +25,22 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.List;
+import jdk.test.lib.jittester.BinaryOperator;
+import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.Literal;
 import jdk.test.lib.jittester.LocalVariable;
+import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.StaticMemberVariable;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
+import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.collections.CollectionElement;
 import jdk.test.lib.jittester.collections.IndexedStorageKind;
-import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -52,6 +56,7 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
     private final Type elementType;
     private final boolean assignmentCompatible;
     private final boolean arrayOnly;
+    private final int iterationOffset;
 
     IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType) {
         this(ownerClass, elementType, false, false);
@@ -64,10 +69,16 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
 
     IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType,
             boolean assignmentCompatible, boolean arrayOnly) {
+        this(ownerClass, elementType, assignmentCompatible, arrayOnly, 0);
+    }
+
+    IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType,
+            boolean assignmentCompatible, boolean arrayOnly, int iterationOffset) {
         this.ownerClass = ownerClass;
         this.elementType = elementType;
         this.assignmentCompatible = assignmentCompatible;
         this.arrayOnly = arrayOnly;
+        this.iterationOffset = iterationOffset;
     }
 
     @Override
@@ -96,7 +107,7 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
             if (varInfo.getArrayLength().isEmpty()) {
                 continue;
             }
-            if (!canUseIterationIndex(varInfo)) {
+            if (!canUseIterationIndex(varInfo, iterationOffset)) {
                 continue;
             }
             if (varInfo.isLocal()) {
@@ -117,8 +128,7 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
             throw new ProductionFailedException();
         }
         ArrayList<IRNode> indexes = new ArrayList<>(1);
-        // Array candidates here carry known generation-time lengths. Kernel loops keep iterator in-range.
-        indexes.add(new LocalVariable(iterationInfo));
+        indexes.add(indexExpression(iterationInfo));
         CollectionElement element = new CollectionElement(baseArray, indexes, storageKind(baseArrayInfo));
         if (element.getResultType().equals(elementType)) {
             return element;
@@ -148,7 +158,7 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
             if (varInfo.getArrayLength().isEmpty()) {
                 continue;
             }
-            if (!canUseIterationIndex(varInfo)) {
+            if (!canUseIterationIndex(varInfo, iterationOffset)) {
                 continue;
             }
             if (varInfo.isLocal() || varInfo.isStatic()) {
@@ -160,7 +170,19 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
 
     private List<Symbol> candidateSymbols() {
         if (!assignmentCompatible) {
-            return new ArrayList<>(SymbolTable.get(new TypeArray(elementType, 1), VariableInfo.class));
+            ArrayList<Symbol> result = new ArrayList<>();
+            for (Symbol symbol : SymbolTable.get(new TypeArray(elementType, 1), VariableInfo.class)) {
+                if (!(symbol instanceof VariableInfo varInfo)) {
+                    continue;
+                }
+                if (arrayOnly
+                        && varInfo.type instanceof TypeArray arrayType
+                        && arrayType.getStorageKind() != IndexedStorageKind.ARRAY) {
+                    continue;
+                }
+                result.add(symbol);
+            }
+            return result;
         }
         ArrayList<Symbol> result = new ArrayList<>();
         for (Symbol symbol : SymbolTable.getAllCombined(VariableInfo.class)) {
@@ -186,9 +208,26 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
         return result;
     }
 
-    private static boolean canUseIterationIndex(VariableInfo varInfo) {
+    private IRNode indexExpression(VariableInfo iterationInfo) {
+        IRNode index = new LocalVariable(iterationInfo);
+        if (iterationOffset == 0) {
+            return index;
+        }
+        if (iterationOffset < 0) {
+            return new BinaryOperator(OperatorKind.SUB, TypeList.INT, index,
+                    new Literal(-iterationOffset, TypeList.INT));
+        }
+        return new BinaryOperator(OperatorKind.ADD, TypeList.INT, index,
+                new Literal(iterationOffset, TypeList.INT));
+    }
+
+    private static boolean canUseIterationIndex(VariableInfo varInfo, int offset) {
+        int iterationStart = GenerationState.currentFlowParams().arrayKernelIterationStart();
         int iterationLimit = GenerationState.currentFlowParams().arrayKernelIterationLimit();
-        return iterationLimit <= 0 || varInfo.getArrayLength().orElse(0) >= iterationLimit;
+        if (iterationStart + offset < 0) {
+            return false;
+        }
+        return iterationLimit <= 0 || varInfo.getArrayLength().orElse(0) >= iterationLimit + offset;
     }
 
     private static IndexedStorageKind storageKind(VariableInfo variableInfo) {

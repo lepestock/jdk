@@ -23,6 +23,7 @@
 
 package jdk.test.lib.jittester;
 
+import jdk.test.lib.jittester.morph.LoopIntrinsificationMorphTemplate;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public final class ContainerSizePicker {
@@ -37,6 +38,11 @@ public final class ContainerSizePicker {
     }
 
     public static int pickIntContainerSize() {
+        if (ProductionParams.morphTemplateLoopIntrinsificationProbability != null
+                && ProductionParams.morphTemplateLoopIntrinsificationProbability.value() > 0) {
+            return 128 + LoopIntrinsificationMorphTemplate.maxNegativeOffset()
+                    + LoopIntrinsificationMorphTemplate.maxPositiveOffset();
+        }
         return Math.max(1, pickByteAnchor() / 4);
     }
 

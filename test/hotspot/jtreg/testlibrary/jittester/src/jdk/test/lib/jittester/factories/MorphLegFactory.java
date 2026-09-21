@@ -45,6 +45,23 @@ class MorphLegFactory extends Factory<IRNode> {
         return context.hasTemplates();
     }
 
+    static double weight(MorphContext context, double baseWeight) {
+        double multiplier = 0.0;
+        for (int i = 0; i < context.size(); i++) {
+            multiplier = Math.max(multiplier, context.get(i).legWeightMultiplier());
+        }
+        return baseWeight * multiplier;
+    }
+
+    static boolean hasWholeBlockLeg(MorphContext context) {
+        for (int i = 0; i < context.size(); i++) {
+            if (context.get(i).takesWholeBlock()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public IRNode produce() throws ProductionFailedException {
         MorphContext context = GenerationState.currentMorphContext();

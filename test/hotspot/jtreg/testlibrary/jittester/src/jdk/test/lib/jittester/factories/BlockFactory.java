@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -168,19 +168,24 @@ class BlockFactory extends Factory<Block> {
                                 .setLevel(level);
                         rule = new Rule<>("block");
                         double mtLegWeight = GenerationState.currentFlowParams().mtLegWeight();
+                        boolean wholeBlockMorphLeg = MorphLegFactory.hasWholeBlockLeg(
+                                GenerationState.currentMorphContext());
                         if (mtLegWeight > 0.0
                                 && MorphLegFactory.hasApplicableLeg(GenerationState.currentMorphContext())) {
                             // This hot rule usually has no active morph legs. Avoid adding a
                             // mostly-failing factory that would pay exception/checkpoint/rollback cost.
-                            rule.add("morph_leg", new MorphLegFactory(builder), 2.0 * mtLegWeight);
+                            rule.add("morph_leg", new MorphLegFactory(builder),
+                                    MorphLegFactory.weight(GenerationState.currentMorphContext(), mtLegWeight));
                         }
-                        rule.add("statement", builder.getStatementFactory(), 8);
-                        if (!ProductionParams.disableVarsInBlock.value()) {
+                        if (!wholeBlockMorphLeg) {
+                            rule.add("statement", builder.getStatementFactory(), 8);
+                        }
+                        if (!wholeBlockMorphLeg && !ProductionParams.disableVarsInBlock.value()) {
                             double localDeclWeight = computeLocalDeclarationWeight(
                                     blockDepth, attemptedStatements);
                             rule.add("decl", builder.setIsLocal(true).getDeclarationFactory(), localDeclWeight);
                         }
-                        if (effectiveStatementLimit > 1 && allowNestedControlFlow) {
+                        if (!wholeBlockMorphLeg && effectiveStatementLimit > 1 && allowNestedControlFlow) {
                             int childStatementLimit = Math.max(1,
                                     (int) Math.ceil(effectiveStatementLimit * childStatementLimitFactor()));
                             builder.withStatementLimit(childStatementLimit).setLevel(level + 1);
@@ -213,6 +218,9 @@ class BlockFactory extends Factory<Block> {
                             attemptedStatements++;
                             successfulStatements++;
                             content.add(choiceResult);
+                            if (wholeBlockMorphLeg) {
+                                break;
+                            }
                         } catch (ProductionFailedException e) {
                             if (e instanceof MutationScopeProductionFailedException
                                     && !Genome.isReplayMutationScopeActive()) {

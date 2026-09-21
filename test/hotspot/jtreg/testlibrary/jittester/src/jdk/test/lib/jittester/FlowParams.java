@@ -39,6 +39,8 @@ public final class FlowParams {
         UNKNOWN,
         STATIC_INITIALIZER,
         CONSTRUCTOR,
+        // Generic test facilities like the main test method body.
+        TEST,
         METHOD
     }
 
@@ -46,8 +48,11 @@ public final class FlowParams {
     private final int statementLimit;
     private final int operatorLimit;
     private final String iterationVariable;
+    private final Type iterationVariableType;
+    private final int arrayKernelIterationStart;
     private final int arrayKernelIterationLimit;
     private final boolean inArrayKernel;
+    private final boolean arrayKernelForward;
     private final boolean preferIterationIndexedArrayTerminal;
     private final Type fixedOperandType;
     private final int arrayElementExpressionWeightPercent;
@@ -57,11 +62,14 @@ public final class FlowParams {
     private final boolean normalizeNaN;
     private final CodeContext codeContext;
     private final double mtCreationProbability;
+    private final double loopIntrinsificationMorphTemplateCreationProbability;
     private final double mtLegWeight;
     private final double taperingBlockTerminalProbability;
 
     private FlowParams(FlowParams prev, int statementLimit, int operatorLimit,
-                       String iterationVariable, int arrayKernelIterationLimit, boolean inArrayKernel,
+                       String iterationVariable, Type iterationVariableType,
+                       int arrayKernelIterationStart, int arrayKernelIterationLimit, boolean inArrayKernel,
+                       boolean arrayKernelForward,
                        boolean preferIterationIndexedArrayTerminal,
                        Type fixedOperandType,
                        int arrayElementExpressionWeightPercent,
@@ -71,14 +79,18 @@ public final class FlowParams {
                        boolean normalizeNaN,
                        CodeContext codeContext,
                        double mtCreationProbability,
+                       double loopIntrinsificationMorphTemplateCreationProbability,
                        double mtLegWeight,
                        double taperingBlockTerminalProbability) {
         this.prev = prev;
         this.statementLimit = statementLimit;
         this.operatorLimit = operatorLimit;
         this.iterationVariable = iterationVariable;
+        this.iterationVariableType = iterationVariableType;
+        this.arrayKernelIterationStart = arrayKernelIterationStart;
         this.arrayKernelIterationLimit = arrayKernelIterationLimit;
         this.inArrayKernel = inArrayKernel;
+        this.arrayKernelForward = arrayKernelForward;
         this.preferIterationIndexedArrayTerminal = preferIterationIndexedArrayTerminal;
         this.fixedOperandType = fixedOperandType;
         this.arrayElementExpressionWeightPercent = arrayElementExpressionWeightPercent;
@@ -88,6 +100,8 @@ public final class FlowParams {
         this.normalizeNaN = normalizeNaN;
         this.codeContext = codeContext;
         this.mtCreationProbability = mtCreationProbability;
+        this.loopIntrinsificationMorphTemplateCreationProbability =
+                loopIntrinsificationMorphTemplateCreationProbability;
         this.mtLegWeight = mtLegWeight;
         this.taperingBlockTerminalProbability = taperingBlockTerminalProbability;
     }
@@ -97,7 +111,10 @@ public final class FlowParams {
                 ProductionParams.statementLimit.value(),
                 ProductionParams.operatorLimit.value(),
                 null,
+                null,
                 0,
+                0,
+                false,
                 false,
                 false,
                 null,
@@ -108,6 +125,7 @@ public final class FlowParams {
                 false,
                 CodeContext.UNKNOWN,
                 percentToProbability(ProductionParams.lockEliminationMorphTemplateProbability.value()),
+                percentToProbability(ProductionParams.morphTemplateLoopIntrinsificationProbability.value()),
                 percentToProbability(ProductionParams.morphTemplateLegWeight.value()),
                 percentToProbability(ProductionParams.taperingBlockTerminalProbabilityPercent.value()));
     }
@@ -124,12 +142,24 @@ public final class FlowParams {
         return iterationVariable;
     }
 
+    public Optional<Type> iterationVariableType() {
+        return Optional.ofNullable(iterationVariableType);
+    }
+
+    public int arrayKernelIterationStart() {
+        return arrayKernelIterationStart;
+    }
+
     public int arrayKernelIterationLimit() {
         return arrayKernelIterationLimit;
     }
 
     public boolean inArrayKernel() {
         return inArrayKernel;
+    }
+
+    public boolean arrayKernelForward() {
+        return arrayKernelForward;
     }
 
     public boolean preferIterationIndexedArrayTerminal() {
@@ -182,6 +212,10 @@ public final class FlowParams {
         return mtCreationProbability;
     }
 
+    public double loopIntrinsificationMorphTemplateCreationProbability() {
+        return loopIntrinsificationMorphTemplateCreationProbability;
+    }
+
     public double mtLegWeight() {
         return mtLegWeight;
     }
@@ -204,6 +238,18 @@ public final class FlowParams {
 
     public Builder withIterationVariable(String value) {
         return new Builder(this).withIterationVariable(value);
+    }
+
+    public Builder withIterationVariableType(Type value) {
+        return new Builder(this).withIterationVariableType(value);
+    }
+
+    public Builder withArrayKernelIterationStart(int value) {
+        return new Builder(this).withArrayKernelIterationStart(value);
+    }
+
+    public Builder withArrayKernelForward(boolean value) {
+        return new Builder(this).withArrayKernelForward(value);
     }
 
     public Builder withProductionParamsLimits() {
@@ -232,6 +278,10 @@ public final class FlowParams {
         return new Builder(this).withMtCreationProbability(value);
     }
 
+    public Builder withLoopIntrinsificationMorphTemplateCreationProbability(double value) {
+        return new Builder(this).withLoopIntrinsificationMorphTemplateCreationProbability(value);
+    }
+
     public Builder withMtLegWeight(double value) {
         return new Builder(this).withMtLegWeight(value);
     }
@@ -248,8 +298,11 @@ public final class FlowParams {
         return "FlowParams{statementLimit=" + statementLimit
                 + ", operatorLimit=" + operatorLimit
                 + ", iterationVariable=" + (iterationVariable == null ? "<none>" : iterationVariable)
+                + ", iterationVariableType=" + (iterationVariableType == null ? "<none>" : iterationVariableType.getName())
+                + ", arrayKernelIterationStart=" + arrayKernelIterationStart
                 + ", arrayKernelIterationLimit=" + arrayKernelIterationLimit
                 + ", inArrayKernel=" + inArrayKernel
+                + ", arrayKernelForward=" + arrayKernelForward
                 + ", preferIterationIndexedArrayTerminal=" + preferIterationIndexedArrayTerminal
                 + ", fixedOperandType=" + (fixedOperandType == null ? "<none>" : fixedOperandType.getName())
                 + ", arrayElementExpressionWeightPercent=" + arrayElementExpressionWeightPercent
@@ -259,6 +312,8 @@ public final class FlowParams {
                 + ", normalizeNaN=" + normalizeNaN
                 + ", codeContext=" + codeContext
                 + ", mtCreationProbability=" + mtCreationProbability
+                + ", loopIntrinsificationMorphTemplateCreationProbability="
+                + loopIntrinsificationMorphTemplateCreationProbability
                 + ", mtLegWeight=" + mtLegWeight
                 + ", taperingBlockTerminalProbability=" + taperingBlockTerminalProbability
                 + ", depth=" + depth(this)
@@ -295,8 +350,11 @@ public final class FlowParams {
         private int statementLimit;
         private int operatorLimit;
         private String iterationVariable;
+        private Type iterationVariableType;
+        private int arrayKernelIterationStart;
         private int arrayKernelIterationLimit;
         private boolean inArrayKernel;
+        private boolean arrayKernelForward;
         private boolean preferIterationIndexedArrayTerminal;
         private Type fixedOperandType;
         private int arrayElementExpressionWeightPercent;
@@ -306,6 +364,7 @@ public final class FlowParams {
         private boolean normalizeNaN;
         private CodeContext codeContext;
         private double mtCreationProbability;
+        private double loopIntrinsificationMorphTemplateCreationProbability;
         private double mtLegWeight;
         private double taperingBlockTerminalProbability;
 
@@ -317,8 +376,11 @@ public final class FlowParams {
             this.statementLimit = base.statementLimit;
             this.operatorLimit = base.operatorLimit;
             this.iterationVariable = base.iterationVariable;
+            this.iterationVariableType = base.iterationVariableType;
+            this.arrayKernelIterationStart = base.arrayKernelIterationStart;
             this.arrayKernelIterationLimit = base.arrayKernelIterationLimit;
             this.inArrayKernel = base.inArrayKernel;
+            this.arrayKernelForward = base.arrayKernelForward;
             this.preferIterationIndexedArrayTerminal = base.preferIterationIndexedArrayTerminal;
             this.fixedOperandType = base.fixedOperandType;
             this.arrayElementExpressionWeightPercent = base.arrayElementExpressionWeightPercent;
@@ -328,6 +390,8 @@ public final class FlowParams {
             this.normalizeNaN = base.normalizeNaN;
             this.codeContext = base.codeContext;
             this.mtCreationProbability = base.mtCreationProbability;
+            this.loopIntrinsificationMorphTemplateCreationProbability =
+                    base.loopIntrinsificationMorphTemplateCreationProbability;
             this.mtLegWeight = base.mtLegWeight;
             this.taperingBlockTerminalProbability = base.taperingBlockTerminalProbability;
         }
@@ -352,6 +416,16 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withIterationVariableType(Type value) {
+            this.iterationVariableType = value;
+            return this;
+        }
+
+        public Builder withArrayKernelIterationStart(int value) {
+            this.arrayKernelIterationStart = Math.max(0, value);
+            return this;
+        }
+
         public Builder withArrayKernelIterationLimit(int value) {
             this.arrayKernelIterationLimit = Math.max(0, value);
             return this;
@@ -359,6 +433,11 @@ public final class FlowParams {
 
         public Builder withInArrayKernel(boolean value) {
             this.inArrayKernel = value;
+            return this;
+        }
+
+        public Builder withArrayKernelForward(boolean value) {
+            this.arrayKernelForward = value;
             return this;
         }
 
@@ -426,6 +505,11 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withLoopIntrinsificationMorphTemplateCreationProbability(double value) {
+            this.loopIntrinsificationMorphTemplateCreationProbability = normalizeProbability(value);
+            return this;
+        }
+
         public Builder withMtLegWeight(double value) {
             this.mtLegWeight = normalizeProbability(value);
             return this;
@@ -443,14 +527,16 @@ public final class FlowParams {
         }
 
         public FlowParams advance() {
-            return new FlowParams(base, statementLimit, operatorLimit, iterationVariable,
-                    arrayKernelIterationLimit, inArrayKernel, preferIterationIndexedArrayTerminal, fixedOperandType,
+            return new FlowParams(base, statementLimit, operatorLimit, iterationVariable, iterationVariableType,
+                    arrayKernelIterationStart, arrayKernelIterationLimit, inArrayKernel, arrayKernelForward,
+                    preferIterationIndexedArrayTerminal, fixedOperandType,
                     arrayElementExpressionWeightPercent, arrayExtractionExpressionWeightPercent,
                     Collections.unmodifiableSet(new LinkedHashSet<>(readOnlyVars)),
                     Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)),
                     normalizeNaN,
                     codeContext,
                     mtCreationProbability,
+                    loopIntrinsificationMorphTemplateCreationProbability,
                     mtLegWeight,
                     taperingBlockTerminalProbability);
         }
