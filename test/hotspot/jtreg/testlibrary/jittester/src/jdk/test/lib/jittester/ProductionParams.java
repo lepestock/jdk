@@ -106,6 +106,7 @@ public class ProductionParams {
     public static Option<Integer> intrinsicCallWeightBonus = null;
     public static Option<Integer> magnetismLevel = null;
     public static Option<Integer> arrayProductionWeightBonus = null;
+    public static Option<Integer> arraysNullRestrictedValueProbability = null;
     public static Option<Integer> listStoragePercent = null;
     public static Option<Integer> arrayKernelBodyStatementPercent = null;
     public static Option<Boolean> arrayKernelCollectionElementLValues = null;
@@ -276,6 +277,10 @@ public class ProductionParams {
                 "Magnet matching mode: 0=strict exact-id preference (deterministic), >0 enables distance-weighted stochastic magnetism");
         arrayProductionWeightBonus = optionResolver.addIntegerOption("array-production-weight-bonus", 0,
                 "Additional selection weight percent for array productions (0 keeps default)");
+        arraysNullRestrictedValueProbability = optionResolver.addIntegerOption(
+                "arrays-null-restricted-value-probability",
+                0,
+                "Probability (0..100) to create eligible one-dimensional value-class arrays as null-restricted arrays");
         listStoragePercent = optionResolver.addIntegerOption("list-storage-percent", 0,
                 "Percent chance to use java.util.List-backed one-dimensional indexed storage");
         arrayKernelBodyStatementPercent = optionResolver.addIntegerOption("array-kernel-body-statement-percent", 50,

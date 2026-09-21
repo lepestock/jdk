@@ -31,6 +31,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -65,14 +67,30 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         Path targetDir = getGeneratorDir(mainClassName);
         String classPath = tmpDir.path.toString() + File.pathSeparator
                 + targetDir.toString();
-        ProcessBuilder pb = new ProcessBuilder(JAVA, "-Xint", DISABLE_WARNINGS, "-Xverify",
-                "-cp", classPath, mainClassName);
+        ArrayList<String> command = new ArrayList<>();
+        command.add(JAVA);
+        command.add("-Xint");
+        command.add(DISABLE_WARNINGS);
+        command.addAll(goldenRunVmOptions());
+        command.add("-Xverify");
+        command.add("-cp");
+        command.add(classPath);
+        command.add(mainClassName);
+        ProcessBuilder pb = new ProcessBuilder(command);
         String goldFile = mainClassName + ".gold";
         try {
             runProcess(pb, targetDir.resolve(goldFile).toString());
         } catch (IOException | InterruptedException e)  {
             throw generationFailure("Can't run generated test", e);
         }
+    }
+
+    protected List<String> goldenRunVmOptions() {
+        return List.of();
+    }
+
+    protected String jtDriverOptions() {
+        return jtDriverOptions;
     }
 
     protected static GenerationFailureException generationFailure(String message) {
@@ -188,7 +206,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         header.append(" * @run driver jdk.test.lib.jittester.jtreg.JitTesterDriver ")
               .append(DISABLE_WARNINGS)
               .append(" ")
-              .append(jtDriverOptions)
+              .append(jtDriverOptions())
               .append(" ")
               .append(mainClassName)
               .append("\n */\n\n");

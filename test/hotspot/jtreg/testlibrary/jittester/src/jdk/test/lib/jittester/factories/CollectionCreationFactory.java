@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,10 +86,26 @@ class CollectionCreationFactory extends SafeFactory<CollectionCreation> {
     }
 
     static TypeArray withSelectedStorageKind(TypeArray arrayType) {
+        arrayType = withSelectedNullRestrictedValueArray(arrayType);
+        if (arrayType.isNullRestricted()) {
+            return arrayType;
+        }
         IndexedStorageKind storageKind = selectStorageKind(arrayType);
-        return storageKind == arrayType.getStorageKind()
-                ? arrayType
-                : new TypeArray(arrayType.type, arrayType.dimensions, storageKind);
+        return arrayType.withStorageKind(storageKind);
+    }
+
+    private static TypeArray withSelectedNullRestrictedValueArray(TypeArray arrayType) {
+        if (arrayType.isNullRestricted() || !arrayType.canBeNullRestricted()) {
+            return arrayType;
+        }
+        int percent = Math.max(0, Math.min(100,
+                ProductionParams.arraysNullRestrictedValueProbability.value()));
+        if (percent == 0) {
+            return arrayType;
+        }
+        return PseudoRandom.randomBoolean(percent / 100.0)
+                ? arrayType.asNullRestricted()
+                : arrayType;
     }
 
     static IndexedStorageKind selectStorageKind(TypeArray arrayType) {

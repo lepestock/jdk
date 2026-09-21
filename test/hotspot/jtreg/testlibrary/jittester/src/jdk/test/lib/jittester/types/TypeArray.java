@@ -51,6 +51,7 @@ public class TypeArray extends TypeKlass {
     public final Type type;
     public final int dimensions;
     private final IndexedStorageKind storageKind;
+    private final boolean nullRestricted;
     private List<Byte> dims = new ArrayList<>();
 
     public TypeArray(Type type, int dimensions) {
@@ -58,12 +59,17 @@ public class TypeArray extends TypeKlass {
     }
 
     public TypeArray(Type type, int dimensions, IndexedStorageKind storageKind) {
+        this(type, dimensions, storageKind, false);
+    }
+
+    public TypeArray(Type type, int dimensions, IndexedStorageKind storageKind, boolean nullRestricted) {
         super("Array", TypeKlass.FINAL);
         addParent(TypeList.OBJECT.getName());
         setParent(TypeList.OBJECT);
         this.type = type;
         this.dimensions = dimensions;
         this.storageKind = storageKind;
+        this.nullRestricted = nullRestricted;
     }
 
     public String getName() {
@@ -90,7 +96,8 @@ public class TypeArray extends TypeKlass {
         if (super.equals(t)) { // make sure we're compating to an array
             try {
                 TypeArray a = (TypeArray) t;
-                return a.type.equals(type) && (a.dimensions == dimensions
+                return a.type.equals(type) && a.nullRestricted == nullRestricted
+                        && (a.dimensions == dimensions
                         || a.dimensions == -1
                         || dimensions == -1);
             } catch (Exception e) {
@@ -104,6 +111,7 @@ public class TypeArray extends TypeKlass {
         int hash = 3;
         hash = 53 * hash + Objects.hashCode(this.type);
         hash = 313 * hash + this.dimensions;
+        hash = 499 * hash + Boolean.hashCode(this.nullRestricted);
         return hash;
     }
 
@@ -113,9 +121,12 @@ public class TypeArray extends TypeKlass {
         if (r == 0) {
             try {
                 TypeArray a = (TypeArray) t;
-                r = type.compareTo(t);
+                r = type.compareTo(a.type);
                 if (r == 0) {
                     r = dimensions - a.dimensions;
+                }
+                if (r == 0) {
+                    r = Boolean.compare(nullRestricted, a.nullRestricted);
                 }
             } catch (Exception e) {
             }
@@ -207,10 +218,27 @@ public class TypeArray extends TypeKlass {
         return storageKind;
     }
 
+    public boolean isNullRestricted() {
+        return nullRestricted;
+    }
+
+    public boolean canBeNullRestricted() {
+        return dimensions == 1
+                && storageKind == IndexedStorageKind.ARRAY
+                && type instanceof TypeKlass typeKlass
+                && typeKlass.isValueKlass()
+                && !typeKlass.isAbstract()
+                && !typeKlass.isInterface();
+    }
+
     public TypeArray withStorageKind(IndexedStorageKind storageKind) {
         if (storageKind == this.storageKind) {
             return this;
         }
-        return new TypeArray(type, dimensions, storageKind);
+        return new TypeArray(type, dimensions, storageKind, nullRestricted);
+    }
+
+    public TypeArray asNullRestricted() {
+        return nullRestricted ? this : new TypeArray(type, dimensions, IndexedStorageKind.ARRAY, true);
     }
 }

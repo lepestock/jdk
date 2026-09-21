@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@ package jdk.test.lib.jittester;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
@@ -34,6 +36,8 @@ import jdk.test.lib.jittester.visitors.JavaCodeVisitor;
  */
 public class JavaCodeGenerator extends TestsGenerator {
     private static final String DEFAULT_SUFFIX = "java_tests";
+    private static final String NULL_RESTRICTED_ARRAY_EXPORT =
+            "--add-exports=java.base/jdk.internal.value=ALL-UNNAMED";
 
     JavaCodeGenerator() {
         this(DEFAULT_SUFFIX, JavaCodeGenerator::generatePrerunAction, "-Xcomp");
@@ -101,10 +105,17 @@ public class JavaCodeGenerator extends TestsGenerator {
     private void compileJavaFile(String mainClassName) {
         Path targetDir = getGeneratorDir(mainClassName);
         String classPath = tmpDir.path.toString();
-        ProcessBuilder pb = new ProcessBuilder(JAVAC,
-                "-d", classPath,
-                "-cp", classPath,
-                targetDir.resolve(mainClassName + ".java").toString());
+        ArrayList<String> command = new ArrayList<>();
+        command.add(JAVAC);
+        if (nullRestrictedArraysEnabled()) {
+            command.add(NULL_RESTRICTED_ARRAY_EXPORT);
+        }
+        command.add("-d");
+        command.add(classPath);
+        command.add("-cp");
+        command.add(classPath);
+        command.add(targetDir.resolve(mainClassName + ".java").toString());
+        ProcessBuilder pb = new ProcessBuilder(command);
         try {
             int r = runProcess(pb, tmpDir.path.resolve(mainClassName + ".javac").toString());
             if (r != 0) {
@@ -116,7 +127,29 @@ public class JavaCodeGenerator extends TestsGenerator {
     }
 
     protected static String[] generatePrerunAction(String mainClassName) {
+        if (nullRestrictedArraysEnabled()) {
+            return new String[] {"@compile " + NULL_RESTRICTED_ARRAY_EXPORT + " " + mainClassName + ".java"};
+        }
         return new String[] {"@compile " + mainClassName + ".java"};
+    }
+
+    @Override
+    protected List<String> goldenRunVmOptions() {
+        return nullRestrictedArraysEnabled()
+                ? List.of(NULL_RESTRICTED_ARRAY_EXPORT)
+                : List.of();
+    }
+
+    @Override
+    protected String jtDriverOptions() {
+        if (!nullRestrictedArraysEnabled()) {
+            return super.jtDriverOptions();
+        }
+        return NULL_RESTRICTED_ARRAY_EXPORT + " " + super.jtDriverOptions();
+    }
+
+    private static boolean nullRestrictedArraysEnabled() {
+        return ProductionParams.arraysNullRestrictedValueProbability.value() > 0;
     }
 
     public static void main(String[] args) throws Exception {

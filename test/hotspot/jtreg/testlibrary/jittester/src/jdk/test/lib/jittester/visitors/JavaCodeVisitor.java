@@ -105,6 +105,7 @@ import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 public class JavaCodeVisitor implements Visitor<String> {
     private Set<String> debugWrapGeneFilter = null;
+    private int nullRestrictedArrayInitializerCount = 0;
 
     public static String funcAttributes(FunctionInfo fi) {
         String attrs = attributes(fi);
@@ -247,16 +248,21 @@ public class JavaCodeVisitor implements Visitor<String> {
         List<String> sizes = node.getChildren().stream()
                 .map(p -> p.accept(this))
                 .toList();
+        String creation = node.getArrayType().isNullRestricted()
+                ? nullRestrictedArrayCreation(type, sizes.get(0), defaultReferenceElementValue(arrayElemType))
+                : node.getStorageKind().creation(type, sizes,
+                        defaultCollectionElementValue(node.getStorageKind(), arrayElemType));
         StringBuilder code = new StringBuilder()
                 .append(node.getVariable().accept(this))
                 .append(";\n")
                 .append(PrintingUtils.align(node.getParent().getLevel()))
                 .append(name)
                 .append(" = ")
-                .append(node.getStorageKind().creation(type, sizes,
-                        defaultCollectionElementValue(node.getStorageKind(), arrayElemType)))
+                .append(creation)
                 .append(";\n");
-        if (node.getStorageKind() == IndexedStorageKind.ARRAY && !TypeList.isBuiltIn(arrayElemType)) {
+        if (node.getStorageKind() == IndexedStorageKind.ARRAY
+                && !node.getArrayType().isNullRestricted()
+                && !TypeList.isBuiltIn(arrayElemType)) {
             code.append(PrintingUtils.align(node.getParent().getLevel()))
                 .append("java.util.Arrays.fill(")
                 .append(name)
@@ -345,6 +351,15 @@ public class JavaCodeVisitor implements Visitor<String> {
         List<String> elements = node.getChildren().stream()
                 .map(c -> c.accept(this))
                 .toList();
+        if (arrayType.isNullRestricted()) {
+            String defaultValue = elements.isEmpty()
+                    ? defaultReferenceElementValue(arrayType.type)
+                    : elements.get(0);
+            if (elements.size() > 1) {
+                return nullRestrictedArrayInitializer(elementType, defaultValue, elements);
+            }
+            return nullRestrictedArrayCreation(elementType, Integer.toString(elements.size()), defaultValue);
+        }
         return node.getStorageKind().initializer(elementType, elements);
     }
 
@@ -1461,7 +1476,45 @@ public class JavaCodeVisitor implements Visitor<String> {
         if (elementType.equals(TypeList.STRING)) {
             return "\"\"";
         }
+        return defaultReferenceElementValue(elementType);
+    }
+
+    private String defaultReferenceElementValue(Type elementType) {
         return "new " + elementType.accept(this) + "()";
+    }
+
+    private String nullRestrictedArrayCreation(String elementType, String size, String defaultValue) {
+        return "(" + elementType + "[]) jdk.internal.value.ValueClass."
+                + "newNullRestrictedNonAtomicArray("
+                + elementType + ".class, " + size + ", " + defaultValue + ")";
+    }
+
+    private String nullRestrictedArrayInitializer(String elementType, String defaultValue,
+            List<String> elements) {
+        String arrayName = "__jtt_nr_array_" + nullRestrictedArrayInitializerCount++;
+        StringBuilder code = new StringBuilder()
+                .append("((java.util.function.Supplier<")
+                .append(elementType)
+                .append("[]>) () -> {\n        ")
+                .append(elementType)
+                .append("[] ")
+                .append(arrayName)
+                .append(" = ")
+                .append(nullRestrictedArrayCreation(elementType, Integer.toString(elements.size()), defaultValue))
+                .append(";\n");
+        for (int i = 1; i < elements.size(); i++) {
+            code.append("        ")
+                    .append(arrayName)
+                    .append("[")
+                    .append(i)
+                    .append("] = ")
+                    .append(elements.get(i))
+                    .append(";\n");
+        }
+        return code.append("        return ")
+                .append(arrayName)
+                .append(";\n    }).get()")
+                .toString();
     }
 
     private String unboxedValueExpression(Type resultType, String expression) {
