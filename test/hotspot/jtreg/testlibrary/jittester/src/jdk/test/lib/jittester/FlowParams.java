@@ -63,6 +63,7 @@ public final class FlowParams {
     private final CodeContext codeContext;
     private final double mtCreationProbability;
     private final double loopIntrinsificationMorphTemplateCreationProbability;
+    private final int morphTemplateCreationRepeatProbability;
     private final double mtLegWeight;
     private final double taperingBlockTerminalProbability;
 
@@ -80,6 +81,7 @@ public final class FlowParams {
                        CodeContext codeContext,
                        double mtCreationProbability,
                        double loopIntrinsificationMorphTemplateCreationProbability,
+                       int morphTemplateCreationRepeatProbability,
                        double mtLegWeight,
                        double taperingBlockTerminalProbability) {
         this.prev = prev;
@@ -102,6 +104,7 @@ public final class FlowParams {
         this.mtCreationProbability = mtCreationProbability;
         this.loopIntrinsificationMorphTemplateCreationProbability =
                 loopIntrinsificationMorphTemplateCreationProbability;
+        this.morphTemplateCreationRepeatProbability = morphTemplateCreationRepeatProbability;
         this.mtLegWeight = mtLegWeight;
         this.taperingBlockTerminalProbability = taperingBlockTerminalProbability;
     }
@@ -126,6 +129,7 @@ public final class FlowParams {
                 CodeContext.UNKNOWN,
                 percentToProbability(ProductionParams.lockEliminationMorphTemplateProbability.value()),
                 percentToProbability(ProductionParams.morphTemplateLoopIntrinsificationProbability.value()),
+                ProductionParams.morphTemplateCreationRepeatProbability.value(),
                 percentToProbability(ProductionParams.morphTemplateLegWeight.value()),
                 percentToProbability(ProductionParams.taperingBlockTerminalProbabilityPercent.value()));
     }
@@ -216,6 +220,10 @@ public final class FlowParams {
         return loopIntrinsificationMorphTemplateCreationProbability;
     }
 
+    public int morphTemplateCreationRepeatProbability() {
+        return morphTemplateCreationRepeatProbability;
+    }
+
     public double mtLegWeight() {
         return mtLegWeight;
     }
@@ -282,6 +290,10 @@ public final class FlowParams {
         return new Builder(this).withLoopIntrinsificationMorphTemplateCreationProbability(value);
     }
 
+    public Builder withMorphTemplateCreationRepeatProbability(int value) {
+        return new Builder(this).withMorphTemplateCreationRepeatProbability(value);
+    }
+
     public Builder withMtLegWeight(double value) {
         return new Builder(this).withMtLegWeight(value);
     }
@@ -314,6 +326,7 @@ public final class FlowParams {
                 + ", mtCreationProbability=" + mtCreationProbability
                 + ", loopIntrinsificationMorphTemplateCreationProbability="
                 + loopIntrinsificationMorphTemplateCreationProbability
+                + ", morphTemplateCreationRepeatProbability=" + morphTemplateCreationRepeatProbability
                 + ", mtLegWeight=" + mtLegWeight
                 + ", taperingBlockTerminalProbability=" + taperingBlockTerminalProbability
                 + ", depth=" + depth(this)
@@ -365,6 +378,7 @@ public final class FlowParams {
         private CodeContext codeContext;
         private double mtCreationProbability;
         private double loopIntrinsificationMorphTemplateCreationProbability;
+        private int morphTemplateCreationRepeatProbability;
         private double mtLegWeight;
         private double taperingBlockTerminalProbability;
 
@@ -392,6 +406,7 @@ public final class FlowParams {
             this.mtCreationProbability = base.mtCreationProbability;
             this.loopIntrinsificationMorphTemplateCreationProbability =
                     base.loopIntrinsificationMorphTemplateCreationProbability;
+            this.morphTemplateCreationRepeatProbability = base.morphTemplateCreationRepeatProbability;
             this.mtLegWeight = base.mtLegWeight;
             this.taperingBlockTerminalProbability = base.taperingBlockTerminalProbability;
         }
@@ -510,6 +525,11 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withMorphTemplateCreationRepeatProbability(int value) {
+            this.morphTemplateCreationRepeatProbability = Math.max(0, value);
+            return this;
+        }
+
         public Builder withMtLegWeight(double value) {
             this.mtLegWeight = normalizeProbability(value);
             return this;
@@ -537,6 +557,7 @@ public final class FlowParams {
                     codeContext,
                     mtCreationProbability,
                     loopIntrinsificationMorphTemplateCreationProbability,
+                    morphTemplateCreationRepeatProbability,
                     mtLegWeight,
                     taperingBlockTerminalProbability);
         }

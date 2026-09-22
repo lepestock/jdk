@@ -23,7 +23,9 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -100,6 +102,7 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 public class IRNodeBuilder {
     private static final String BLOCK_TERMINAL_DECISION = "tapering.block.terminal";
+    private static final String MT_CREATION_REPEAT_DECISION = "morph.template.creation.repeat";
 
     //private Optional<Type> variableType = Optional.empty();
     private FlowParams flowParams;
@@ -318,21 +321,21 @@ public class IRNodeBuilder {
         normalizeNaN.ifPresent(flowBuilder::withNormalizeNaN);
         FlowParams nextFlowParams = flowBuilder.advance();
         GenerationState.setCurrentFlowParams(nextFlowParams);
-        MorphTemplate createdTemplate = createMorphTemplate(nextFlowParams, this);
-        if (createdTemplate != null) {
+        List<MorphTemplate> createdTemplates = createMorphTemplates(nextFlowParams, this);
+        for (MorphTemplate createdTemplate : createdTemplates) {
             GenerationState.setCurrentMorphContext(
                     GenerationState.currentMorphContext().withAdded(createdTemplate));
         }
         try {
             Block block = getBlockFactory().produce();
-            maybeAddMtDiagnostic(block, createdTemplate);
-            if (!(createdTemplate instanceof LoopIntrinsificationMorphTemplate)) {
+            maybeAddMtDiagnostics(block, createdTemplates);
+            if (createdTemplates.stream().noneMatch(LoopIntrinsificationMorphTemplate.class::isInstance)) {
                 maybeAddLoopIntrinsificationRejectionDiagnostic(block, nextFlowParams, this);
             }
             return block;
         } finally {
             GenerationState.setCurrentFlowParams(previous);
-            if (createdTemplate != null) {
+            for (MorphTemplate createdTemplate : createdTemplates) {
                 GenerationState.setCurrentMorphContext(
                         GenerationState.currentMorphContext().withoutId(createdTemplate.id()));
             }
@@ -366,7 +369,20 @@ public class IRNodeBuilder {
         return Math.max(0.0, Math.min(1.0, 1.0 - nextNonEmptyPercent / 100.0));
     }
 
-    private static MorphTemplate createMorphTemplate(FlowParams flowParams, IRNodeBuilder builder) {
+    private static List<MorphTemplate> createMorphTemplates(FlowParams flowParams, IRNodeBuilder builder) {
+        ArrayList<MorphTemplate> templates = new ArrayList<>();
+        int attemptsCompleted = 0;
+        do {
+            MorphTemplate template = createOneMorphTemplate(flowParams, builder);
+            if (template != null) {
+                templates.add(template);
+            }
+            attemptsCompleted++;
+        } while (shouldAttemptAnotherMorphTemplateCreation(flowParams, attemptsCompleted));
+        return templates;
+    }
+
+    private static MorphTemplate createOneMorphTemplate(FlowParams flowParams, IRNodeBuilder builder) {
         MorphTemplate loopIntrinsificationTemplate = LoopIntrinsificationMorphTemplate.createOrNull(
                 flowParams, builder);
         if (loopIntrinsificationTemplate != null) {
@@ -379,11 +395,11 @@ public class IRNodeBuilder {
         return null;
     }
 
-    private static void maybeAddMtDiagnostic(Block block, MorphTemplate template) {
-        if (template == null || !ProductionParams.debugMorphSourceDiagnostics.value()) {
+    private static void maybeAddMtDiagnostics(Block block, List<MorphTemplate> templates) {
+        if (!ProductionParams.debugMorphSourceDiagnostics.value()) {
             return;
         }
-        SourceDiagnostics.attach(block, template.creationDiagnostic());
+        templates.forEach(template -> SourceDiagnostics.attach(block, template.creationDiagnostic()));
     }
 
     private static void maybeAddLoopIntrinsificationRejectionDiagnostic(Block block, FlowParams flowParams,
@@ -398,6 +414,23 @@ public class IRNodeBuilder {
     private static boolean createLockEliminationMorphTemplateDecision(double probability) {
         boolean liveChoice = probability > 0.0 && PseudoRandom.randomSilent() < probability;
         return Genome.createOrConsumeBooleanDecisionGene("morph.lock_elimination.create", liveChoice);
+    }
+
+    private static boolean shouldAttemptAnotherMorphTemplateCreation(FlowParams flowParams, int attemptsCompleted) {
+        int percent = Math.max(0, flowParams.morphTemplateCreationRepeatProbability());
+        if (percent == 0) {
+            return false;
+        }
+        double probability = normalizeProbability((percent / 100.0) / Math.max(1, attemptsCompleted));
+        boolean liveChoice = probability > 0.0 && PseudoRandom.randomSilent() < probability;
+        return Genome.createOrConsumeBooleanDecisionGene(MT_CREATION_REPEAT_DECISION, liveChoice);
+    }
+
+    private static double normalizeProbability(double value) {
+        if (Double.isNaN(value)) {
+            return 0.0;
+        }
+        return Math.max(0.0, Math.min(1.0, value));
     }
 
     /**

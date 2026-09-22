@@ -154,6 +154,7 @@ public class ProductionParams {
     public static Option<Boolean> debugMorphSourceDiagnostics = null;
     public static Option<Integer> lockEliminationMorphTemplateProbability = null;
     public static Option<Integer> morphTemplateLoopIntrinsificationProbability = null;
+    public static Option<Integer> morphTemplateCreationRepeatProbability = null;
     public static Option<Integer> arrayKernelEmptyBodyKeepProbability = null;
     public static Option<Integer> morphLockEliminationCreateLockVarProbability = null;
     public static Option<Integer> morphTemplateLegWeight = null;
@@ -416,6 +417,10 @@ public class ProductionParams {
                 "morph-template-loop-intrinsification-probability",
                 0,
                 "Probability (0..100) to create a loop-intrinsification morph template in array-kernel blocks");
+        morphTemplateCreationRepeatProbability = optionResolver.addIntegerOption(
+                "morph-template-creation-repeat-probability",
+                0,
+                "Initial probability (0..100) to attempt creating another morph template in the same scope");
         arrayKernelEmptyBodyKeepProbability = optionResolver.addIntegerOption(
                 "array-kernel-empty-body-keep-probability",
                 5,
