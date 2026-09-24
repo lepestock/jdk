@@ -43,6 +43,22 @@ public interface MorphTemplate {
         return false;
     }
 
+    default boolean canProduceLeg(MorphLegTarget target, IRNodeBuilder builder) {
+        return target == MorphLegTarget.BLOCK;
+    }
+
+    default boolean takesWholeTarget(MorphLegTarget target) {
+        return target == MorphLegTarget.BLOCK && takesWholeBlock();
+    }
+
+    default MorphLegResult produceLeg(MorphLegTarget target, int leg, IRNodeBuilder builder)
+            throws ProductionFailedException {
+        if (!canProduceLeg(target, builder)) {
+            throw new ProductionFailedException();
+        }
+        return produceLeg(leg, builder);
+    }
+
     MorphLegResult produceLeg(int leg, IRNodeBuilder builder)
             throws ProductionFailedException;
 }

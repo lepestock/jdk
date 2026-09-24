@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,12 +23,12 @@
 
 package jdk.test.lib.jittester;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import jdk.test.lib.jittester.visitors.Visitor;
 
-public class VariableDeclarationBlock extends IRNode {
-    public VariableDeclarationBlock(ArrayList<? extends IRNode> content, int level) {
+public class FieldDeclarationSequence extends IRNode {
+    public FieldDeclarationSequence(List<? extends Declaration> content, int level) {
         super(TypeList.VOID);
         addChildren(content);
         this.level = level;

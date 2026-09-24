@@ -370,10 +370,21 @@ public class IRNodeBuilder {
     }
 
     private static List<MorphTemplate> createMorphTemplates(FlowParams flowParams, IRNodeBuilder builder) {
+        return createMorphTemplates(flowParams, builder, false);
+    }
+
+    private static List<MorphTemplate> createClassMorphTemplates(FlowParams flowParams, IRNodeBuilder builder) {
+        return createMorphTemplates(flowParams, builder, true);
+    }
+
+    private static List<MorphTemplate> createMorphTemplates(FlowParams flowParams, IRNodeBuilder builder,
+            boolean classScope) {
         ArrayList<MorphTemplate> templates = new ArrayList<>();
         int attemptsCompleted = 0;
         do {
-            MorphTemplate template = createOneMorphTemplate(flowParams, builder);
+            MorphTemplate template = classScope
+                    ? createOneClassMorphTemplate(flowParams, builder)
+                    : createOneMorphTemplate(flowParams, builder);
             if (template != null) {
                 templates.add(template);
             }
@@ -392,6 +403,16 @@ public class IRNodeBuilder {
                 && createLockEliminationMorphTemplateDecision(flowParams.mtCreationProbability())) {
             return new LockEliminationMorphTemplate();
         }
+        return null;
+    }
+
+    public List<MorphTemplate> createClassMorphTemplates() {
+        return createClassMorphTemplates(flowParams(), this);
+    }
+
+    private static MorphTemplate createOneClassMorphTemplate(FlowParams flowParams, IRNodeBuilder builder) {
+        // Class-scope creation is opt-in per template. Block-scoped templates
+        // such as lock-elimination and loop-intrinsification do not support it.
         return null;
     }
 

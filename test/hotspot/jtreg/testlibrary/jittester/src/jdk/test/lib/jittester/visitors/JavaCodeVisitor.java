@@ -38,6 +38,7 @@ import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.CatchBlock;
 import jdk.test.lib.jittester.Continue;
 import jdk.test.lib.jittester.Declaration;
+import jdk.test.lib.jittester.FieldDeclarationSequence;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.If;
 import jdk.test.lib.jittester.Initialization;
@@ -692,6 +693,24 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(Declaration node) {
         return node.getChild(0).accept(this)+ ";";
+    }
+
+    @Override
+    public String visit(FieldDeclarationSequence node) {
+        StringBuilder code = new StringBuilder();
+        for (IRNode child : node.getChildren()) {
+            String comment = geneComment(child);
+            if (!comment.isEmpty()) {
+                code.append(PrintingUtils.align(node.getLevel()))
+                    .append(comment.trim())
+                    .append("\n");
+            }
+            code.append(PrintingUtils.align(node.getLevel()))
+                .append(child.accept(this))
+                .append(addComplexityInfo(child))
+                .append("\n");
+        }
+        return code.toString();
     }
 
     @Override
@@ -1596,6 +1615,16 @@ public class JavaCodeVisitor implements Visitor<String> {
     public String visit(VariableDeclarationBlock node) {
         StringBuilder code = new StringBuilder();
         for (IRNode i : node.getChildren()) {
+            if (i instanceof FieldDeclarationSequence) {
+                code.append(i.accept(this));
+                continue;
+            }
+            String comment = geneComment(i);
+            if (!comment.isEmpty()) {
+                code.append(PrintingUtils.align(node.getLevel()))
+                    .append(comment.trim())
+                    .append("\n");
+            }
             code.append(PrintingUtils.align(node.getLevel()))
                 .append(i.accept(this))
                 .append(addComplexityInfo(i))

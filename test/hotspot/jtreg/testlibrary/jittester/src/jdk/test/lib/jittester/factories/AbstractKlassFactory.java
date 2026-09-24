@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.GenerationState;
@@ -41,6 +42,7 @@ import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.functions.FunctionDeclarationBlock;
 import jdk.test.lib.jittester.functions.FunctionDefinition;
 import jdk.test.lib.jittester.functions.FunctionInfo;
+import jdk.test.lib.jittester.morph.MorphTemplate;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -149,11 +151,17 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
             IRNode overridenFunctionsRedefinitions = null;
             IRNodeBuilder builder = new IRNodeBuilder().setOwnerKlass(thisKlass)
                     .setExceptionSafe(true);
+            List<MorphTemplate> classTemplates = List.of();
             try {
                 builder.setLevel(level + 1)
                         .withOperatorLimit(operatorLimit)
                         .withStatementLimit(statementsInFunctionLimit)
                         .setMemberFunctionsArgLimit(memberFunctionsArgLimit);
+                classTemplates = builder.createClassMorphTemplates();
+                for (MorphTemplate classTemplate : classTemplates) {
+                    GenerationState.setCurrentMorphContext(
+                            GenerationState.currentMorphContext().withAdded(classTemplate));
+                }
                 variableDeclarations = produceVariableDeclarations(builder);
 
                 if (!ProductionParams.disableFunctions.value()) {
@@ -185,6 +193,10 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                 e.printStackTrace(System.out);
                 throw e;
             } finally {
+                for (MorphTemplate classTemplate : classTemplates) {
+                    GenerationState.setCurrentMorphContext(
+                            GenerationState.currentMorphContext().withoutId(classTemplate.id()));
+                }
                 SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
             }
             finalizeClassFlags(thisKlass);

@@ -30,6 +30,7 @@ import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.CatchBlock;
 import jdk.test.lib.jittester.Continue;
 import jdk.test.lib.jittester.Declaration;
+import jdk.test.lib.jittester.FieldDeclarationSequence;
 import jdk.test.lib.jittester.If;
 import jdk.test.lib.jittester.Initialization;
 import jdk.test.lib.jittester.Literal;
@@ -96,6 +97,7 @@ public interface Visitor<T> {
     T visit(CounterManipulator node);
     T visit(Declaration node);
     T visit(DoWhile node);
+    T visit(FieldDeclarationSequence node);
     T visit(For node);
     T visit(Function node);
     T visit(FunctionDeclaration node);

@@ -46,6 +46,7 @@ import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
 import jdk.test.lib.jittester.utils.PseudoRandom;
+import jdk.test.lib.jittester.morph.MorphLegTarget;
 
 import java.util.ArrayList;
 import java.util.ArrayDeque;
@@ -169,13 +170,15 @@ class BlockFactory extends Factory<Block> {
                         rule = new Rule<>("block");
                         double mtLegWeight = GenerationState.currentFlowParams().mtLegWeight();
                         boolean wholeBlockMorphLeg = MorphLegFactory.hasWholeBlockLeg(
-                                GenerationState.currentMorphContext());
+                                GenerationState.currentMorphContext(), builder);
                         if (mtLegWeight > 0.0
-                                && MorphLegFactory.hasApplicableLeg(GenerationState.currentMorphContext())) {
+                                && MorphLegFactory.hasApplicableLeg(GenerationState.currentMorphContext(),
+                                        MorphLegTarget.BLOCK, builder)) {
                             // This hot rule usually has no active morph legs. Avoid adding a
                             // mostly-failing factory that would pay exception/checkpoint/rollback cost.
-                            rule.add("morph_leg", new MorphLegFactory(builder),
-                                    MorphLegFactory.weight(GenerationState.currentMorphContext(), mtLegWeight));
+                            rule.add("morph_leg", new MorphLegFactory(builder, MorphLegTarget.BLOCK),
+                                    MorphLegFactory.weight(GenerationState.currentMorphContext(), mtLegWeight,
+                                            MorphLegTarget.BLOCK, builder));
                         }
                         if (!wholeBlockMorphLeg) {
                             rule.add("statement", builder.getStatementFactory(), 8);

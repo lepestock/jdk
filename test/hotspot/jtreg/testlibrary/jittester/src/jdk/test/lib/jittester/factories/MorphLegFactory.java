@@ -23,11 +23,14 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.ArrayList;
+import java.util.List;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.morph.MorphContext;
 import jdk.test.lib.jittester.morph.MorphLegResult;
+import jdk.test.lib.jittester.morph.MorphLegTarget;
 import jdk.test.lib.jittester.morph.MorphTemplate;
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -36,26 +39,28 @@ class MorphLegFactory extends Factory<IRNode> {
     private static final String TEMPLATE_ID_EVENT = "morph.template.id";
     private static final String LEG_ID_EVENT = "morph.leg.id";
     private final IRNodeBuilder builder;
+    private final MorphLegTarget target;
 
-    MorphLegFactory(IRNodeBuilder builder) {
+    MorphLegFactory(IRNodeBuilder builder, MorphLegTarget target) {
         this.builder = builder;
+        this.target = target;
     }
 
-    static boolean hasApplicableLeg(MorphContext context) {
-        return context.hasTemplates();
+    static boolean hasApplicableLeg(MorphContext context, MorphLegTarget target, IRNodeBuilder builder) {
+        return !applicableTemplates(context, target, builder).isEmpty();
     }
 
-    static double weight(MorphContext context, double baseWeight) {
+    static double weight(MorphContext context, double baseWeight, MorphLegTarget target, IRNodeBuilder builder) {
         double multiplier = 0.0;
-        for (int i = 0; i < context.size(); i++) {
-            multiplier = Math.max(multiplier, context.get(i).legWeightMultiplier());
+        for (MorphTemplate template : applicableTemplates(context, target, builder)) {
+            multiplier = Math.max(multiplier, template.legWeightMultiplier());
         }
         return baseWeight * multiplier;
     }
 
-    static boolean hasWholeBlockLeg(MorphContext context) {
-        for (int i = 0; i < context.size(); i++) {
-            if (context.get(i).takesWholeBlock()) {
+    static boolean hasWholeBlockLeg(MorphContext context, IRNodeBuilder builder) {
+        for (MorphTemplate template : applicableTemplates(context, MorphLegTarget.BLOCK, builder)) {
+            if (template.takesWholeTarget(MorphLegTarget.BLOCK)) {
                 return true;
             }
         }
@@ -65,24 +70,40 @@ class MorphLegFactory extends Factory<IRNode> {
     @Override
     public IRNode produce() throws ProductionFailedException {
         MorphContext context = GenerationState.currentMorphContext();
-        if (!hasApplicableLeg(context)) {
+        List<MorphTemplate> applicableTemplates = applicableTemplates(context, target, builder);
+        if (applicableTemplates.isEmpty()) {
             throw new ProductionFailedException();
         }
-        int liveTemplateIndex = (int) (PseudoRandom.randomSilent() * context.size());
-        MorphTemplate liveTemplate = context.get(liveTemplateIndex);
+        int liveTemplateIndex = (int) (PseudoRandom.randomSilent() * applicableTemplates.size());
+        MorphTemplate liveTemplate = applicableTemplates.get(liveTemplateIndex);
         long templateId = createOrConsumeTemplateEvent(TEMPLATE_ID_EVENT, liveTemplate::id);
         int templateIndex = context.indexOfId(templateId);
         if (templateIndex < 0 || templateIndex >= context.size()) {
             throw new ProductionFailedException();
         }
         MorphTemplate template = context.get(templateIndex);
+        if (!template.canProduceLeg(target, builder)) {
+            throw new ProductionFailedException();
+        }
         int leg = Math.toIntExact(createOrConsumeTemplateEvent(LEG_ID_EVENT, template::nextLeg));
-        MorphLegResult result = template.produceLeg(leg, builder);
+        MorphLegResult result = template.produceLeg(target, leg, builder);
         MorphContext updated = result.templateExhausted()
                 ? context.without(templateIndex)
                 : context.withReplaced(templateIndex, result.updatedTemplate());
         GenerationState.setCurrentMorphContext(updated);
         return result.node();
+    }
+
+    private static List<MorphTemplate> applicableTemplates(MorphContext context,
+            MorphLegTarget target, IRNodeBuilder builder) {
+        ArrayList<MorphTemplate> result = new ArrayList<>();
+        for (int i = 0; i < context.size(); i++) {
+            MorphTemplate template = context.get(i);
+            if (template.canProduceLeg(target, builder)) {
+                result.add(template);
+            }
+        }
+        return result;
     }
 
     private static long createOrConsumeTemplateEvent(String name, ChoiceSupplier liveChoice) {

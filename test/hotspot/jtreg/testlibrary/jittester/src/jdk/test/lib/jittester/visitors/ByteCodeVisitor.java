@@ -48,6 +48,7 @@ import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.CatchBlock;
 import jdk.test.lib.jittester.Continue;
 import jdk.test.lib.jittester.Declaration;
+import jdk.test.lib.jittester.FieldDeclarationSequence;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.If;
 import jdk.test.lib.jittester.Initialization;
@@ -821,6 +822,11 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
             emitPop(((Initialization) child).getVariableInfo().type);
         }
         return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public byte[] visit(FieldDeclarationSequence node) {
+        return iterateBlock(node);
     }
 
     @Override

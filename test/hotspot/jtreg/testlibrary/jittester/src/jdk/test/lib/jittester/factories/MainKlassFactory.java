@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
@@ -40,6 +41,7 @@ import jdk.test.lib.jittester.classes.MainKlass;
 import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.functions.FunctionDefinitionBlock;
 import jdk.test.lib.jittester.functions.StaticConstructorDefinition;
+import jdk.test.lib.jittester.morph.MorphTemplate;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -83,21 +85,36 @@ class MainKlassFactory extends Factory<MainKlass> {
                 .withStatementLimit(statementsInFunctionLimit)
                 .setLevel(1)
                 .setExceptionSafe(true);
-        IRNode variableDeclarations = builder.getVariableDeclarationBlockFactory().produce();
-        IRNode functionDefinitions = null;
-        if (!ProductionParams.disableFunctions.value()) {
-            functionDefinitions = builder
-                    .setFlags(FunctionInfo.NONRECURSIVE)
-                    .getFunctionDefinitionBlockFactory()
-                    .produce();
+        List<MorphTemplate> classTemplates = builder.createClassMorphTemplates();
+        for (MorphTemplate classTemplate : classTemplates) {
+            GenerationState.setCurrentMorphContext(
+                    GenerationState.currentMorphContext().withAdded(classTemplate));
         }
-        functionDefinitions = ensureMainClassStaticCollectionInitializer(builder, functionDefinitions);
-        IRNode testFunction = builder.setResultType(TypeList.VOID)
-                .withStatementLimit(statementsInTestFunctionLimit)
-                .withCodeContext(FlowParams.CodeContext.TEST)
-                .produceBlock();
-        SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
-        IRNode printVariables = builder.setLevel(2)
+        IRNode variableDeclarations;
+        IRNode functionDefinitions = null;
+        IRNode testFunction;
+        IRNode printVariables;
+        try {
+            variableDeclarations = builder.getVariableDeclarationBlockFactory().produce();
+            if (!ProductionParams.disableFunctions.value()) {
+                functionDefinitions = builder
+                        .setFlags(FunctionInfo.NONRECURSIVE)
+                        .getFunctionDefinitionBlockFactory()
+                        .produce();
+            }
+            functionDefinitions = ensureMainClassStaticCollectionInitializer(builder, functionDefinitions);
+            testFunction = builder.setResultType(TypeList.VOID)
+                    .withStatementLimit(statementsInTestFunctionLimit)
+                    .withCodeContext(FlowParams.CodeContext.TEST)
+                    .produceBlock();
+        } finally {
+            for (MorphTemplate classTemplate : classTemplates) {
+                GenerationState.setCurrentMorphContext(
+                        GenerationState.currentMorphContext().withoutId(classTemplate.id()));
+            }
+            SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
+        }
+        printVariables = builder.setLevel(2)
                 .getPrintVariablesFactory()
                 .produce();
         List<IRNode> childs = new ArrayList<>();

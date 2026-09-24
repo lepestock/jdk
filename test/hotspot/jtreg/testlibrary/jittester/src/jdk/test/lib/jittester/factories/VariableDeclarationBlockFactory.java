@@ -26,9 +26,14 @@ package jdk.test.lib.jittester.factories;
 import java.util.ArrayList;
 
 import jdk.test.lib.jittester.Declaration;
+import jdk.test.lib.jittester.FieldDeclarationSequence;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
+import jdk.test.lib.jittester.GenerationState;
+import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.VariableDeclarationBlock;
+import jdk.test.lib.jittester.morph.MorphLegTarget;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -55,7 +60,7 @@ class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> 
 
     @Override
     public VariableDeclarationBlock produce() throws ProductionFailedException {
-        ArrayList<Declaration> content = new ArrayList<>();
+        ArrayList<IRNode> content = new ArrayList<>();
         int configuredLimit = ProductionParams.dataMemberLimit.value();
         int randomPart = (int) Math.ceil(PseudoRandom.random() * configuredLimit);
         int floor = Math.max(1, configuredLimit / 2);
@@ -63,6 +68,7 @@ class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> 
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setOwnerKlass(ownerClass)
                 .withOperatorLimit(operatorLimit)
+                .setLevel(level)
                 .setIsLocal(false)
                 .setExceptionSafe(exceptionSafe);
         Factory<Declaration> declFactory = constantsOnly
@@ -70,7 +76,22 @@ class VariableDeclarationBlockFactory extends Factory<VariableDeclarationBlock> 
                 : builder.getDeclarationFactory();
         for (int i = 0; i < limit; i++) {
             try {
-                content.add(declFactory.produce());
+                double mtLegWeight = GenerationState.currentFlowParams().mtLegWeight();
+                if (mtLegWeight > 0.0 && MorphLegFactory.hasApplicableLeg(GenerationState.currentMorphContext(),
+                        MorphLegTarget.FIELD_DECLARATION, builder)) {
+                    Rule<IRNode> rule = new Rule<>("field_declaration");
+                    rule.add("morph_field_leg", new MorphLegFactory(builder, MorphLegTarget.FIELD_DECLARATION),
+                            MorphLegFactory.weight(GenerationState.currentMorphContext(), mtLegWeight,
+                                    MorphLegTarget.FIELD_DECLARATION, builder));
+                    rule.add("declaration", declFactory, 1.0);
+                    IRNode node = rule.produce();
+                    if (!(node instanceof Declaration || node instanceof FieldDeclarationSequence)) {
+                        throw new ProductionFailedException();
+                    }
+                    content.add(node);
+                } else {
+                    content.add(declFactory.produce());
+                }
             } catch (ProductionFailedException e) {
             }
         }

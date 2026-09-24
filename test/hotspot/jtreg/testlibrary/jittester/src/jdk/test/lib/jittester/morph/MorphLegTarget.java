@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,29 +21,9 @@
  * questions.
  */
 
-package jdk.test.lib.jittester;
+package jdk.test.lib.jittester.morph;
 
-import java.util.ArrayList;
-
-import jdk.test.lib.jittester.visitors.Visitor;
-
-public class VariableDeclarationBlock extends IRNode {
-    public VariableDeclarationBlock(ArrayList<? extends IRNode> content, int level) {
-        super(TypeList.VOID);
-        addChildren(content);
-        this.level = level;
-    }
-
-    @Override
-    public long complexity() {
-        return getChildren()
-                .stream()
-                .mapToLong(IRNode::complexity)
-                .sum();
-    }
-
-    @Override
-    public<T> T accept(Visitor<T> v) {
-        return v.visit(this);
-    }
+public enum MorphLegTarget {
+    BLOCK,
+    FIELD_DECLARATION
 }
