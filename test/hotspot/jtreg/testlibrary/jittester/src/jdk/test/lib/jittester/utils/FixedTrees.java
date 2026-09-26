@@ -50,7 +50,6 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.VariableInitialization;
-import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
 import jdk.test.lib.jittester.functions.Function;
 import jdk.test.lib.jittester.functions.FunctionDefinition;
@@ -94,8 +93,10 @@ public class FixedTrees {
     private static FunctionDefinition buildPrintFunction(TypeKlass owner, List<Symbol> vars, String functionName) {
         ArrayList<IRNode> nodes = new ArrayList<>();
 
-        VariableInfo resultInfo = new VariableInfo("result", owner, TypeList.STRING, VariableInfo.LOCAL);
-        nodes.add(new Statement(new VariableInitialization(resultInfo, new Literal("[", TypeList.STRING)), true));
+        TypeKlass stringBuilderKlass = new TypeKlass("java.lang.StringBuilder");
+        VariableInfo resultInfo = new VariableInfo("result", owner, stringBuilderKlass, VariableInfo.LOCAL);
+        nodes.add(new Statement(new VariableInitialization(resultInfo,
+                buildStringBuilderConstructor(owner, stringBuilderKlass, new Literal("[", TypeList.STRING))), true));
         LocalVariable resultVar = new LocalVariable(resultInfo);
 
         TypeKlass printerKlass = new TypeKlass(ProductionParams.printerClassName());
@@ -108,13 +109,11 @@ public class FixedTrees {
         for (int i = 0; i < vars.size(); i++) {
             Symbol v = vars.get(i);
             IRNode variable = variableAccess(owner, thisVar, v);
-            Function reducedCollectionPrint = buildReducedCollectionPrint(owner, printerKlass, printerModeKlass, v, variable);
+            Function reducedCollectionPrint = buildReducedPrint(owner, printerKlass, printerModeKlass, v, variable);
             if (reducedCollectionPrint != null) {
-                nodes.add(new Statement(new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar,
-                        reducedCollectionPrint), true));
+                nodes.add(appendToStringBuilder(stringBuilderKlass, resultVar, reducedCollectionPrint));
                 if (i < vars.size() - 1) {
-                    nodes.add(new Statement(new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar,
-                            EOL), true));
+                    nodes.add(appendToStringBuilder(stringBuilderKlass, resultVar, EOL));
                 }
                 continue;
             }
@@ -130,8 +129,8 @@ public class FixedTrees {
                 call = new Function(owner, printInfo, null);
                 call.addChild(new Literal(v.owner.getName() + "." + v.name, TypeList.STRING));
             } else {
-                nodes.add(new Statement(new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar,
-                        new Literal(v.owner.getName() + "." + v.name + " = ", TypeList.STRING)), true));
+                nodes.add(appendToStringBuilder(stringBuilderKlass, resultVar,
+                        new Literal(v.owner.getName() + "." + v.name + " = ", TypeList.STRING)));
                 VariableInfo argInfo = new VariableInfo("arg", printerKlass, v.type, VariableInfo.LOCAL
                         | VariableInfo.INITIALIZED);
                 FunctionInfo printInfo = new FunctionInfo("print", printerKlass,
@@ -139,20 +138,56 @@ public class FixedTrees {
                 call = new Function(owner, printInfo, null);
             }
             call.addChild(variable);
-            nodes.add(new Statement(new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar,
-                    call), true));
+            nodes.add(appendToStringBuilder(stringBuilderKlass, resultVar, call));
             if (i < vars.size() - 1) {
-                nodes.add(new Statement(new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar,
-                        EOL), true));
+                nodes.add(appendToStringBuilder(stringBuilderKlass, resultVar, EOL));
             }
         }
-        nodes.add(new Statement(
-                new BinaryOperator(OperatorKind.COMPOUND_ADD, TypeList.STRING, resultVar, new Literal("]\n", TypeList.STRING)),
-                true));
+        nodes.add(appendToStringBuilder(stringBuilderKlass, resultVar, new Literal("]\n", TypeList.STRING)));
 
         Block block = blockWithAnchor(owner, TypeList.STRING, nodes, 1, "print-function:" + functionName);
         FunctionInfo printInfo = new FunctionInfo(functionName, owner, TypeList.STRING, 0L, FunctionInfo.PUBLIC, thisInfo);
-        return new FunctionDefinition(printInfo, new ArrayList<>(), block, new Return(resultVar));
+        return new FunctionDefinition(printInfo, new ArrayList<>(), block,
+                new Return(stringBuilderToString(stringBuilderKlass, resultVar)));
+    }
+
+    private static Function buildStringBuilderConstructor(TypeKlass owner, TypeKlass stringBuilderKlass,
+                                                          IRNode initialValue) {
+        VariableInfo argInfo = new VariableInfo("str", owner, TypeList.STRING,
+                VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+        FunctionInfo constructorInfo = new FunctionInfo(stringBuilderKlass.getName(), stringBuilderKlass,
+                stringBuilderKlass, 0L, FunctionInfo.PUBLIC, argInfo);
+        Function constructor = new Function(owner, constructorInfo, new ArrayList<>());
+        constructor.addChild(initialValue);
+        return constructor;
+    }
+
+    private static Statement appendToStringBuilder(TypeKlass stringBuilderKlass, LocalVariable builder,
+                                                   IRNode value) {
+        Function append = new Function(stringBuilderKlass, stringBuilderAppendInfo(stringBuilderKlass), null);
+        append.addChild(builder);
+        append.addChild(value);
+        return new Statement(append, true);
+    }
+
+    private static Function stringBuilderToString(TypeKlass stringBuilderKlass, LocalVariable builder) {
+        Function toString = new Function(stringBuilderKlass, stringBuilderToStringInfo(stringBuilderKlass), null);
+        toString.addChild(builder);
+        return toString;
+    }
+
+    private static FunctionInfo stringBuilderAppendInfo(TypeKlass stringBuilderKlass) {
+        return new FunctionInfo("append", stringBuilderKlass, stringBuilderKlass, 0L, FunctionInfo.PUBLIC,
+                new VariableInfo("this", stringBuilderKlass, stringBuilderKlass,
+                        VariableInfo.LOCAL | VariableInfo.INITIALIZED),
+                new VariableInfo("arg", stringBuilderKlass, TypeList.STRING,
+                        VariableInfo.LOCAL | VariableInfo.INITIALIZED));
+    }
+
+    private static FunctionInfo stringBuilderToStringInfo(TypeKlass stringBuilderKlass) {
+        return new FunctionInfo("toString", stringBuilderKlass, TypeList.STRING, 0L, FunctionInfo.PUBLIC,
+                new VariableInfo("this", stringBuilderKlass, stringBuilderKlass,
+                        VariableInfo.LOCAL | VariableInfo.INITIALIZED));
     }
 
     private static IRNode variableAccess(TypeKlass owner, LocalVariable thisVar, Symbol v) {
@@ -164,49 +199,39 @@ public class FixedTrees {
         return new NonStaticMemberVariable(thisVar, varInfo);
     }
 
-    private static Function buildReducedCollectionPrint(TypeKlass owner,
-                                                        TypeKlass printerKlass,
-                                                        TypeKlass printerModeKlass,
-                                                        Symbol v,
-                                                        IRNode variable) {
-        if (!(v.type instanceof TypeArray arrayType) || !arrayType.getType().equals(TypeList.INT)) {
-            return null;
-        }
-        String printMethodName = reducedCollectionPrintMethodName(arrayType);
-        if (printMethodName == null) {
+    private static Function buildReducedPrint(TypeKlass owner,
+                                              TypeKlass printerKlass,
+                                              TypeKlass printerModeKlass,
+                                              Symbol v,
+                                              IRNode variable) {
+        if (!reducedPrintingEnabled() || !(v.type instanceof TypeKlass || v.type instanceof TypeArray)) {
             return null;
         }
 
         VariableInfo pathArgInfo = new VariableInfo("path", printerKlass, TypeList.STRING,
                 VariableInfo.LOCAL | VariableInfo.INITIALIZED);
-        VariableInfo valueArgInfo = new VariableInfo("arg", printerKlass, arrayType,
+        VariableInfo valueArgInfo = new VariableInfo("arg", printerKlass, TypeList.OBJECT,
                 VariableInfo.LOCAL | VariableInfo.INITIALIZED);
         VariableInfo modeArgInfo = new VariableInfo("mode", printerKlass, printerModeKlass,
                 VariableInfo.LOCAL | VariableInfo.INITIALIZED);
-        FunctionInfo printInfo = new FunctionInfo(printMethodName, printerKlass,
+        FunctionInfo printInfo = new FunctionInfo("printReduced", printerKlass,
                 TypeList.STRING, 0, FunctionInfo.PUBLIC | FunctionInfo.STATIC,
                 pathArgInfo, valueArgInfo, modeArgInfo);
         Function call = new Function(owner, printInfo, null);
         call.addChild(new Literal(v.owner.getName() + "." + v.name, TypeList.STRING));
         call.addChild(variable);
-        call.addChild(printerMode(owner, printerModeKlass));
+        call.addChild(reducedPrinterMode(owner, printerModeKlass));
         return call;
     }
 
-    private static String reducedCollectionPrintMethodName(TypeArray arrayType) {
-        if (arrayType.getStorageKind() == IndexedStorageKind.LIST) {
-            return arrayType.getDimensions() == 1 ? "printIntList" : null;
-        }
-        if (arrayType.getStorageKind() == IndexedStorageKind.ARRAY && arrayType.getDimensions() <= 3) {
-            return "printIntArray";
-        }
-        return null;
+    private static boolean reducedPrintingEnabled() {
+        return ProductionParams.collectionPrintReductionPercent.value() > 0;
     }
 
-    private static StaticMemberVariable printerMode(TypeKlass owner, TypeKlass printerModeKlass) {
-        int reductionPercent = Math.max(0, Math.min(100, ProductionParams.collectionPrintReductionPercent.value()));
-        String mode = PseudoRandom.randomNotNegative(100) < reductionPercent ? "REDUCED" : "FULL";
-        VariableInfo modeInfo = new VariableInfo(mode, printerModeKlass, printerModeKlass,
+    private static StaticMemberVariable reducedPrinterMode(TypeKlass owner, TypeKlass printerModeKlass) {
+        // Reduced object/container printing is structural and recursive. Once enabled,
+        // keep it deterministic so a rare FULL choice cannot produce multi-GB stdout.
+        VariableInfo modeInfo = new VariableInfo("REDUCED", printerModeKlass, printerModeKlass,
                 VariableInfo.PUBLIC | VariableInfo.STATIC | VariableInfo.FINAL);
         return new StaticMemberVariable(owner, modeInfo);
     }
