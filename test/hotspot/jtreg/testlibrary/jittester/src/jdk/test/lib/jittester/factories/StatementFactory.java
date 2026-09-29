@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.List;
+import jdk.test.lib.jittester.FlowParams;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -36,6 +37,7 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -60,7 +62,36 @@ class StatementFactory extends Factory<Statement> {
                 + Math.max(0, ProductionParams.arrayProductionWeightBonus.value()) / 100.0;
         rule.add("array_creation", builder.getCollectionCreationFactory(), arrayWeight);
         rule.add("assignment", builder.getAssignmentOperatorFactory());
-//        rule.add("function", builder.getFunctionFactory(), 0.1);
+        double generatedFunctionWeight = generatedFunctionStatementWeight();
+        if (!exceptionSafe && generatedFunctionWeight > 0.0) {
+            rule.add("generated_function", builder.getGeneratedFunctionFactory(), generatedFunctionWeight);
+        }
+    }
+
+    private static double generatedFunctionStatementWeight() {
+        FlowParams flowParams = GenerationState.currentFlowParams();
+        if (flowParams.codeContext() != FlowParams.CodeContext.TEST
+                && flowParams.codeContext() != FlowParams.CodeContext.METHOD) {
+            return 0.0;
+        }
+        double baseWeight = Math.max(0, ProductionParams.generatedFunctionStatementWeight.value());
+        if (baseWeight <= 0.0) {
+            return 0.0;
+        }
+        long loopMultiplier = flowParams.loopExecutionMultiplier();
+        if (loopMultiplier <= 0) {
+            return baseWeight;
+        }
+        int decayK = Math.max(0, ProductionParams.generatedFunctionLoopCallDecayK.value());
+        if (decayK <= 0) {
+            return 0.0;
+        }
+        int currentRank = flowParams.currentFunctionRank();
+        if (currentRank != FunctionInfo.GENERATED_RANK_ROOT
+                && currentRank != flowParams.loopGeneratedFunctionCallRank()) {
+            return 0.0;
+        }
+        return baseWeight * ((double) decayK / (decayK + loopMultiplier));
     }
 
     private static Type pickStatementResultType() {

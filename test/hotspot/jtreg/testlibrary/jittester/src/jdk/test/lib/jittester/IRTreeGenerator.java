@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import jdk.test.lib.jittester.factories.IRNodeBuilder;
 import jdk.test.lib.jittester.corelib.CoreLibSymbols;
 import jdk.test.lib.jittester.corelib.CoreLibSymbolsLoader;
+import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -55,6 +56,10 @@ public class IRTreeGenerator {
         SymbolTable.removeAll();
         TypeList.removeAll();
         GenerationState.setCurrentMainClassName(name);
+        GenerationState.setCurrentFlowParams(GenerationState.currentFlowParams()
+                .withLoopGeneratedFunctionCallRank(randomGeneratedRank())
+                .withLoopExecutionMultiplier(0)
+                .advance());
 
         IRNodeBuilder builder = new IRNodeBuilder()
                 .setPrefix(name)
@@ -81,6 +86,12 @@ public class IRTreeGenerator {
             ex.printStackTrace(System.out);
         }
         return new Test(seed, mainClass, privateClasses);
+    }
+
+    private static int randomGeneratedRank() {
+        return FunctionInfo.GENERATED_RANK_MIN
+                + PseudoRandom.randomNotNegative(FunctionInfo.GENERATED_RANK_MAX
+                - FunctionInfo.GENERATED_RANK_MIN + 1);
     }
 
     /**

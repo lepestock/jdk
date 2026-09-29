@@ -35,8 +35,14 @@ import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 public class FunctionInfo extends Symbol {
+    public static final int GENERATED_RANK_NONE = 0;
+    public static final int GENERATED_RANK_MIN = 1;
+    public static final int GENERATED_RANK_MAX = 5;
+    public static final int GENERATED_RANK_ROOT = GENERATED_RANK_MAX + 1;
+
     public ArrayList<VariableInfo> argTypes;
     public long complexity = 0;
+    public int generatedRank = GENERATED_RANK_NONE;
     public static final int ABSTRACT = 0x40;
     public static final int NONRECURSIVE = 0x80;
     public static final int SYNCHRONIZED = 0x100;
@@ -69,6 +75,7 @@ public class FunctionInfo extends Symbol {
             argTypes.add(new VariableInfo(i));
         }
         complexity = value.complexity;
+        generatedRank = value.generatedRank;
         argumentConstraints = new HashMap<>(value.argumentConstraints);
         resultWrapper = value.resultWrapper;
     }

@@ -138,6 +138,7 @@ class ArrayKernelLoopFactory extends SafeFactory<For> {
                     .withCollectionExtractionExpressionWeightPercent(KERNEL_ARRAY_EXTRACTION_EXPRESSION_WEIGHT_PERCENT)
                     .withMoreReadOnlyVars(iterationVariable)
                     .withMoreIterationVariables(iterationVariable)
+                    .withEnteredLoop(iterationCount)
                     .produceBlock();
             if (body1.getChildren().isEmpty() && !shouldKeepEmptyBody()) {
                 throw new ProductionFailedException();

@@ -88,6 +88,7 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
         IRNode body;
         Return returnNode;
         FunctionInfo functionInfo;
+        int generatedRank = randomGeneratedRank();
         try {
             IRNodeBuilder builder = new IRNodeBuilder().setArgumentType(ownerClass);
             int i = 0;
@@ -103,6 +104,7 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
             while (true) {
                 functionInfo = new FunctionInfo(name, ownerClass, resType, 0, flags,
                         argumentsInfo);
+                functionInfo.generatedRank = generatedRank;
                 if (thisKlassFuncs.contains(functionInfo)
                         || FunctionDefinition.isInvalidOverride(functionInfo, parentFuncs)) {
                     // try changing the signature, and go checking again.
@@ -119,8 +121,10 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
                 ThisVariableControl.pushForbidThis();
             }
             FlowParams previous = GenerationState.currentFlowParams();
-            GenerationState.setCurrentFlowParams(previous.withCodeContext(
-                    FlowParams.CodeContext.METHOD).advance());
+            GenerationState.setCurrentFlowParams(previous.withCodeContext(FlowParams.CodeContext.METHOD)
+                    .withCurrentFunctionRank(generatedRank)
+                    .withLoopExecutionMultiplier(0)
+                    .advance());
             try {
                 body = builder.setOwnerKlass(ownerClass)
                         .setResultType(resType)
@@ -133,18 +137,18 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
                         .setCanHaveContinues(false)
                         .setCanHaveReturn(true)
                         .produceBlock();
+                if (!resType.equals(TypeList.VOID)) {
+                    returnNode = builder.setExceptionSafe(false)
+                            .getReturnFactory()
+                            .produce();
+                } else {
+                    returnNode = new Return(new Nothing());
+                }
             } finally {
                 GenerationState.setCurrentFlowParams(previous);
                 if (staticMethod) {
                     ThisVariableControl.popForbidThis();
                 }
-            }
-            if (!resType.equals(TypeList.VOID)) {
-                returnNode = builder.setExceptionSafe(false)
-                        .getReturnFactory()
-                        .produce();
-            } else {
-                returnNode = new Return(new Nothing());
             }
         } finally {
             SymbolTable.pop();
@@ -152,8 +156,15 @@ class FunctionDefinitionFactory extends Factory<FunctionDefinition> {
         // addChildren(argumentsDeclaration); // not neccessary while complexity() doesn't use it
         functionInfo = new FunctionInfo(name, ownerClass, resType, body == null ? 0 : body.complexity(),
                 flags, argumentsInfo);
+        functionInfo.generatedRank = generatedRank;
         // If it's all ok, add the function to the symbol table.
         SymbolTable.add(functionInfo);
         return new FunctionDefinition(functionInfo, argumentsDeclaration, body, returnNode);
+    }
+
+    private static int randomGeneratedRank() {
+        return FunctionInfo.GENERATED_RANK_MIN
+                + PseudoRandom.randomNotNegative(FunctionInfo.GENERATED_RANK_MAX
+                - FunctionInfo.GENERATED_RANK_MIN + 1);
     }
 }

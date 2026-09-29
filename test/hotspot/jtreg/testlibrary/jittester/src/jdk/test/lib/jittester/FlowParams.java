@@ -28,6 +28,8 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 
+import jdk.test.lib.jittester.functions.FunctionInfo;
+
 /**
  * Scoped generation-time parameters that may vary across replay/mutation scopes.
  *
@@ -35,6 +37,8 @@ import java.util.Set;
  * so values can be migrated from {@link ProductionParams} gradually.</p>
  */
 public final class FlowParams {
+    private static final long MAX_LOOP_EXECUTION_MULTIPLIER = 1_000_000L;
+
     public enum CodeContext {
         UNKNOWN,
         STATIC_INITIALIZER,
@@ -61,6 +65,9 @@ public final class FlowParams {
     private final Set<String> iterationVariables;
     private final boolean normalizeNaN;
     private final CodeContext codeContext;
+    private final int currentFunctionRank;
+    private final int loopGeneratedFunctionCallRank;
+    private final long loopExecutionMultiplier;
     private final double mtCreationProbability;
     private final double loopIntrinsificationMorphTemplateCreationProbability;
     private final int morphTemplateCreationRepeatProbability;
@@ -79,6 +86,9 @@ public final class FlowParams {
                        Set<String> iterationVariables,
                        boolean normalizeNaN,
                        CodeContext codeContext,
+                       int currentFunctionRank,
+                       int loopGeneratedFunctionCallRank,
+                       long loopExecutionMultiplier,
                        double mtCreationProbability,
                        double loopIntrinsificationMorphTemplateCreationProbability,
                        int morphTemplateCreationRepeatProbability,
@@ -101,6 +111,9 @@ public final class FlowParams {
         this.iterationVariables = iterationVariables;
         this.normalizeNaN = normalizeNaN;
         this.codeContext = codeContext;
+        this.currentFunctionRank = currentFunctionRank;
+        this.loopGeneratedFunctionCallRank = loopGeneratedFunctionCallRank;
+        this.loopExecutionMultiplier = loopExecutionMultiplier;
         this.mtCreationProbability = mtCreationProbability;
         this.loopIntrinsificationMorphTemplateCreationProbability =
                 loopIntrinsificationMorphTemplateCreationProbability;
@@ -127,6 +140,9 @@ public final class FlowParams {
                 Collections.emptySet(),
                 false,
                 CodeContext.UNKNOWN,
+                FunctionInfo.GENERATED_RANK_ROOT,
+                FunctionInfo.GENERATED_RANK_NONE,
+                0,
                 percentToProbability(ProductionParams.lockEliminationMorphTemplateProbability.value()),
                 percentToProbability(ProductionParams.morphTemplateLoopIntrinsificationProbability.value()),
                 ProductionParams.morphTemplateCreationRepeatProbability.value(),
@@ -212,6 +228,18 @@ public final class FlowParams {
         return codeContext;
     }
 
+    public int currentFunctionRank() {
+        return currentFunctionRank;
+    }
+
+    public int loopGeneratedFunctionCallRank() {
+        return loopGeneratedFunctionCallRank;
+    }
+
+    public long loopExecutionMultiplier() {
+        return loopExecutionMultiplier;
+    }
+
     public double mtCreationProbability() {
         return mtCreationProbability;
     }
@@ -282,6 +310,18 @@ public final class FlowParams {
         return new Builder(this).withCodeContext(value);
     }
 
+    public Builder withCurrentFunctionRank(int value) {
+        return new Builder(this).withCurrentFunctionRank(value);
+    }
+
+    public Builder withLoopGeneratedFunctionCallRank(int value) {
+        return new Builder(this).withLoopGeneratedFunctionCallRank(value);
+    }
+
+    public Builder withLoopExecutionMultiplier(long value) {
+        return new Builder(this).withLoopExecutionMultiplier(value);
+    }
+
     public Builder withMtCreationProbability(double value) {
         return new Builder(this).withMtCreationProbability(value);
     }
@@ -323,6 +363,9 @@ public final class FlowParams {
                 + ", iterationVariables=" + iterationVariables
                 + ", normalizeNaN=" + normalizeNaN
                 + ", codeContext=" + codeContext
+                + ", currentFunctionRank=" + currentFunctionRank
+                + ", loopGeneratedFunctionCallRank=" + loopGeneratedFunctionCallRank
+                + ", loopExecutionMultiplier=" + loopExecutionMultiplier
                 + ", mtCreationProbability=" + mtCreationProbability
                 + ", loopIntrinsificationMorphTemplateCreationProbability="
                 + loopIntrinsificationMorphTemplateCreationProbability
@@ -376,6 +419,9 @@ public final class FlowParams {
         private LinkedHashSet<String> iterationVariables;
         private boolean normalizeNaN;
         private CodeContext codeContext;
+        private int currentFunctionRank;
+        private int loopGeneratedFunctionCallRank;
+        private long loopExecutionMultiplier;
         private double mtCreationProbability;
         private double loopIntrinsificationMorphTemplateCreationProbability;
         private int morphTemplateCreationRepeatProbability;
@@ -403,6 +449,9 @@ public final class FlowParams {
             this.iterationVariables = new LinkedHashSet<>(base.iterationVariables);
             this.normalizeNaN = base.normalizeNaN;
             this.codeContext = base.codeContext;
+            this.currentFunctionRank = base.currentFunctionRank;
+            this.loopGeneratedFunctionCallRank = base.loopGeneratedFunctionCallRank;
+            this.loopExecutionMultiplier = base.loopExecutionMultiplier;
             this.mtCreationProbability = base.mtCreationProbability;
             this.loopIntrinsificationMorphTemplateCreationProbability =
                     base.loopIntrinsificationMorphTemplateCreationProbability;
@@ -515,6 +564,32 @@ public final class FlowParams {
             return this;
         }
 
+        public Builder withCurrentFunctionRank(int value) {
+            this.currentFunctionRank = value;
+            return this;
+        }
+
+        public Builder withLoopGeneratedFunctionCallRank(int value) {
+            this.loopGeneratedFunctionCallRank = value;
+            return this;
+        }
+
+        public Builder withLoopExecutionMultiplier(long value) {
+            this.loopExecutionMultiplier = Math.max(0, Math.min(MAX_LOOP_EXECUTION_MULTIPLIER, value));
+            return this;
+        }
+
+        public Builder withEnteredLoop(long iterationLimit) {
+            long base = loopExecutionMultiplier <= 0 ? 1 : loopExecutionMultiplier;
+            long normalizedLimit = Math.max(1, iterationLimit);
+            if (base >= MAX_LOOP_EXECUTION_MULTIPLIER / normalizedLimit) {
+                loopExecutionMultiplier = MAX_LOOP_EXECUTION_MULTIPLIER;
+            } else {
+                loopExecutionMultiplier = Math.min(MAX_LOOP_EXECUTION_MULTIPLIER, base * normalizedLimit);
+            }
+            return this;
+        }
+
         public Builder withMtCreationProbability(double value) {
             this.mtCreationProbability = normalizeProbability(value);
             return this;
@@ -555,6 +630,9 @@ public final class FlowParams {
                     Collections.unmodifiableSet(new LinkedHashSet<>(iterationVariables)),
                     normalizeNaN,
                     codeContext,
+                    currentFunctionRank,
+                    loopGeneratedFunctionCallRank,
+                    loopExecutionMultiplier,
                     mtCreationProbability,
                     loopIntrinsificationMorphTemplateCreationProbability,
                     morphTemplateCreationRepeatProbability,

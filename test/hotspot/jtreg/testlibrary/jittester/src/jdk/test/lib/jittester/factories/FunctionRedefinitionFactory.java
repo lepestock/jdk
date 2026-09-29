@@ -24,6 +24,9 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+
+import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.Nothing;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -91,6 +94,14 @@ class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
             if (staticMethod) {
                 ThisVariableControl.pushForbidThis();
             }
+            FlowParams previous = GenerationState.currentFlowParams();
+            int generatedRank = functionInfo.generatedRank == FunctionInfo.GENERATED_RANK_NONE
+                    ? FunctionInfo.GENERATED_RANK_ROOT
+                    : functionInfo.generatedRank;
+            GenerationState.setCurrentFlowParams(previous.withCodeContext(FlowParams.CodeContext.METHOD)
+                    .withCurrentFunctionRank(generatedRank)
+                    .withLoopExecutionMultiplier(0)
+                    .advance());
             try {
                 body = builder.setLevel(level)
                         .setSubBlock(true)
@@ -106,6 +117,7 @@ class FunctionRedefinitionFactory extends Factory<FunctionRedefinition> {
                     returnNode = new Return(new Nothing());
                 }
             } finally {
+                GenerationState.setCurrentFlowParams(previous);
                 if (staticMethod) {
                     ThisVariableControl.popForbidThis();
                 }

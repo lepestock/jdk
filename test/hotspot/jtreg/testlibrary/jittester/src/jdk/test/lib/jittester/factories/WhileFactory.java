@@ -100,6 +100,7 @@ class WhileFactory extends SafeFactory<While> {
         FlowParams previousFlowParams = GenerationState.currentFlowParams();
         GenerationState.setCurrentFlowParams(previousFlowParams
                 .withMoreIterationVariables(iterationVariable)
+                .withEnteredLoop(thisLoopIterLimit)
                 .advance());
         try {
             loop.condition = builder

@@ -104,6 +104,8 @@ public class ProductionParams {
     public static Option<String> methodResultWrappersFile = null;
     public static Option<Integer> expressionGuardRawBp = null;
     public static Option<Integer> intrinsicCallWeightBonus = null;
+    public static Option<Integer> generatedFunctionStatementWeight = null;
+    public static Option<Integer> generatedFunctionLoopCallDecayK = null;
     public static Option<Integer> magnetismLevel = null;
     public static Option<Integer> arrayProductionWeightBonus = null;
     public static Option<Integer> arraysNullRestrictedValueProbability = null;
@@ -279,6 +281,12 @@ public class ProductionParams {
                 "Raw-expression probability for expression guards, in basis points; 20 means 0.20%");
         intrinsicCallWeightBonus = optionResolver.addIntegerOption("intrinsic-call-weight-bonus", 0,
                 "Additional selection weight for calls marked intrinsic (0 disables bias)");
+        generatedFunctionStatementWeight = optionResolver.addIntegerOption(
+                "generated-function-statement-weight", 0,
+                "Statement production weight for calls to generated member functions");
+        generatedFunctionLoopCallDecayK = optionResolver.addIntegerOption(
+                "generated-function-loop-call-decay-k", 0,
+                "Decay K for generated member function calls inside loops; 0 disables loop calls");
         magnetismLevel = optionResolver.addIntegerOption("magnetism-level", 0,
                 "Magnet matching mode: 0=strict exact-id preference (deterministic), >0 enables distance-weighted stochastic magnetism");
         arrayProductionWeightBonus = optionResolver.addIntegerOption("array-production-weight-bonus", 0,

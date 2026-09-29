@@ -117,6 +117,7 @@ public class DoWhileFactory extends SafeFactory<DoWhile> {
         FlowParams previousFlowParams = GenerationState.currentFlowParams();
         GenerationState.setCurrentFlowParams(previousFlowParams
                 .withMoreIterationVariables(iterationVariable)
+                .withEnteredLoop(thisLoopIterLimit)
                 .advance());
         try {
             loop.condition = lcFactory.produce();

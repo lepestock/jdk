@@ -121,6 +121,7 @@ class ForFactory extends SafeFactory<For> {
         FlowParams previousFlowParams = GenerationState.currentFlowParams();
         GenerationState.setCurrentFlowParams(previousFlowParams
                 .withMoreIterationVariables(iterationVariable)
+                .withEnteredLoop(thisLoopIterLimit)
                 .advance());
         try {
             loop.condition = builder

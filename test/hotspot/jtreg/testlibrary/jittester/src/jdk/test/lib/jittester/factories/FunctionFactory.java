@@ -28,6 +28,8 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Predicate;
 import jdk.test.lib.jittester.MethodArgumentConstraint;
 import jdk.test.lib.jittester.MethodResultWrapper;
 import jdk.test.lib.jittester.IRNode;
@@ -56,17 +58,24 @@ public class FunctionFactory extends SafeFactory<Function> {
     private final int operatorLimit;
     private final boolean exceptionSafe;
     private final TypeKlass ownerClass;
+    private final Predicate<FunctionInfo> functionFilter;
     public static long SEED;
     private static long INTERVENTION = 131992649516573L;
     public static VariableInfo forbiddenThizz = null;
 
     FunctionFactory(int operatorLimit, TypeKlass ownerClass,
             Type resultType, boolean exceptionSafe) {
+        this(operatorLimit, ownerClass, resultType, exceptionSafe, functionInfo -> true);
+    }
+
+    FunctionFactory(int operatorLimit, TypeKlass ownerClass,
+            Type resultType, boolean exceptionSafe, Predicate<FunctionInfo> functionFilter) {
         functionInfo = new FunctionInfo();
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.functionInfo.type = resultType;
         this.exceptionSafe = exceptionSafe;
+        this.functionFilter = functionFilter;
     }
 
     @Override
@@ -80,7 +89,7 @@ public class FunctionFactory extends SafeFactory<Function> {
             Logger.log(SEED == INTERVENTION, "FunctionFactory :forbiddenThizz " + forbiddenThizz +
                     " :thizz-type " + forbiddenThizz.type +
                     " :result-type " + functionInfo.type +
-                    " :types-equals? " + functionInfo.type.equals(forbiddenThizz.type));
+                    " :types-equals? " + Objects.equals(functionInfo.type, forbiddenThizz.type));
             SymbolTable.removeVariable(forbiddenThizz);
             thizzRemoved = true;
         }
@@ -98,6 +107,8 @@ public class FunctionFactory extends SafeFactory<Function> {
         if (!allFunctions.isEmpty()) {
             boolean replayMode = Genome.isReplayActive();
             List<FunctionInfo> remainingFunctions = toFunctionList(allFunctions);
+            remainingFunctions.removeIf(candidate -> !functionFilter.test(candidate)
+                    || !allowedByCurrentFunctionRank(candidate));
             remainingFunctions.sort(FUNCTION_ORDER);
             Collection<TypeKlass> klassHierarchy = ownerClass.getAllParents();
             while (!remainingFunctions.isEmpty()) {
@@ -296,6 +307,24 @@ public class FunctionFactory extends SafeFactory<Function> {
             out.add((FunctionInfo) symbol);
         }
         return out;
+    }
+
+    static boolean isGeneratedFunction(FunctionInfo functionInfo) {
+        return functionInfo.name != null
+                && functionInfo.name.startsWith("func_")
+                && !functionInfo.isConstructor();
+    }
+
+    private static boolean allowedByCurrentFunctionRank(FunctionInfo functionInfo) {
+        if (!isGeneratedFunction(functionInfo)) {
+            return true;
+        }
+        int callerRank = GenerationState.currentFlowParams().currentFunctionRank();
+        if (callerRank == FunctionInfo.GENERATED_RANK_ROOT) {
+            return true;
+        }
+        return functionInfo.generatedRank != FunctionInfo.GENERATED_RANK_NONE
+                && functionInfo.generatedRank < callerRank;
     }
 
     private static final Comparator<FunctionInfo> FUNCTION_ORDER = Comparator

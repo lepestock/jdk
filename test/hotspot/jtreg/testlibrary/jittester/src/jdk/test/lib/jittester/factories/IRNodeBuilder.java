@@ -146,6 +146,7 @@ public class IRNodeBuilder {
     private Optional<Integer> arrayExtractionExpressionWeightPercent = Optional.empty();
     private Optional<String[]> moreReadOnlyVars = Optional.empty();
     private Optional<String[]> moreIterationVariables = Optional.empty();
+    private Optional<Long> enteredLoopIterationLimit = Optional.empty();
     private Optional<Boolean> normalizeNaN = Optional.empty();
 
     public Factory<ArgumentDeclaration> getArgumentDeclarationFactory() {
@@ -318,6 +319,7 @@ public class IRNodeBuilder {
         arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withCollectionExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
+        enteredLoopIterationLimit.ifPresent(flowBuilder::withEnteredLoop);
         normalizeNaN.ifPresent(flowBuilder::withNormalizeNaN);
         FlowParams nextFlowParams = flowBuilder.advance();
         GenerationState.setCurrentFlowParams(nextFlowParams);
@@ -482,6 +484,7 @@ public class IRNodeBuilder {
         arrayExtractionExpressionWeightPercent.ifPresent(flowBuilder::withCollectionExtractionExpressionWeightPercent);
         moreReadOnlyVars.ifPresent(flowBuilder::withMoreReadOnlyVars);
         moreIterationVariables.ifPresent(flowBuilder::withMoreIterationVariables);
+        enteredLoopIterationLimit.ifPresent(flowBuilder::withEnteredLoop);
         normalizeNaN.ifPresent(flowBuilder::withNormalizeNaN);
         GenerationState.setCurrentFlowParams(flowBuilder.advance());
         try {
@@ -641,6 +644,11 @@ public class IRNodeBuilder {
     public Factory<Function> getFunctionFactory() {
         return new FunctionFactory(flowParams().operatorLimit(), getOwnerClass(),
                 resultType.orElse(null), getExceptionSafe());
+    }
+
+    public Factory<Function> getGeneratedFunctionFactory() {
+        return new FunctionFactory(flowParams().operatorLimit(), getOwnerClass(),
+                null, getExceptionSafe(), FunctionFactory::isGeneratedFunction);
     }
 
     public Factory<FunctionRedefinitionBlock> getFunctionRedefinitionBlockFactory(Collection<Symbol>
@@ -1054,6 +1062,11 @@ public class IRNodeBuilder {
 
     public IRNodeBuilder withMoreIterationVariables(String... values) {
         moreIterationVariables = Optional.ofNullable(values);
+        return this;
+    }
+
+    public IRNodeBuilder withEnteredLoop(long iterationLimit) {
+        enteredLoopIterationLimit = Optional.of(iterationLimit);
         return this;
     }
 

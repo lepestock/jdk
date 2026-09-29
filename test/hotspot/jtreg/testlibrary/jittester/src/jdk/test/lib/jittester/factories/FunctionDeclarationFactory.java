@@ -72,6 +72,7 @@ class FunctionDeclarationFactory extends Factory<FunctionDeclaration> {
         SymbolTable.push();
         FunctionInfo functionInfo;
         IRNodeBuilder builder = new IRNodeBuilder().setArgumentType(ownerClass);
+        int generatedRank = randomGeneratedRank();
         try {
             int i = 0;
             for (; i < argNumber; i++) {
@@ -85,6 +86,7 @@ class FunctionDeclarationFactory extends Factory<FunctionDeclaration> {
             Collection<Symbol> parentFuncs = FunctionDefinition.getFuncsFromParents(ownerClass);
             while (true) {
                 functionInfo = new FunctionInfo(name, ownerClass, resType, 0, flags, argumentsInfo);
+                functionInfo.generatedRank = generatedRank;
                 if (thisKlassFuncs.contains(functionInfo)
                         || FunctionDefinition.isInvalidOverride(functionInfo, parentFuncs)) {
                     // try changing the signature, and go checking again.
@@ -101,8 +103,15 @@ class FunctionDeclarationFactory extends Factory<FunctionDeclaration> {
         }
         //addChildren(argumentsDeclaration); // not neccessary while complexity is 0
         functionInfo = new FunctionInfo(name, ownerClass, resType, 0, flags, argumentsInfo);
+        functionInfo.generatedRank = generatedRank;
         // If it's all ok, add the function to the symbol table.
         SymbolTable.add(functionInfo);
         return new FunctionDeclaration(functionInfo, argumentsDeclaration);
+    }
+
+    private static int randomGeneratedRank() {
+        return FunctionInfo.GENERATED_RANK_MIN
+                + PseudoRandom.randomNotNegative(FunctionInfo.GENERATED_RANK_MAX
+                - FunctionInfo.GENERATED_RANK_MIN + 1);
     }
 }
