@@ -488,11 +488,11 @@ public class Printer {
             }
         } else if (array instanceof float[] values) {
             for (float value : values) {
-                updateLong(crc, Float.floatToRawIntBits(value));
+                updateLong(crc, normalizedFloatBits(value));
             }
         } else if (array instanceof double[] values) {
             for (double value : values) {
-                updateLong(crc, Double.doubleToRawLongBits(value));
+                updateLong(crc, normalizedDoubleBits(value));
             }
         }
     }
@@ -606,8 +606,8 @@ public class Printer {
             case FLOATING -> {
                 double current = ((Number) value).doubleValue();
                 updateLong(crc, value instanceof Float
-                        ? Float.floatToRawIntBits((Float) value)
-                        : Double.doubleToRawLongBits(current));
+                        ? normalizedFloatBits((Float) value)
+                        : normalizedDoubleBits(current));
             }
             case GENERIC -> updateString(crc, printScalar(value));
             case STRING -> throw new IllegalArgumentException("string groups use positional CRCs");
@@ -947,10 +947,18 @@ public class Printer {
             }
             double current = ((Number) value).doubleValue();
             updateLong(crc, value instanceof Float
-                    ? Float.floatToRawIntBits((Float) value)
-                    : Double.doubleToRawLongBits(current));
+                    ? normalizedFloatBits((Float) value)
+                    : normalizedDoubleBits(current));
         }
         appendReducedValue(sb, path, shape, Long.toString(crc.getValue()));
+    }
+
+    private static int normalizedFloatBits(float value) {
+        return Float.floatToIntBits(value);
+    }
+
+    private static long normalizedDoubleBits(double value) {
+        return Double.doubleToLongBits(value);
     }
 
     private static void reduceStringGroup(StringBuilder sb,

@@ -42,6 +42,7 @@ public class ReducerTests {
         testNullMapsHaveValueBucket();
         testStructuralOnlyGroupsUseValueCrc();
         testStringReductionPreservesValueSequence();
+        testFloatingNaNsAreCanonicalized();
     }
 
     private static void testNestedArrayShapeIsPreserved() {
@@ -150,6 +151,36 @@ public class ReducerTests {
         assertNotEquals(reducedParts(reduced(new String[] {"abc", null}))[1],
                 reducedParts(reduced(new String[] {"abc"}))[1],
                 "string null slot");
+    }
+
+    private static void testFloatingNaNsAreCanonicalized() {
+        double canonicalDoubleNaN = Double.longBitsToDouble(0x7ff8000000000000L);
+        double negativeDoubleNaN = Double.longBitsToDouble(0xfff8000000000000L);
+        double payloadDoubleNaN = Double.longBitsToDouble(0x7ff8123456789ab0L);
+
+        assertEquals(reduced(new double[] {canonicalDoubleNaN, 1.0}),
+                reduced(new double[] {negativeDoubleNaN, 1.0}),
+                "primitive double array NaN canonicalization");
+        assertEquals(reduced(new double[] {canonicalDoubleNaN, payloadDoubleNaN}),
+                reduced(new double[] {payloadDoubleNaN, negativeDoubleNaN}),
+                "primitive double array NaN payload canonicalization");
+        assertEquals(reduced(new Double[] {canonicalDoubleNaN, 1.0}),
+                reduced(new Double[] {negativeDoubleNaN, 1.0}),
+                "boxed double array NaN canonicalization");
+        assertEquals(reduced(new ArrayList<>(Arrays.asList(canonicalDoubleNaN, 1.0))),
+                reduced(new ArrayList<>(Arrays.asList(negativeDoubleNaN, 1.0))),
+                "boxed double list NaN canonicalization");
+
+        float canonicalFloatNaN = Float.intBitsToFloat(0x7fc00000);
+        float negativeFloatNaN = Float.intBitsToFloat(0xffc00000);
+        float payloadFloatNaN = Float.intBitsToFloat(0x7fc12345);
+
+        assertEquals(reduced(new float[] {canonicalFloatNaN, payloadFloatNaN}),
+                reduced(new float[] {negativeFloatNaN, canonicalFloatNaN}),
+                "primitive float array NaN canonicalization");
+        assertEquals(reduced(new Float[] {canonicalFloatNaN, 1.0F}),
+                reduced(new Float[] {negativeFloatNaN, 1.0F}),
+                "boxed float array NaN canonicalization");
     }
 
     private static void printDrawingSample() {
