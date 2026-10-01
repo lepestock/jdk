@@ -64,6 +64,9 @@ public class JavaCodeGenerator extends TestsGenerator {
         StringBuilder code = new StringBuilder();
         JavaCodeVisitor vis = new JavaCodeVisitor();
         code.append(getJtregHeader(mainClassName, seed));
+        code.append("/*\n")
+            .append(CodeStructureStats.analyze(privateClasses, mainClass).formatSourceHeader())
+            .append("*/\n");
         int richestExpressionCount = Math.max(0, ProductionParams.debugRichestExpressionCount.value());
         if (richestExpressionCount > 0) {
             ExpressionStats.Snapshot snapshot = ExpressionStats.analyze(privateClasses, mainClass);
@@ -135,17 +138,24 @@ public class JavaCodeGenerator extends TestsGenerator {
 
     @Override
     protected List<String> goldenRunVmOptions() {
-        return nullRestrictedArraysEnabled()
-                ? List.of(NULL_RESTRICTED_ARRAY_EXPORT)
-                : List.of();
+        ArrayList<String> options = new ArrayList<>(ProductionParams.runtimeOutputVmOptions());
+        if (nullRestrictedArraysEnabled()) {
+            options.add(NULL_RESTRICTED_ARRAY_EXPORT);
+        }
+        return options;
     }
 
     @Override
     protected String jtDriverOptions() {
-        if (!nullRestrictedArraysEnabled()) {
-            return super.jtDriverOptions();
+        ArrayList<String> options = new ArrayList<>(ProductionParams.runtimeOutputVmOptions());
+        if (nullRestrictedArraysEnabled()) {
+            options.add(NULL_RESTRICTED_ARRAY_EXPORT);
         }
-        return NULL_RESTRICTED_ARRAY_EXPORT + " " + super.jtDriverOptions();
+        String base = super.jtDriverOptions();
+        if (!base.isBlank()) {
+            options.add(base);
+        }
+        return String.join(" ", options);
     }
 
     private static boolean nullRestrictedArraysEnabled() {

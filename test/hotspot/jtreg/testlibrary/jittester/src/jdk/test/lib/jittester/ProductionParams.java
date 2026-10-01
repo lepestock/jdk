@@ -112,7 +112,10 @@ public class ProductionParams {
     public static Option<Boolean> arrayKernelCollectionElementLValues = null;
     public static Option<Integer> collectionPrintReductionPercent = null;
     public static Option<String> embedUtilsPath = null;
+    public static Option<String> runtimeOutputMode = null;
+    public static Option<String> pulsemapFile = null;
     public static Option<Boolean> pulsemap = null;
+    public static Option<Boolean> pulsemapArrayReads = null;
     public static Option<Boolean> disableFixedTreeExceptionGuards = null;
     public static Option<String> generators = null;
     public static Option<String> generatorsFactories = null;
@@ -173,6 +176,8 @@ public class ProductionParams {
             "intrinsic-methods-file",
             "method-argument-constraints-file",
             "method-result-wrappers-file",
+            "runtime-output-mode",
+            "pulsemap-file",
             "testbase-dir",
             "temp-dir",
             "individual-sandboxes",
@@ -296,8 +301,16 @@ public class ProductionParams {
                 "Additional selection weight percent for choosing array-typed class field declarations");
         embedUtilsPath = optionResolver.addStringOption("embed-utils-path", "",
                 "Source root with JitTester utility sources to embed into each generated Java test source");
+        runtimeOutputMode = optionResolver.addStringOption("runtime-output-mode", "printer",
+                "Generated-test runtime output mode: printer, pulse, or printer_and_pulse");
+        pulsemapFile = optionResolver.addStringOption("pulsemap-file", "",
+                "PulseMap output file path; required by runtime-output-mode=printer_and_pulse");
         pulsemap = optionResolver.addBooleanOption(null, "pulsemap", false,
                 "Enable pulsemap prototype instrumentation with block-level runtime beats");
+        pulsemapArrayReads = optionResolver.addBooleanOption(null,
+                "pulsemap-array-reads",
+                false,
+                "Emit PulseMap events for array reads; off by default because it rewrites expressions");
         disableFixedTreeExceptionGuards = optionResolver.addBooleanOption(
                 null,
                 "safety-exceptions-disable",
@@ -455,6 +468,7 @@ public class ProductionParams {
         applyConfDirDefaults(parser);
         activeOptionResolver = parser;
         mutationOverrides = Collections.unmodifiableMap(overrideParseResult.overrides);
+        validateRuntimeOutputMode();
         validateMutationOverrides();
 
         GenerationState.initializeFlowParamsFromProductionParams();
@@ -522,6 +536,80 @@ public class ProductionParams {
 
     public static boolean isGenomeRecordEnabled() {
         return genomeRecordEnabled;
+    }
+
+    public enum RuntimeOutputMode {
+        PRINTER("printer", true, false),
+        PULSE("pulse", false, true),
+        PRINTER_AND_PULSE("printer_and_pulse", true, true);
+
+        private final String optionValue;
+        private final boolean printerEnabled;
+        private final boolean pulseEnabled;
+
+        RuntimeOutputMode(String optionValue, boolean printerEnabled, boolean pulseEnabled) {
+            this.optionValue = optionValue;
+            this.printerEnabled = printerEnabled;
+            this.pulseEnabled = pulseEnabled;
+        }
+
+        public boolean printerEnabled() {
+            return printerEnabled;
+        }
+
+        public boolean pulseEnabled() {
+            return pulseEnabled;
+        }
+
+        private static RuntimeOutputMode parse(String value) {
+            for (RuntimeOutputMode mode : values()) {
+                if (mode.optionValue.equals(value)) {
+                    return mode;
+                }
+            }
+            throw new IllegalArgumentException("Unknown --runtime-output-mode value: " + value
+                    + " (expected printer, pulse, or printer_and_pulse)");
+        }
+    }
+
+    public static RuntimeOutputMode runtimeOutputMode() {
+        return RuntimeOutputMode.parse(runtimeOutputMode.value());
+    }
+
+    public static boolean printerOutputEnabled() {
+        return runtimeOutputMode().printerEnabled();
+    }
+
+    public static boolean pulsemapEnabled() {
+        return pulsemap.value() || runtimeOutputMode().pulseEnabled();
+    }
+
+    public static List<String> runtimeOutputVmOptions() {
+        RuntimeOutputMode mode = runtimeOutputMode();
+        ArrayList<String> options = new ArrayList<>();
+        if (!mode.pulseEnabled() && pulsemapFile.value().isBlank()) {
+            return options;
+        }
+        if (mode.pulseEnabled()) {
+            options.add("-Djittester.pulse.max.records=0");
+        }
+        String file = pulsemapFile.value().trim();
+        if (mode == RuntimeOutputMode.PULSE && file.isBlank()) {
+            options.add("-Djittester.pulse.file=-");
+        } else if (!file.isBlank()) {
+            options.add("-Djittester.pulse.file=" + file);
+        }
+        return options;
+    }
+
+    private static void validateRuntimeOutputMode() {
+        RuntimeOutputMode mode = runtimeOutputMode();
+        String file = pulsemapFile.value().trim();
+        if (mode == RuntimeOutputMode.PRINTER_AND_PULSE
+                && (file.isBlank() || "-".equals(file) || "stdout".equalsIgnoreCase(file))) {
+            throw new IllegalArgumentException(
+                    "--runtime-output-mode=printer_and_pulse requires a real --pulsemap-file path");
+        }
     }
 
     public static boolean hasMutationOverrides() {

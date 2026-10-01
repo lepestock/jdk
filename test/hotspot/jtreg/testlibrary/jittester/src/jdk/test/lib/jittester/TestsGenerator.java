@@ -156,7 +156,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
     }
 
     protected void compilePulse() {
-        if (!ProductionParams.pulsemap.value()) {
+        if (!ProductionParams.pulsemapEnabled()) {
             return;
         }
         Path root = getRoot();
@@ -194,7 +194,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
             header.append(" jdk.test.lib.jittester.jtreg.Printer")
                   .append(" jdk.test.lib.jittester.jtreg.RuntimeSupport");
         }
-        if (ProductionParams.pulsemap.value()) {
+        if (ProductionParams.pulsemapEnabled()) {
             header.append(" jdk.test.lib.jittester.pulse.Pulse");
         }
         header.append("\n");

@@ -36,6 +36,7 @@ import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.Break;
 import jdk.test.lib.jittester.CastOperator;
 import jdk.test.lib.jittester.CatchBlock;
+import jdk.test.lib.jittester.CodeStructureStats;
 import jdk.test.lib.jittester.Continue;
 import jdk.test.lib.jittester.Declaration;
 import jdk.test.lib.jittester.FieldDeclarationSequence;
@@ -290,7 +291,8 @@ public class JavaCodeVisitor implements Visitor<String> {
                 && !TypeBoxingUtil.isWrapperType(node.getResultType())) {
             return unboxedValueExpression(node.getResultType(), access);
         }
-        if (!ProductionParams.pulsemap.value()
+        if (!ProductionParams.pulsemapEnabled()
+                || !ProductionParams.pulsemapArrayReads.value()
                 || !node.getStorageKind().supportsPulseArrayRead()
                 || node.getChildren().size() < 2
                 || !(array.getResultType() instanceof TypeArray)) {
@@ -457,7 +459,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     private static String blockPulseStartScope(int level, IRNode body) {
-        if (!ProductionParams.pulsemap.value()) {
+        if (!ProductionParams.pulsemapEnabled()) {
             return "";
         }
         String token = blockGeneToken(body);
@@ -469,7 +471,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     private static String blockPulseEndScope(int level, IRNode body) {
-        if (!ProductionParams.pulsemap.value()) {
+        if (!ProductionParams.pulsemapEnabled()) {
             return "";
         }
         String token = blockGeneToken(body);
@@ -517,10 +519,41 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     private static boolean hasBlockPulseScope(IRNode body) {
-        if (!ProductionParams.pulsemap.value()) {
+        if (!ProductionParams.pulsemapEnabled()) {
             return false;
         }
         return !blockGeneToken(body).isEmpty();
+    }
+
+    private static String methodPulseBeat(int level, String kind, String owner, String id) {
+        if (!ProductionParams.pulsemapEnabled()) {
+            return "";
+        }
+        return PrintingUtils.align(level)
+                + "jdk.test.lib.jittester.pulse.Pulse.beat(\"method\", \":kind "
+                + kind + " :owner " + owner + " :id " + id + "\");\n";
+    }
+
+    private static String methodPulseBeat(int level, String kind, FunctionInfo functionInfo) {
+        return methodPulseBeat(level, kind, functionInfo.owner.getName(), methodPulseId(functionInfo));
+    }
+
+    private static String functionPulseBeat(int level, FunctionInfo functionInfo) {
+        return methodPulseBeat(level,
+                CodeStructureStats.isSupportFunction(functionInfo) ? "support" : "function",
+                functionInfo);
+    }
+
+    private static String methodPulseId(FunctionInfo functionInfo) {
+        return sanitizePulseToken(functionInfo.owner.getName()) + "." + sanitizePulseToken(functionInfo.name)
+                + "(" + functionInfo.argTypes.stream()
+                        .map(arg -> sanitizePulseToken(arg.type.getName()))
+                        .collect(Collectors.joining(","))
+                + ")";
+    }
+
+    private static String sanitizePulseToken(String value) {
+        return value.replaceAll("\\s+", "_");
     }
 
     private static String pulseArrayReadMethodName(TypeArray arrayType) {
@@ -561,7 +594,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     private static String loopPulseStartScope(int level, String loopKind, Loop loop, IRNode body) {
-        if (!ProductionParams.pulsemap.value()) {
+        if (!ProductionParams.pulsemapEnabled()) {
             return "";
         }
         String token = blockGeneToken(body);
@@ -580,7 +613,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     private static String loopPulseIterationBeat(int level, String loopKind, Loop loop, IRNode body) {
-        if (!ProductionParams.pulsemap.value()) {
+        if (!ProductionParams.pulsemapEnabled()) {
             return "";
         }
         String token = blockGeneToken(body);
@@ -599,7 +632,7 @@ public class JavaCodeVisitor implements Visitor<String> {
     }
 
     private static String loopPulseEndScope(int level, Loop loop, IRNode body) {
-        if (!ProductionParams.pulsemap.value()) {
+        if (!ProductionParams.pulsemapEnabled()) {
             return "";
         }
         String token = blockGeneToken(body);
@@ -656,6 +689,7 @@ public class JavaCodeVisitor implements Visitor<String> {
             .append(args)
             .append(")\n")
             .append(openBraceWithGene(node.getLevel() + 1, body))
+            .append(methodPulseBeat(node.getLevel() + 2, "constructor", node.getFunctionInfo()))
             .append(body != null ? body.accept(this) : "")
             .append(closeBraceWithGene(node.getLevel() + 1, body));
         return code.toString();
@@ -996,6 +1030,7 @@ public class JavaCodeVisitor implements Visitor<String> {
         FunctionInfo functionInfo = node.getFunctionInfo();
         return funcAttributes(functionInfo) + functionInfo.type.accept(this) + " " + functionInfo.name + "(" + args + ")" + "\n"
                 + openBraceWithGene(node.getLevel() + 1, body)
+                + functionPulseBeat(node.getLevel() + 2, functionInfo)
                 + body.accept(this)
                 + (ret != null ? PrintingUtils.align(node.getLevel() + 2) + ret.accept(this) + "\n" : "")
                 + closeBraceWithGene(node.getLevel() + 1, body) + "\n";
@@ -1027,6 +1062,7 @@ public class JavaCodeVisitor implements Visitor<String> {
         FunctionInfo functionInfo = node.getFunctionInfo();
         return funcAttributes(functionInfo) + functionInfo.type.accept(this) + " " + functionInfo.name + "(" + args + ")" + "\n"
                 + openBraceWithGene(level + 1, body)
+                + functionPulseBeat(level + 2, functionInfo)
                 + body.accept(this)
                 + (ret != null ? PrintingUtils.align(level + 2) + ret.accept(this) + "\n" : "")
                 + closeBraceWithGene(level + 1, body);
@@ -1295,6 +1331,7 @@ public class JavaCodeVisitor implements Visitor<String> {
                 + (memberFunctions != null ? memberFunctions.accept(this): "") + "\n"
                 + "    private void test()\n"
                 + "    {\n"
+                + methodPulseBeat(2, "test", name, sanitizePulseToken(name) + ".test()")
                 + testFunction.accept(this)
                 + "    }" + addComplexityInfo(testFunction) + "\n"
                 + printVariables.accept(this)
@@ -1377,6 +1414,8 @@ public class JavaCodeVisitor implements Visitor<String> {
     public String visit(StaticConstructorDefinition node) {
         IRNode body = node.getChild(0);
         return "static {\n"
+                + methodPulseBeat(node.getLevel() + 1, "static-init", node.getOwner().getName(),
+                        sanitizePulseToken(node.getOwner().getName()) + ".<clinit>()")
                 + (body != null ? body.accept(this): "")
                 + PrintingUtils.align(node.getLevel()) + "}";
     }

@@ -238,6 +238,7 @@ public class FixedTrees {
 
     public static FunctionDefinition generateMainOrExecuteMethod(TypeKlass owner, boolean isMain) {
         boolean disableExceptionGuards = ProductionParams.disableFixedTreeExceptionGuards.value();
+        boolean printerOutputEnabled = ProductionParams.printerOutputEnabled();
         Nothing nothing = new Nothing();
         ArrayList<IRNode> testCallNodeContent = new ArrayList<>();
         VariableInfo tInfo = new VariableInfo("t", owner, owner, VariableInfo.LOCAL);
@@ -307,9 +308,13 @@ public class FixedTrees {
             markerPrintArgs.add(systemOutVar);
             markerPrintArgs.add(new Literal("### ITERATION ###\n", TypeList.STRING));
             iterationMarkerPrint = new Function(printStreamKlass, printInfo, markerPrintArgs);
-            testAndPrintWithIterationMarkerContent.add(new Statement(iterationMarkerPrint, true));
+            if (printerOutputEnabled) {
+                testAndPrintWithIterationMarkerContent.add(new Statement(iterationMarkerPrint, true));
+            }
             testAndPrintWithIterationMarkerContent.add(new Statement(testCallNode, true));
-            testAndPrintWithIterationMarkerContent.add(new Statement(print, true));
+            if (printerOutputEnabled) {
+                testAndPrintWithIterationMarkerContent.add(new Statement(print, true));
+            }
             Block testAndPrintWithIterationMarkerBlock = blockWithAnchor(
                     owner,
                     TypeList.VOID,
@@ -362,17 +367,19 @@ public class FixedTrees {
         catchBlocks3.add(new CatchBlock(printExceptionBlock, throwables, 2));
 
         if (mainLoopForNode != null && !disableExceptionGuards) {
-            // Keep main-loop iterations alive and always print state:
-            // marker -> try(test) catch(Throwable) -> print(state)
+            // Keep main-loop iterations alive. In printer modes also emit
+            // marker/state snapshots around the guarded test call.
             ArrayList<IRNode> guardedBodyContent = new ArrayList<>();
-            if (iterationMarkerPrint != null) {
+            if (printerOutputEnabled && iterationMarkerPrint != null) {
                 guardedBodyContent.add(new Statement(iterationMarkerPrint, true));
             }
             ArrayList<IRNode> testOnlyContent = new ArrayList<>();
             testOnlyContent.add(new Statement(testCallNode, true));
             Block testOnlyBlock = blockWithAnchor(owner, TypeList.VOID, testOnlyContent, 4, "main-loop-test-only");
             guardedBodyContent.add(new TryCatchBlock(testOnlyBlock, nothing, catchBlocks2, 4));
-            guardedBodyContent.add(new Statement(print, true));
+            if (printerOutputEnabled) {
+                guardedBodyContent.add(new Statement(print, true));
+            }
             Block guardedBody = blockWithAnchor(owner, TypeList.VOID, guardedBodyContent, 4, "main-loop-guarded-body");
             mainLoopForNode.getChildren().set(For.ForPart.BODY1.ordinal(), guardedBody);
         }
@@ -405,16 +412,16 @@ public class FixedTrees {
 
         List<IRNode> mainTryCatchBlockContent = new ArrayList<>();
         mainTryCatchBlockContent.add(new Statement(testInit, true));
-        if (isMain) {
+        if (isMain && printerOutputEnabled) {
             // Print one-time initial final-field snapshot before iterations start.
             mainTryCatchBlockContent.add(printInitialWithOptionalGuard);
         }
         mainTryCatchBlockContent.add(testCallWithOptionalGuard);
-        if (isMain) {
+        if (isMain && printerOutputEnabled) {
             // Print final-field snapshot once after the loop for diagnostics.
             mainTryCatchBlockContent.add(printFinalWithOptionalGuard);
         }
-        if (!isMain) {
+        if (!isMain && printerOutputEnabled) {
             // execute() runs test once, then prints once.
             mainTryCatchBlockContent.add(printWithOptionalGuard);
         }
