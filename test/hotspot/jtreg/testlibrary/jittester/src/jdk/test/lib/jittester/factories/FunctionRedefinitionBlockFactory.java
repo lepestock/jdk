@@ -60,9 +60,11 @@ class FunctionRedefinitionBlockFactory extends Factory<FunctionRedefinitionBlock
             for (Symbol symbol : functionSet) {
                 FunctionInfo functionInfo = (FunctionInfo) symbol;
                 Symbol thisSymbol = null;
-                if ((functionInfo.flags & FunctionInfo.STATIC) > 0) {
+                boolean isStatic = (functionInfo.flags & FunctionInfo.STATIC) > 0;
+                if (isStatic) {
                     thisSymbol = SymbolTable.get("this", VariableInfo.class);
                     SymbolTable.remove(thisSymbol);
+                    ThisVariableControl.pushForbidThis();
                 }
                 try {
                     content.add(builder.setFunctionInfo(functionInfo)
@@ -73,9 +75,11 @@ class FunctionRedefinitionBlockFactory extends Factory<FunctionRedefinitionBlock
                     if ((functionInfo.flags & FunctionInfo.STATIC) == 0) {
                         ownerClass.setAbstract();
                     }
-                }
-                if ((functionInfo.flags & FunctionInfo.STATIC) > 0) {
-                    SymbolTable.add(thisSymbol);
+                } finally {
+                    if (isStatic) {
+                        ThisVariableControl.popForbidThis();
+                        SymbolTable.add(thisSymbol);
+                    }
                 }
             }
         }

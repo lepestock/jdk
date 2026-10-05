@@ -76,7 +76,11 @@ class VariableInitializationFactory extends SafeFactory<VariableInitialization> 
                 .setExceptionSafe(exceptionSafe)
                 .setNoConsts(false);
         Symbol thisSymbol = null;
-        boolean forbidThisScope = isStatic;
+        // Value-class instance field initializers run before an explicit constructor invocation,
+        // so they cannot read instance state through implicit this.
+        boolean valueClassInstanceField = ownerClass != null && ownerClass.isValueKlass()
+                && !isLocal && !isStatic;
+        boolean forbidThisScope = isStatic || valueClassInstanceField;
         if (isStatic) {
             thisSymbol = SymbolTable.get("this", VariableInfo.class);
             SymbolTable.remove(thisSymbol);

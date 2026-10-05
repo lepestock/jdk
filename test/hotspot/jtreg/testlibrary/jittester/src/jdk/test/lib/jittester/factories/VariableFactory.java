@@ -156,8 +156,11 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
     }
 
     static boolean canUseImplicitThis(TypeKlass ownerClass, VariableInfo varInfo) {
+        Symbol thisSymbol = SymbolTable.get("this", VariableInfo.class);
         return !ThisVariableControl.isThisForbidden()
-                && ownerClass.equals(varInfo.owner);
+                && ownerClass.equals(varInfo.owner)
+                && thisSymbol instanceof VariableInfo thisInfo
+                && thisInfo.type.equals(ownerClass);
     }
 
     private static boolean hasConstructibleReceiver(TypeKlass ownerClass, TypeKlass type) {

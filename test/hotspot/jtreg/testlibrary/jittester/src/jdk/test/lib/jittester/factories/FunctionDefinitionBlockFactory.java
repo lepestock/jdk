@@ -97,9 +97,11 @@ class FunctionDefinitionBlockFactory extends Factory<FunctionDefinitionBlock> {
                         break;
                 }
                 Symbol thisSymbol = null;
-                if ((flags & FunctionInfo.STATIC) > 0) {
+                boolean isStatic = (flags & FunctionInfo.STATIC) > 0;
+                if (isStatic) {
                     thisSymbol = SymbolTable.get("this", VariableInfo.class);
                     SymbolTable.remove(thisSymbol);
+                    ThisVariableControl.pushForbidThis();
                 }
                 try {
                     content.add(builder.setName("func_" + i)
@@ -107,9 +109,11 @@ class FunctionDefinitionBlockFactory extends Factory<FunctionDefinitionBlock> {
                             .getFunctionDefinitionFactory()
                             .produce());
                 } catch (ProductionFailedException e) {
-                }
-                if ((flags & FunctionInfo.STATIC) > 0) {
-                    SymbolTable.add(thisSymbol);
+                } finally {
+                    if (isStatic) {
+                        ThisVariableControl.popForbidThis();
+                        SymbolTable.add(thisSymbol);
+                    }
                 }
             }
         }
