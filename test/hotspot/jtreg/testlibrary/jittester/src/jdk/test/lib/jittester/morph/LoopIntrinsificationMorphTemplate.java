@@ -68,11 +68,23 @@ public record LoopIntrinsificationMorphTemplate(long id, int nextLeg, int legCou
 
     public static LoopIntrinsificationMorphTemplate createOrNull(FlowParams flowParams,
             IRNodeBuilder builder) {
+        if (!shouldCreate(flowParams, builder)) {
+            return null;
+        }
+        return create(flowParams, builder);
+    }
+
+    public static boolean shouldCreate(FlowParams flowParams, IRNodeBuilder builder) {
         if (hardRejectionReason(flowParams, builder).isPresent()
                 || !shouldCreate(flowParams)
                 || (preferredRejectionReason(flowParams).isPresent() && !shouldExploreNonViable())) {
-            return null;
+            return false;
         }
+        return true;
+    }
+
+    public static LoopIntrinsificationMorphTemplate create(FlowParams flowParams,
+            IRNodeBuilder builder) {
         return new LoopIntrinsificationMorphTemplate();
     }
 
