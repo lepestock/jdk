@@ -39,6 +39,10 @@ public interface MorphTemplate {
         return 2.0;
     }
 
+    default double legWeightMultiplier(MorphLegTarget target) {
+        return legWeightMultiplier();
+    }
+
     default double legSelectionWeight() {
         return 1.0;
     }

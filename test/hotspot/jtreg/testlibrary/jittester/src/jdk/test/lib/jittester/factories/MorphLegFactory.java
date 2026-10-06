@@ -53,7 +53,7 @@ class MorphLegFactory extends Factory<IRNode> {
     static double weight(MorphContext context, double baseWeight, MorphLegTarget target, IRNodeBuilder builder) {
         double multiplier = 0.0;
         for (MorphTemplate template : selectableTemplates(context, target, builder)) {
-            multiplier = Math.max(multiplier, template.legWeightMultiplier());
+            multiplier = Math.max(multiplier, template.legWeightMultiplier(target));
         }
         return baseWeight * multiplier;
     }
