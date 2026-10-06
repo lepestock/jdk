@@ -56,6 +56,7 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
     private final Type elementType;
     private final boolean assignmentCompatible;
     private final boolean arrayOnly;
+    private final boolean nullRestrictedOnly;
     private final int iterationOffset;
 
     IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType) {
@@ -74,10 +75,16 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
 
     IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType,
             boolean assignmentCompatible, boolean arrayOnly, int iterationOffset) {
+        this(ownerClass, elementType, assignmentCompatible, arrayOnly, false, iterationOffset);
+    }
+
+    IterationIndexedCollectionElementFactory(TypeKlass ownerClass, Type elementType,
+            boolean assignmentCompatible, boolean arrayOnly, boolean nullRestrictedOnly, int iterationOffset) {
         this.ownerClass = ownerClass;
         this.elementType = elementType;
         this.assignmentCompatible = assignmentCompatible;
         this.arrayOnly = arrayOnly;
+        this.nullRestrictedOnly = nullRestrictedOnly;
         this.iterationOffset = iterationOffset;
     }
 
@@ -171,13 +178,23 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
     private List<Symbol> candidateSymbols() {
         if (!assignmentCompatible) {
             ArrayList<Symbol> result = new ArrayList<>();
-            for (Symbol symbol : SymbolTable.get(new TypeArray(elementType, 1), VariableInfo.class)) {
+            Iterable<Symbol> symbols = nullRestrictedOnly
+                    ? SymbolTable.getAllCombined(VariableInfo.class)
+                    : SymbolTable.get(new TypeArray(elementType, 1), VariableInfo.class);
+            for (Symbol symbol : symbols) {
                 if (!(symbol instanceof VariableInfo varInfo)) {
                     continue;
                 }
-                if (arrayOnly
-                        && varInfo.type instanceof TypeArray arrayType
-                        && arrayType.getStorageKind() != IndexedStorageKind.ARRAY) {
+                if (!(varInfo.type instanceof TypeArray arrayType)) {
+                    continue;
+                }
+                if (arrayOnly && arrayType.getStorageKind() != IndexedStorageKind.ARRAY) {
+                    continue;
+                }
+                if (nullRestrictedOnly
+                        && (!arrayType.isNullRestricted()
+                                || arrayType.dimensions != 1
+                                || !arrayType.type.equals(elementType))) {
                     continue;
                 }
                 result.add(symbol);
@@ -193,6 +210,9 @@ class IterationIndexedCollectionElementFactory extends SafeFactory<IRNode> {
                 continue;
             }
             if (arrayOnly && arrayType.getStorageKind() != IndexedStorageKind.ARRAY) {
+                continue;
+            }
+            if (nullRestrictedOnly && !arrayType.isNullRestricted()) {
                 continue;
             }
             if (arrayType.dimensions != 1) {

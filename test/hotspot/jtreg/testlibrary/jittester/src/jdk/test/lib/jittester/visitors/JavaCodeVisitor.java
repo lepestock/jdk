@@ -51,6 +51,7 @@ import jdk.test.lib.jittester.Operator;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.PrintVariables;
 import jdk.test.lib.jittester.ProductionParams;
+import jdk.test.lib.jittester.RawJavaStatement;
 import jdk.test.lib.jittester.Statement;
 import jdk.test.lib.jittester.StatementSequence;
 import jdk.test.lib.jittester.StaticMemberVariable;
@@ -1364,6 +1365,11 @@ public class JavaCodeVisitor implements Visitor<String> {
         return FixedTrees.printVariablesAsFunction(node).accept(this)
                 + "\n"
                 + FixedTrees.printFinalVariablesAsFunction(node).accept(this);
+    }
+
+    @Override
+    public String visit(RawJavaStatement node) {
+        return node.code();
     }
 
     @Override

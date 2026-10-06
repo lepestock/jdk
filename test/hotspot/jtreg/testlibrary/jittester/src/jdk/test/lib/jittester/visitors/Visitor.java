@@ -38,6 +38,7 @@ import jdk.test.lib.jittester.LocalVariable;
 import jdk.test.lib.jittester.NonStaticMemberVariable;
 import jdk.test.lib.jittester.Nothing;
 import jdk.test.lib.jittester.PrintVariables;
+import jdk.test.lib.jittester.RawJavaStatement;
 import jdk.test.lib.jittester.Statement;
 import jdk.test.lib.jittester.StatementSequence;
 import jdk.test.lib.jittester.StaticMemberVariable;
@@ -118,6 +119,7 @@ public interface Visitor<T> {
     T visit(NonStaticMemberVariable node);
     T visit(Nothing node);
     T visit(PrintVariables node);
+    T visit(RawJavaStatement node);
     T visit(Return node);
     T visit(Throw node);
     T visit(Statement node);

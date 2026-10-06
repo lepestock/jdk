@@ -53,6 +53,7 @@ import jdk.test.lib.jittester.Statement;
 import jdk.test.lib.jittester.StaticMemberVariable;
 import jdk.test.lib.jittester.Switch;
 import jdk.test.lib.jittester.Symbol;
+import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.TernaryOperator;
 import jdk.test.lib.jittester.Throw;
 import jdk.test.lib.jittester.TryCatchBlock;
@@ -95,6 +96,7 @@ import jdk.test.lib.jittester.loops.While;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.diagnostics.SourceDiagnostics;
 import jdk.test.lib.jittester.morph.LockEliminationMorphTemplate;
+import jdk.test.lib.jittester.morph.InlineTypeFlatArrayMorphTemplate;
 import jdk.test.lib.jittester.morph.LoopIntrinsificationMorphTemplate;
 import jdk.test.lib.jittester.morph.MorphTemplate;
 import jdk.test.lib.jittester.utils.Genome;
@@ -224,6 +226,24 @@ public class IRNodeBuilder {
     public boolean hasOffsetIterationIndexedArrayElementCandidates(Type elementType, int offset) {
         return new IterationIndexedCollectionElementFactory(getOwnerClass(), elementType,
                 false, true, offset).hasCandidates();
+    }
+
+    public Factory<IRNode> getAssignmentCompatibleOffsetIterationIndexedArrayElementFactory(
+            Type elementType, int offset) {
+        return new IterationIndexedCollectionElementFactory(getOwnerClass(), elementType,
+                true, true, offset);
+    }
+
+    public Factory<IRNode> getOffsetIterationIndexedNullRestrictedArrayElementFactory(
+            Type elementType, int offset) {
+        return new IterationIndexedCollectionElementFactory(getOwnerClass(), elementType,
+                false, true, true, offset);
+    }
+
+    public boolean hasOffsetIterationIndexedNullRestrictedArrayElementCandidates(
+            Type elementType, int offset) {
+        return new IterationIndexedCollectionElementFactory(getOwnerClass(), elementType,
+                false, true, true, offset).hasCandidates();
     }
 
     public Factory<CollectionExtraction> getCollectionExtractionFactory() {
@@ -445,6 +465,10 @@ public class IRNodeBuilder {
 
     private static MorphTemplate createOneMorphTemplate(FlowParams flowParams, IRNodeBuilder builder) {
         ArrayList<MorphTemplateCreationCandidate> candidates = new ArrayList<>();
+        if (InlineTypeFlatArrayMorphTemplate.shouldCreate(flowParams, builder)) {
+            candidates.add(new MorphTemplateCreationCandidate(1.0,
+                    () -> InlineTypeFlatArrayMorphTemplate.create(flowParams, builder)));
+        }
         if (LoopIntrinsificationMorphTemplate.shouldCreate(flowParams, builder)) {
             candidates.add(new MorphTemplateCreationCandidate(1.0,
                     () -> LoopIntrinsificationMorphTemplate.create(flowParams, builder)));
@@ -498,7 +522,17 @@ public class IRNodeBuilder {
     private static MorphTemplate createOneClassMorphTemplate(FlowParams flowParams, IRNodeBuilder builder) {
         // Class-scope creation is opt-in per template. Block-scoped templates
         // such as lock-elimination and loop-intrinsification do not support it.
-        return null;
+        return InlineTypeFlatArrayMorphTemplate.createClassScopedOrNull(flowParams, builder);
+    }
+
+    private static boolean shouldAttemptAnotherMorphTemplateCreation(FlowParams flowParams, int attemptsCompleted) {
+        int percent = Math.max(0, flowParams.morphTemplateCreationRepeatProbability());
+        if (percent == 0) {
+            return false;
+        }
+        double probability = normalizeProbability((percent / 100.0) / Math.max(1, attemptsCompleted));
+        boolean liveChoice = probability > 0.0 && PseudoRandom.randomSilent() < probability;
+        return Genome.createOrConsumeBooleanDecisionGene(MT_CREATION_REPEAT_DECISION, liveChoice);
     }
 
     private static void maybeAddMtDiagnostics(Block block, List<MorphTemplate> templates) {
@@ -533,16 +567,6 @@ public class IRNodeBuilder {
     @FunctionalInterface
     private interface MorphTemplateCreator {
         MorphTemplate create();
-    }
-
-    private static boolean shouldAttemptAnotherMorphTemplateCreation(FlowParams flowParams, int attemptsCompleted) {
-        int percent = Math.max(0, flowParams.morphTemplateCreationRepeatProbability());
-        if (percent == 0) {
-            return false;
-        }
-        double probability = normalizeProbability((percent / 100.0) / Math.max(1, attemptsCompleted));
-        boolean liveChoice = probability > 0.0 && PseudoRandom.randomSilent() < probability;
-        return Genome.createOrConsumeBooleanDecisionGene(MT_CREATION_REPEAT_DECISION, liveChoice);
     }
 
     private static double normalizeProbability(double value) {
@@ -789,6 +813,19 @@ public class IRNodeBuilder {
         return new StableExpressionFactory(type).produce();
     }
 
+    public boolean hasDefaultConstructor(TypeKlass type) {
+        return !defaultConstructors(type).isEmpty();
+    }
+
+    public IRNode produceDefaultConstructor(TypeKlass type) throws ProductionFailedException {
+        ArrayList<FunctionInfo> constructors = defaultConstructors(type);
+        if (constructors.isEmpty()) {
+            throw new ProductionFailedException();
+        }
+        FunctionInfo constructor = constructors.get(PseudoRandom.randomNotNegative(constructors.size()));
+        return new Function(getOwnerClass(), constructor, List.of());
+    }
+
     public Factory<LocalVariable> getLocalVariableFactory() {
         return new LocalVariableFactory(/*getVariableType()*/getResultType(), getFlags());
     }
@@ -928,6 +965,13 @@ public class IRNodeBuilder {
     public IRNodeBuilder withLoopIntrinsificationMorphTemplateCreationProbability(double value) {
         flowParams = flowParams()
                 .withLoopIntrinsificationMorphTemplateCreationProbability(value)
+                .advance();
+        return this;
+    }
+
+    public IRNodeBuilder withInlineTypeFlatArrayMorphTemplateCreationProbability(double value) {
+        flowParams = flowParams()
+                .withInlineTypeFlatArrayMorphTemplateCreationProbability(value)
                 .advance();
         return this;
     }
@@ -1255,6 +1299,34 @@ public class IRNodeBuilder {
 
     public int currentLevel() {
         return getLevel();
+    }
+
+    private ArrayList<FunctionInfo> defaultConstructors(TypeKlass type) {
+        ArrayList<FunctionInfo> constructors = new ArrayList<>();
+        for (Symbol symbol : SymbolTable.get(type, FunctionInfo.class)) {
+            if (!(symbol instanceof FunctionInfo functionInfo)) {
+                continue;
+            }
+            if (!functionInfo.isConstructor() || !functionInfo.argTypes.isEmpty()) {
+                continue;
+            }
+            if (functionInfo.owner.isAbstract() || functionInfo.owner.isInterface()) {
+                continue;
+            }
+            if (!isVisibleFromCurrentOwner(functionInfo)) {
+                continue;
+            }
+            constructors.add(functionInfo);
+        }
+        return constructors;
+    }
+
+    private boolean isVisibleFromCurrentOwner(FunctionInfo functionInfo) {
+        if (getOwnerClass().equals(functionInfo.owner)) {
+            return true;
+        }
+        int access = functionInfo.flags & Symbol.ACCESS_ATTRS_MASK;
+        return access == Symbol.PUBLIC || access == Symbol.DEFAULT;
     }
 
     private boolean getIsInitialized() {

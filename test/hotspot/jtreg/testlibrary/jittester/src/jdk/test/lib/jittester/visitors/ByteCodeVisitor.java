@@ -60,6 +60,7 @@ import jdk.test.lib.jittester.Operator;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.PrintVariables;
 import jdk.test.lib.jittester.ProductionParams;
+import jdk.test.lib.jittester.RawJavaStatement;
 import jdk.test.lib.jittester.Statement;
 import jdk.test.lib.jittester.StatementSequence;
 import jdk.test.lib.jittester.StaticMemberVariable;
@@ -1371,6 +1372,11 @@ public class ByteCodeVisitor implements Visitor<byte[]> {
     @Override
     public byte[] visit(PrintVariables node) {
         return FixedTrees.printVariablesAsFunction(node).accept(this);
+    }
+
+    @Override
+    public byte[] visit(RawJavaStatement node) {
+        throw new UnsupportedOperationException("RawJavaStatement bytecode generation is not implemented");
     }
 
     @Override

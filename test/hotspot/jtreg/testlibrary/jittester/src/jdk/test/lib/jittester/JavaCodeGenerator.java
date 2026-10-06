@@ -159,7 +159,8 @@ public class JavaCodeGenerator extends TestsGenerator {
     }
 
     private static boolean nullRestrictedArraysEnabled() {
-        return ProductionParams.arraysNullRestrictedValueProbability.value() > 0;
+        return ProductionParams.arraysNullRestrictedValueProbability.value() > 0
+                || ProductionParams.morphTemplateInlineTypeFlatArrayProbability.value() > 0;
     }
 
     public static void main(String[] args) throws Exception {

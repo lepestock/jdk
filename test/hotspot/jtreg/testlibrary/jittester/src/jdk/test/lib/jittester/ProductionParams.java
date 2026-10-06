@@ -159,6 +159,10 @@ public class ProductionParams {
     public static Option<Boolean> debugMorphSourceDiagnostics = null;
     public static Option<Integer> lockEliminationMorphTemplateProbability = null;
     public static Option<Integer> morphTemplateLoopIntrinsificationProbability = null;
+    public static Option<Integer> morphTemplateInlineTypeFlatArrayProbability = null;
+    public static Option<Integer> morphTemplateInlineTypeFlatArrayNonTrivialProbability = null;
+    public static Option<Integer> morphTemplateInlineTypeFlatArrayLegSelectionWeight = null;
+    public static Option<Boolean> morphTemplateInlineTypeFlatArrayPulsemap = null;
     public static Option<Integer> morphTemplateCreationRepeatProbability = null;
     public static Option<Integer> arrayKernelEmptyBodyKeepProbability = null;
     public static Option<Integer> morphLockEliminationCreateLockVarProbability = null;
@@ -438,6 +442,23 @@ public class ProductionParams {
                 "morph-template-loop-intrinsification-probability",
                 0,
                 "Probability (0..100) to create a loop-intrinsification morph template in array-kernel blocks");
+        morphTemplateInlineTypeFlatArrayProbability = optionResolver.addIntegerOption(
+                "morph-template-inline-type-flat-array-probability",
+                0,
+                "Probability (0..100) to create an inline-type flat-array morph template");
+        morphTemplateInlineTypeFlatArrayNonTrivialProbability = optionResolver.addIntegerOption(
+                "morph-template-inline-type-flat-array-non-trivial-probability",
+                50,
+                "Probability (0..100) to use a non-trivial load/store inline-type flat-array leg shape");
+        morphTemplateInlineTypeFlatArrayLegSelectionWeight = optionResolver.addIntegerOption(
+                "morph-template-inline-type-flat-array-leg-selection-weight",
+                100,
+                "Selection weight percent for inline-type flat-array templates among applicable morph templates");
+        morphTemplateInlineTypeFlatArrayPulsemap = optionResolver.addBooleanOption(
+                null,
+                "morph-template-inline-type-flat-array-pulsemap",
+                false,
+                "Emit MTFA-specific pulsemap events for template leg materialization");
         morphTemplateCreationRepeatProbability = optionResolver.addIntegerOption(
                 "morph-template-creation-repeat-probability",
                 0,
