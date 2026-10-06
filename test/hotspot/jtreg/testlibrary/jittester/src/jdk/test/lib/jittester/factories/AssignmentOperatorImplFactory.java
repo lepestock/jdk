@@ -31,6 +31,7 @@ import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.OperatorKind;
 import jdk.test.lib.jittester.ProductionFailedException;
+import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
@@ -111,12 +112,14 @@ class AssignmentOperatorImplFactory extends BinaryOperatorFactory {
             if (uninitializedVarLValueFactory.hasCandidates(v -> true)) {
                 rule.add("uninitialized_nonconst_var", uninitializedVarLValueFactory);
             }
-            // Inside array-kernel blocks, array lvalue indices must follow the kernel iterator.
-            IterationIndexedCollectionElementFactory arrayElementLValueFactory =
-                    new IterationIndexedCollectionElementFactory((TypeKlass) ownerClass, leftOperandType,
-                            true, opKind != OperatorKind.ASSIGN);
-            if (arrayElementLValueFactory.hasCandidates()) {
-                rule.add("array_element_lvalue", arrayElementLValueFactory, 5.0);
+            if (ProductionParams.arrayKernelCollectionElementLValues.value()) {
+                // Inside array-kernel blocks, array lvalue indices must follow the kernel iterator.
+                IterationIndexedCollectionElementFactory arrayElementLValueFactory =
+                        new IterationIndexedCollectionElementFactory((TypeKlass) ownerClass, leftOperandType,
+                                false, true);
+                if (arrayElementLValueFactory.hasCandidates()) {
+                    rule.add("array_element_lvalue", arrayElementLValueFactory, 5.0);
+                }
             }
         } else {
             ReadOnlyLocalLValueFactory initializedVarLValueFactory =
