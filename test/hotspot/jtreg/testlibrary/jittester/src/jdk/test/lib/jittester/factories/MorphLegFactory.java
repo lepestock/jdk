@@ -86,9 +86,22 @@ class MorphLegFactory extends Factory<IRNode> {
         }
         int leg = Math.toIntExact(createOrConsumeTemplateEvent(LEG_ID_EVENT, template::nextLeg));
         MorphLegResult result = template.produceLeg(target, leg, builder);
-        MorphContext updated = result.templateExhausted()
-                ? context.without(templateIndex)
-                : context.withReplaced(templateIndex, result.updatedTemplate());
+        // A leg may generate nested blocks that materialize other legs. Treat
+        // the live context as authoritative so an exhausted template is not
+        // revived and a nested leg update is not rolled back by this leg's
+        // stale pre-nesting result.
+        MorphContext liveContext = GenerationState.currentMorphContext();
+        int liveTemplateIndex = liveContext.indexOfId(templateId);
+        MorphContext updated;
+        if (result.templateExhausted()) {
+            updated = liveTemplateIndex < 0 ? liveContext : liveContext.without(liveTemplateIndex);
+        } else if (liveTemplateIndex < 0) {
+            updated = liveContext;
+        } else if (!liveContext.get(liveTemplateIndex).equals(template)) {
+            updated = liveContext;
+        } else {
+            updated = liveContext.withReplaced(liveTemplateIndex, result.updatedTemplate());
+        }
         GenerationState.setCurrentMorphContext(updated);
         return result.node();
     }
