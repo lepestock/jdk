@@ -85,7 +85,7 @@ class MorphLegFactory extends Factory<IRNode> {
             throw new ProductionFailedException();
         }
         int leg = Math.toIntExact(createOrConsumeTemplateEvent(LEG_ID_EVENT, template::nextLeg));
-        MorphLegResult result = template.produceLeg(target, leg, builder);
+        MorphLegResult result = template.produceLeg(target, leg, builder.fork());
         // A leg may generate nested blocks that materialize other legs. Treat
         // the live context as authoritative so an exhausted template is not
         // revived and a nested leg update is not rolled back by this leg's

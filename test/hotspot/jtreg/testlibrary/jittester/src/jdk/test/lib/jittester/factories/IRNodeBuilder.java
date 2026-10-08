@@ -150,6 +150,53 @@ public class IRNodeBuilder {
     private Optional<Long> enteredLoopIterationLimit = Optional.empty();
     private Optional<Boolean> normalizeNaN = Optional.empty();
 
+    IRNodeBuilder fork() {
+        IRNodeBuilder copy = new IRNodeBuilder();
+        copy.flowParams = flowParams;
+        copy.argumentType = argumentType;
+        copy.variableNumber = variableNumber;
+        copy.ownerClass = ownerClass;
+        copy.resultType = resultType;
+        copy.safe = safe;
+        copy.noConsts = noConsts;
+        copy.opKind = opKind;
+        copy.subBlock = subBlock;
+        copy.canHaveBreaks = canHaveBreaks;
+        copy.canHaveContinues = canHaveContinues;
+        copy.canHaveReturn = canHaveReturn;
+        copy.canHaveThrow = canHaveThrow;
+        copy.level = level;
+        copy.prefix = prefix;
+        copy.memberFunctionsLimit = memberFunctionsLimit;
+        copy.memberFunctionsArgLimit = memberFunctionsArgLimit;
+        copy.localVariable = localVariable;
+        copy.isLocal = isLocal;
+        copy.isStatic = isStatic;
+        copy.isSynchronizedAllowed = isSynchronizedAllowed;
+        copy.isConstant = isConstant;
+        copy.isInitialized = isInitialized;
+        copy.name = name;
+        copy.flags = flags;
+        copy.functionInfo = functionInfo;
+        copy.semicolon = semicolon;
+        copy.arrayKernelIterationVariable = arrayKernelIterationVariable;
+        copy.arrayKernelIterationVariableType = arrayKernelIterationVariableType;
+        copy.arrayKernelIterationStart = arrayKernelIterationStart;
+        copy.arrayKernelIterationLimit = arrayKernelIterationLimit;
+        copy.inArrayKernel = inArrayKernel;
+        copy.arrayKernelForward = arrayKernelForward;
+        copy.preferIterationIndexedArrayTerminal = preferIterationIndexedArrayTerminal;
+        copy.fixedOperandType = fixedOperandType;
+        copy.clearFixedOperandType = clearFixedOperandType;
+        copy.arrayElementExpressionWeightPercent = arrayElementExpressionWeightPercent;
+        copy.arrayExtractionExpressionWeightPercent = arrayExtractionExpressionWeightPercent;
+        copy.moreReadOnlyVars = moreReadOnlyVars.map(String[]::clone);
+        copy.moreIterationVariables = moreIterationVariables.map(String[]::clone);
+        copy.enteredLoopIterationLimit = enteredLoopIterationLimit;
+        copy.normalizeNaN = normalizeNaN;
+        return copy;
+    }
+
     public Factory<ArgumentDeclaration> getArgumentDeclarationFactory() {
         return new ArgumentDeclarationFactory(getArgumentType(), getVariableNumber());
     }
