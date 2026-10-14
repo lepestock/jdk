@@ -24,12 +24,14 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+import java.util.List;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.classes.Klass;
+import jdk.test.lib.jittester.classes.ClassField;
 import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -40,6 +42,12 @@ class KlassFactory extends AbstractKlassFactory<Klass> {
             int operatorLimit, int level) {
         super(name, memberFunctionsLimit, memberFunctionsArgLimit,
                 statementsInFunctionLimit, operatorLimit, level);
+    }
+
+    KlassFactory(String name, int memberFunctionsLimit, int memberFunctionsArgLimit,
+            int statementsInFunctionLimit, int operatorLimit, int level, List<ClassField> fields) {
+        super(name, memberFunctionsLimit, memberFunctionsArgLimit,
+                statementsInFunctionLimit, operatorLimit, level, fields);
     }
 
     @Override

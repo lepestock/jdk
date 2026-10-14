@@ -170,6 +170,9 @@ public class ProductionParams {
     public static Option<Integer> morphTemplateInlineTypeFlatArrayNonTrivialProbability = null;
     public static Option<Integer> morphTemplateInlineTypeFlatArrayLegSelectionWeight = null;
     public static Option<Boolean> morphTemplateInlineTypeFlatArrayPulsemap = null;
+    public static Option<Integer> morphTemplateInlineTypeFlatFieldProbability = null;
+    public static Option<Integer> morphTemplateInlineTypeFlatFieldUseLegLimit = null;
+    public static Option<Integer> morphTemplateInlineTypeFlatFieldLegSelectionWeight = null;
     public static Option<Integer> morphTemplateCreationRepeatProbability = null;
     public static Option<Integer> arrayKernelEmptyBodyKeepProbability = null;
     public static Option<Integer> morphLockEliminationCreateLockVarProbability = null;
@@ -475,6 +478,18 @@ public class ProductionParams {
                 "morph-template-inline-type-flat-array-pulsemap",
                 false,
                 "Emit MTFA-specific pulsemap events for template leg materialization");
+        morphTemplateInlineTypeFlatFieldProbability = optionResolver.addIntegerOption(
+                "morph-template-inline-type-flat-field-probability",
+                0,
+                "Probability (0..100) to create an inline-type flat-field morph template");
+        morphTemplateInlineTypeFlatFieldUseLegLimit = optionResolver.addIntegerOption(
+                "morph-template-inline-type-flat-field-use-leg-limit",
+                5,
+                "Maximum number of inline-type flat-field use legs per template; each template chooses 1..limit");
+        morphTemplateInlineTypeFlatFieldLegSelectionWeight = optionResolver.addIntegerOption(
+                "morph-template-inline-type-flat-field-leg-selection-weight",
+                100,
+                "Selection weight percent for inline-type flat-field templates among applicable morph templates");
         morphTemplateCreationRepeatProbability = optionResolver.addIntegerOption(
                 "morph-template-creation-repeat-probability",
                 0,
@@ -523,7 +538,9 @@ public class ProductionParams {
                 constBiasBasePercent, constBiasHalfDepth, mainLoopIterations, mainLoopJitter,
                 lockEliminationMorphTemplateProbability, morphTemplateLoopIntrinsificationProbability,
                 morphTemplateInlineTypeFlatArrayProbability, morphTemplateInlineTypeFlatArrayNonTrivialProbability,
-                morphTemplateInlineTypeFlatArrayLegSelectionWeight, morphTemplateCreationRepeatProbability,
+                morphTemplateInlineTypeFlatArrayLegSelectionWeight, morphTemplateInlineTypeFlatFieldProbability,
+                morphTemplateInlineTypeFlatFieldUseLegLimit,
+                morphTemplateInlineTypeFlatFieldLegSelectionWeight, morphTemplateCreationRepeatProbability,
                 arrayKernelEmptyBodyKeepProbability, morphLockEliminationCreateLockVarProbability,
                 morphTemplateLegWeight, morphTemplateReferenceDeteriorationPercent)) {
             options.put(option.getLongName(), option);
@@ -567,6 +584,10 @@ public class ProductionParams {
             }
             restored.put(option, value);
         }
+        validateFlatFieldConfiguration(
+                (Boolean) restored.getOrDefault(disableFunctions, disableFunctions.getDefaultValue()),
+                (Integer) restored.getOrDefault(morphTemplateInlineTypeFlatFieldProbability,
+                        morphTemplateInlineTypeFlatFieldProbability.getDefaultValue()));
         activeOptionResolver.restoreValues(restored);
     }
 
@@ -640,6 +661,9 @@ public class ProductionParams {
         PseudoRandom.reset();
         if (!replayMode && seed.isSet()) {
             PseudoRandom.setCurrentSeed(seed.value());
+        }
+        if (!replayMode) {
+            validateFlatFieldConfiguration();
         }
         Long mutationSeedOverride = firstSetLong(genomeMutationSeed);
         String mutationTarget = valueIfSet(genomeMutationTarget);
@@ -747,6 +771,19 @@ public class ProductionParams {
         }
     }
 
+    private static void validateFlatFieldConfiguration() {
+        validateFlatFieldConfiguration(disableFunctions.value(),
+                morphTemplateInlineTypeFlatFieldProbability.value());
+    }
+
+    private static void validateFlatFieldConfiguration(boolean functionsDisabled, int probability) {
+        if (functionsDisabled && probability > 0) {
+            throw new IllegalArgumentException("--disable-functions=true is incompatible with "
+                    + "--morph-template-inline-type-flat-field-probability > 0: "
+                    + "flat fields require generated initialization constructors");
+        }
+    }
+
     public static boolean hasMutationOverrides() {
         return !mutationOverrides.isEmpty();
     }
@@ -757,7 +794,13 @@ public class ProductionParams {
         }
         ensureResolverInitialized();
         State previousState = captureState();
-        applyMutationOverrides();
+        try {
+            applyMutationOverrides();
+            validateFlatFieldConfiguration();
+        } catch (RuntimeException e) {
+            restoreState(previousState);
+            throw e;
+        }
         return previousState;
     }
 

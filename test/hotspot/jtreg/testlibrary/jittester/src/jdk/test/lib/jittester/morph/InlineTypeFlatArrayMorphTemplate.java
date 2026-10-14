@@ -132,9 +132,18 @@ public record InlineTypeFlatArrayMorphTemplate(long id, int nextLeg, int kind,
 
     public static InlineTypeFlatArrayMorphTemplate createClassScopedOrNull(FlowParams flowParams,
             IRNodeBuilder builder) {
-        if (!hasClassScopeTargetCandidates(builder) || !shouldCreate(flowParams)) {
+        if (!shouldCreateClassScoped(flowParams, builder)) {
             return null;
         }
+        return createClassScoped(flowParams, builder);
+    }
+
+    public static boolean shouldCreateClassScoped(FlowParams flowParams, IRNodeBuilder builder) {
+        return hasClassScopeTargetCandidates(builder) && shouldCreate(flowParams);
+    }
+
+    public static InlineTypeFlatArrayMorphTemplate createClassScoped(FlowParams flowParams,
+            IRNodeBuilder builder) {
         int kind = pickKind(true);
         TypeKlass elementType = pickElementType(classScopeElementTypes(builder));
         if (elementType == null) {

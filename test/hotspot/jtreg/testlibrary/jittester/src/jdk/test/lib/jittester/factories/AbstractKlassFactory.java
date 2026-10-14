@@ -29,6 +29,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import jdk.test.lib.jittester.Declaration;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.ProductionFailedException;
@@ -38,6 +39,9 @@ import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
+import jdk.test.lib.jittester.VariableDeclarationBlock;
+import jdk.test.lib.jittester.VariableDeclaration;
+import jdk.test.lib.jittester.classes.ClassField;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.functions.FunctionDeclarationBlock;
 import jdk.test.lib.jittester.functions.FunctionDefinition;
@@ -57,10 +61,18 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
     private TypeKlass parent;
     private int memberFunctionsLimit;
     protected double abstractProbabilityAdjustment;
+    protected final List<ClassField> instanceFields;
 
     AbstractKlassFactory(String name,
             int memberFunctionsLimit, int memberFunctionsArgLimit, int statementsInFunctionLimit,
             int operatorLimit, int level) {
+        this(name, memberFunctionsLimit, memberFunctionsArgLimit, statementsInFunctionLimit,
+                operatorLimit, level, null);
+    }
+
+    AbstractKlassFactory(String name,
+            int memberFunctionsLimit, int memberFunctionsArgLimit, int statementsInFunctionLimit,
+            int operatorLimit, int level, List<ClassField> instanceFields) {
         this.name = name;
         this.memberFunctionsLimit = memberFunctionsLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
@@ -69,6 +81,7 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
         this.level = level;
         interfaces = new ArrayList<>();
         abstractProbabilityAdjustment = 0.2; // Probability to consider making class abstract
+        this.instanceFields = instanceFields == null ? null : List.copyOf(instanceFields);
     }
 
     @Override
@@ -101,7 +114,7 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                 }
                 abstractSet.removeAll(nonAbstractSet);
 
-                if (PseudoRandom.randomBoolean(abstractProbabilityAdjustment)
+                if (instanceFields == null && PseudoRandom.randomBoolean(abstractProbabilityAdjustment)
                         && (abstractSet.removeIf((_unused) -> PseudoRandom.randomBoolean(0.2)))) {
                         thisKlass.setAbstract();
                 }
@@ -162,7 +175,14 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                     GenerationState.setCurrentMorphContext(
                             GenerationState.currentMorphContext().withAdded(classTemplate));
                 }
-                variableDeclarations = produceVariableDeclarations(builder);
+                if (instanceFields == null) {
+                    variableDeclarations = produceVariableDeclarations(builder);
+                } else {
+                    variableDeclarations = produceInstanceFields(builder);
+                    if (!thisKlass.isValueKlass()) {
+                        variableDeclarations.addChild(produceVariableDeclarations(builder));
+                    }
+                }
 
                 if (!ProductionParams.disableFunctions.value()) {
                     abstractFunctionsRedefinitions = builder
@@ -173,7 +193,7 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                             .getFunctionRedefinitionBlockFactory(overrideSet)
                             .produce();
 
-                    if (PseudoRandom.randomBoolean(0.2)) {
+                    if (instanceFields == null && PseudoRandom.randomBoolean(0.2)) {
                         functionDeclarations = builder
                                 .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2 * PseudoRandom.random()))
                                 .getFunctionDeclarationBlockFactory()
@@ -186,6 +206,8 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                     functionDefinitions = produceFunctionDefinitions(builder,
                             (int) (memberFunctionsLimit * 0.6 * PseudoRandom.random()));
 
+                    constructorDefinitions = produceConstructorDefinitions(builder, thizzVariable);
+                } else if (instanceFields != null) {
                     constructorDefinitions = produceConstructorDefinitions(builder, thizzVariable);
                 }
             } catch (ProductionFailedException e) {
@@ -216,6 +238,26 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
     }
 
     protected abstract TypeKlass createThisKlass(String name);
+
+    private VariableDeclarationBlock produceInstanceFields(IRNodeBuilder builder)
+            throws ProductionFailedException {
+        ArrayList<IRNode> fields = new ArrayList<>();
+        for (ClassField field : instanceFields) {
+            IRNodeBuilder fieldBuilder = builder.fork().setResultType(field.type())
+                    .setIsConstant(thisKlass.isValueKlass()).setIsStatic(false).setIsLocal(false)
+                    .setNoConsts(false);
+            if (field.nullRestricted()) {
+                VariableInfo variable = new VariableInfo("var_" + SymbolTable.getNextVariableNumber(),
+                        thisKlass, field.type(), VariableInfo.INITIALIZED | VariableInfo.NULL_RESTRICTED
+                                | (thisKlass.isValueKlass() ? VariableInfo.FINAL : 0));
+                SymbolTable.add(variable);
+                fields.add(new Declaration(new VariableDeclaration(variable)));
+            } else {
+                fields.add(new Declaration(fieldBuilder.getVariableInitializationFactory().produce()));
+            }
+        }
+        return new VariableDeclarationBlock(fields, level + 1);
+    }
 
     protected abstract boolean canInheritFrom(Type type);
 

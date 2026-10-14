@@ -38,6 +38,8 @@ public class JavaCodeGenerator extends TestsGenerator {
     private static final String DEFAULT_SUFFIX = "java_tests";
     private static final String NULL_RESTRICTED_ARRAY_EXPORT =
             "--add-exports=java.base/jdk.internal.value=ALL-UNNAMED";
+    private static final String NULL_RESTRICTED_FIELD_EXPORT =
+            "--add-exports=java.base/jdk.internal.vm.annotation=ALL-UNNAMED";
 
     JavaCodeGenerator() {
         this(DEFAULT_SUFFIX, JavaCodeGenerator::generatePrerunAction, "-Xcomp");
@@ -113,6 +115,9 @@ public class JavaCodeGenerator extends TestsGenerator {
         if (nullRestrictedArraysEnabled()) {
             command.add(NULL_RESTRICTED_ARRAY_EXPORT);
         }
+        if (nullRestrictedFieldsEnabled()) {
+            command.add(NULL_RESTRICTED_FIELD_EXPORT);
+        }
         command.add("-d");
         command.add(classPath);
         command.add("-cp");
@@ -131,7 +136,12 @@ public class JavaCodeGenerator extends TestsGenerator {
 
     protected static String[] generatePrerunAction(String mainClassName) {
         if (nullRestrictedArraysEnabled()) {
-            return new String[] {"@compile " + NULL_RESTRICTED_ARRAY_EXPORT + " " + mainClassName + ".java"};
+            String options = NULL_RESTRICTED_ARRAY_EXPORT
+                    + (nullRestrictedFieldsEnabled() ? " " + NULL_RESTRICTED_FIELD_EXPORT : "");
+            return new String[] {"@compile " + options + " " + mainClassName + ".java"};
+        }
+        if (nullRestrictedFieldsEnabled()) {
+            return new String[] {"@compile " + NULL_RESTRICTED_FIELD_EXPORT + " " + mainClassName + ".java"};
         }
         return new String[] {"@compile " + mainClassName + ".java"};
     }
@@ -142,6 +152,9 @@ public class JavaCodeGenerator extends TestsGenerator {
         if (nullRestrictedArraysEnabled()) {
             options.add(NULL_RESTRICTED_ARRAY_EXPORT);
         }
+        if (nullRestrictedFieldsEnabled()) {
+            options.add(NULL_RESTRICTED_FIELD_EXPORT);
+        }
         return options;
     }
 
@@ -150,6 +163,9 @@ public class JavaCodeGenerator extends TestsGenerator {
         ArrayList<String> options = new ArrayList<>(ProductionParams.runtimeOutputVmOptions());
         if (nullRestrictedArraysEnabled()) {
             options.add(NULL_RESTRICTED_ARRAY_EXPORT);
+        }
+        if (nullRestrictedFieldsEnabled()) {
+            options.add(NULL_RESTRICTED_FIELD_EXPORT);
         }
         String base = super.jtDriverOptions();
         if (!base.isBlank()) {
@@ -161,6 +177,10 @@ public class JavaCodeGenerator extends TestsGenerator {
     private static boolean nullRestrictedArraysEnabled() {
         return ProductionParams.arraysNullRestrictedValueProbability.value() > 0
                 || ProductionParams.morphTemplateInlineTypeFlatArrayProbability.value() > 0;
+    }
+
+    private static boolean nullRestrictedFieldsEnabled() {
+        return ProductionParams.morphTemplateInlineTypeFlatFieldProbability.value() > 0;
     }
 
     public static void main(String[] args) throws Exception {

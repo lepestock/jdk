@@ -74,6 +74,7 @@ import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.classes.MainKlass;
 import jdk.test.lib.jittester.classes.RecordKlass;
+import jdk.test.lib.jittester.classes.ClassField;
 import jdk.test.lib.jittester.classes.ValueKlass;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
 import jdk.test.lib.jittester.functions.ConstructorDefinition;
@@ -153,7 +154,7 @@ public class IRNodeBuilder {
     private Optional<Long> enteredLoopIterationLimit = Optional.empty();
     private Optional<Boolean> normalizeNaN = Optional.empty();
 
-    IRNodeBuilder fork() {
+    public IRNodeBuilder fork() {
         IRNodeBuilder copy = new IRNodeBuilder();
         copy.flowParams = flowParams;
         copy.argumentType = argumentType;
@@ -523,7 +524,19 @@ public class IRNodeBuilder {
     private static MorphTemplate createOneClassMorphTemplate(FlowParams flowParams, IRNodeBuilder builder) {
         // Class-scope creation is opt-in per template. Block-scoped templates
         // such as lock-elimination and loop-intrinsification do not support it.
-        return InlineTypeFlatArrayMorphTemplate.createClassScopedOrNull(flowParams, builder);
+        ArrayList<MorphTemplateCreationCandidate> candidates = new ArrayList<>();
+        if (InlineTypeFlatArrayMorphTemplate.shouldCreateClassScoped(flowParams, builder)) {
+            candidates.add(new MorphTemplateCreationCandidate(1.0,
+                    () -> InlineTypeFlatArrayMorphTemplate.createClassScoped(flowParams, builder)));
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        MorphTemplate selectedTemplate = pickMorphTemplateCreationCandidate(candidates).create();
+        if (selectedTemplate != null) {
+            return selectedTemplate;
+        }
+        return null;
     }
 
     private static boolean shouldAttemptAnotherMorphTemplateCreation(FlowParams flowParams, int attemptsCompleted) {
@@ -799,6 +812,21 @@ public class IRNodeBuilder {
         return new RecordKlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
                 flowParams().statementLimit(),
                 flowParams().operatorLimit(), getLevel());
+    }
+
+    public Factory<RecordKlass> getValueRecordKlassFactory(List<ClassField> fields) {
+        return new RecordKlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
+                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), fields);
+    }
+
+    public Factory<Klass> getKlassFactory(List<ClassField> fields) {
+        return new KlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
+                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), fields);
+    }
+
+    public Factory<ValueKlass> getValueKlassFactory(List<ClassField> fields) {
+        return new ValueKlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
+                flowParams().statementLimit(), flowParams().operatorLimit(), getLevel(), fields);
     }
 
     public Factory<IRNode> getConstructorCallFactory() {
@@ -1105,6 +1133,10 @@ public class IRNodeBuilder {
     public IRNodeBuilder setName(String value) {
         name = Optional.of(value);
         return this;
+    }
+
+    public String currentName() {
+        return getName();
     }
 
     public IRNodeBuilder setFlags(int value) {

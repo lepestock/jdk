@@ -104,7 +104,7 @@ public class TypeList {
         return BUILTIN_FP_TYPES;
     }
 
-    protected static Collection<TypeKlass> getReferenceTypes() {
+    public static Collection<TypeKlass> getReferenceTypes() {
         return REFERENCE_TYPES;
     }
 
@@ -164,13 +164,22 @@ public class TypeList {
     }
 
     public static void removeAll() {
-        Predicate<? super String> isNotBasic = s -> s.startsWith("Test_");
-        Predicate<? super Type> isNotBasicType = t -> isNotBasic.test(t.getName());
+        Predicate<? super String> isNotBasic = TypeList::isGeneratedTypeName;
+        Predicate<? super Type> isNotBasicType = TypeList::isGeneratedType;
         REFERENCE_TYPES.stream()
                        .map(TypeKlass::getChildrenNames)
                        .forEach(l -> l.removeIf(isNotBasic));
         TYPES.removeIf(isNotBasicType);
         REFERENCE_TYPES.removeIf(isNotBasicType);
+    }
+
+    private static boolean isGeneratedTypeName(String name) {
+        Type type = find(name);
+        return name.startsWith("Test_") || isGeneratedType(type);
+    }
+
+    private static boolean isGeneratedType(Type type) {
+        return type instanceof TypeKlass klass && !klass.getLabels().isEmpty();
     }
 
     /**

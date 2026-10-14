@@ -1176,6 +1176,7 @@ public class JavaCodeVisitor implements Visitor<String> {
                 .collect(Collectors.joining(", "));
         String r = typeLabelsComment(node.getThisKlass())
                 + (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
+                + (node.getThisKlass().isValueKlass() ? "value " : "")
                 + "record " + node.getName() + "(" + components + ")";
         List<TypeKlass> interfaces = node.getInterfaces();
         r += interfaces.stream()

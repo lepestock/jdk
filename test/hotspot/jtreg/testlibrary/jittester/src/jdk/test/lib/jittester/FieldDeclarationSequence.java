@@ -28,7 +28,7 @@ import java.util.List;
 import jdk.test.lib.jittester.visitors.Visitor;
 
 public class FieldDeclarationSequence extends IRNode {
-    public FieldDeclarationSequence(List<? extends Declaration> content, int level) {
+    public FieldDeclarationSequence(List<? extends IRNode> content, int level) {
         super(TypeList.VOID);
         addChildren(content);
         this.level = level;

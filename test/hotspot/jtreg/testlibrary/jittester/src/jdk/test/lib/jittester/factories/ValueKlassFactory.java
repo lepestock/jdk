@@ -24,14 +24,18 @@
 package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Symbol;
+import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.classes.ValueKlass;
+import jdk.test.lib.jittester.classes.ClassField;
 import jdk.test.lib.jittester.functions.FunctionInfo;
+import jdk.test.lib.jittester.morph.MorphClassLabels;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class ValueKlassFactory extends AbstractKlassFactory<ValueKlass> {
@@ -42,6 +46,12 @@ class ValueKlassFactory extends AbstractKlassFactory<ValueKlass> {
         super(name, memberFunctionsLimit, memberFunctionsArgLimit,
                 statementsInFunctionLimit, operatorLimit, level);
         abstractProbabilityAdjustment = 1.0; // We want more abstract value classes
+    }
+
+    ValueKlassFactory(String name, int memberFunctionsLimit, int memberFunctionsArgLimit,
+            int statementsInFunctionLimit, int operatorLimit, int level, List<ClassField> fields) {
+        super(name, memberFunctionsLimit, memberFunctionsArgLimit,
+                statementsInFunctionLimit, operatorLimit, level, fields);
     }
 
     @Override
@@ -57,7 +67,10 @@ class ValueKlassFactory extends AbstractKlassFactory<ValueKlass> {
             return false;
         }
         TypeKlass klass = (TypeKlass) type;
-        return klass.isAbstract() && klass.isValueKlass();
+        return klass.isAbstract() && klass.isValueKlass()
+                && (instanceFields == null || SymbolTable.getAllCombined(klass, VariableInfo.class)
+                        .stream().map(VariableInfo.class::cast)
+                        .allMatch(field -> field.isStatic() || field.isLocal()));
     }
 
     @Override
@@ -97,6 +110,7 @@ class ValueKlassFactory extends AbstractKlassFactory<ValueKlass> {
     protected void finalizeClassFlags(TypeKlass thisKlass) {
         if (!thisKlass.isAbstract()) {
             thisKlass.setFinal();
+            thisKlass.addLabel(MorphClassLabels.mtffPayload(thisKlass));
         }
     }
 

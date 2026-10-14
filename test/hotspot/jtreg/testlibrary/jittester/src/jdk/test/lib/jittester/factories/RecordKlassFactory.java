@@ -38,9 +38,11 @@ import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.TypeList;
 import jdk.test.lib.jittester.VariableInfo;
 import jdk.test.lib.jittester.classes.RecordKlass;
+import jdk.test.lib.jittester.classes.ClassField;
 import jdk.test.lib.jittester.functions.FunctionDefinition;
 import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.morph.MorphTemplate;
+import jdk.test.lib.jittester.morph.MorphClassLabels;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.TypeBoxingUtil;
@@ -54,15 +56,23 @@ class RecordKlassFactory extends Factory<RecordKlass> {
     private final int statementsInFunctionLimit;
     private final int operatorLimit;
     private final int level;
+    private final List<ClassField> valueComponents;
 
     RecordKlassFactory(String name, int memberFunctionsLimit, int memberFunctionsArgLimit,
             int statementsInFunctionLimit, int operatorLimit, int level) {
+        this(name, memberFunctionsLimit, memberFunctionsArgLimit,
+                statementsInFunctionLimit, operatorLimit, level, null);
+    }
+
+    RecordKlassFactory(String name, int memberFunctionsLimit, int memberFunctionsArgLimit,
+            int statementsInFunctionLimit, int operatorLimit, int level, List<ClassField> valueComponents) {
         this.name = name;
         this.memberFunctionsLimit = memberFunctionsLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
         this.statementsInFunctionLimit = statementsInFunctionLimit;
         this.operatorLimit = operatorLimit;
         this.level = level;
+        this.valueComponents = valueComponents == null ? null : List.copyOf(valueComponents);
     }
 
     @Override
@@ -70,6 +80,9 @@ class RecordKlassFactory extends Factory<RecordKlass> {
         GenerationState.Checkpoint classStateCheckpoint = GenerationState.checkpoint();
         TypeKlass thisKlass = new TypeKlass(name);
         thisKlass.setRecord();
+        if (valueComponents != null) {
+            thisKlass.setValueKlass();
+        }
         thisKlass.setFinal();
         thisKlass.addParent(TypeList.OBJECT.getName());
         thisKlass.setParent(TypeList.OBJECT);
@@ -128,6 +141,9 @@ class RecordKlassFactory extends Factory<RecordKlass> {
                 SymbolTable.remove(new Symbol("this", thisKlass, thisKlass, VariableInfo.NONE));
             }
             TypeList.add(thisKlass);
+            if (thisKlass.isValueKlass()) {
+                thisKlass.addLabel(MorphClassLabels.mtffPayload(thisKlass));
+            }
             return new RecordKlass(thisKlass, interfaces, name, level,
                     components, abstractFunctionRedefinitions, functionDefinitions, functionDeclarations, null);
         } catch (ProductionFailedException e) {
@@ -140,6 +156,17 @@ class RecordKlassFactory extends Factory<RecordKlass> {
     }
 
     private ArrayList<VariableInfo> produceComponents(TypeKlass ownerClass) throws ProductionFailedException {
+        if (valueComponents != null) {
+            ArrayList<VariableInfo> components = new ArrayList<>();
+            for (ClassField field : valueComponents) {
+                if (field.nullRestricted()) {
+                    throw new ProductionFailedException();
+                }
+                components.add(VariableInfo.symbolArgument("component_" + components.size(), ownerClass,
+                        field.type(), VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED));
+            }
+            return components;
+        }
         List<Type> types = componentTypes();
         int maxComponents = Math.max(0, memberFunctionsArgLimit);
         int limit = PseudoRandom.randomNotNegative(maxComponents + 1);
