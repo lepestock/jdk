@@ -23,10 +23,14 @@
 
 package jdk.test.lib.jittester.factories;
 
+import java.util.ArrayList;
 import java.util.function.Predicate;
+import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.LocalVariable;
 import jdk.test.lib.jittester.ProductionParams;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Rule;
+import jdk.test.lib.jittester.StaticMemberVariable;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
 import jdk.test.lib.jittester.Type;
@@ -36,6 +40,7 @@ import jdk.test.lib.jittester.functions.FunctionInfo;
 import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.DepthProbabilityTaper;
+import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class VariableFactory extends Factory<VariableBase> implements VariableCandidateSource {
     private final Rule<VariableBase> rule;
@@ -150,9 +155,38 @@ class VariableFactory extends Factory<VariableBase> implements VariableCandidate
     }
 
     static boolean hasAccessibleReceiver(TypeKlass ownerClass, VariableInfo varInfo) {
+        if (varInfo.isRecordComponent()) {
+            return canUseImplicitThis(ownerClass, varInfo)
+                    || hasDirectReceiverVariable(varInfo);
+        }
         return canUseImplicitThis(ownerClass, varInfo)
                 || hasConstructibleReceiver(ownerClass, varInfo.owner)
                 || hasDirectReceiverVariable(varInfo);
+    }
+
+    static IRNode produceDirectReceiver(TypeKlass ownerClass, TypeKlass receiverType)
+            throws ProductionFailedException {
+        ArrayList<VariableInfo> candidates = new ArrayList<>();
+        for (Symbol symbol : SymbolTable.get(receiverType, VariableInfo.class)) {
+            VariableInfo varInfo = (VariableInfo) symbol;
+            if ((varInfo.flags & VariableInfo.INITIALIZED) == 0) {
+                continue;
+            }
+            if ("this".equals(varInfo.name) && ThisVariableControl.isThisForbidden()) {
+                continue;
+            }
+            if (varInfo.isLocal() || varInfo.isStatic()) {
+                candidates.add(varInfo);
+            }
+        }
+        if (candidates.isEmpty()) {
+            throw new ProductionFailedException();
+        }
+        VariableInfo selected = candidates.get(PseudoRandom.randomNotNegative(candidates.size()));
+        if (selected.isLocal()) {
+            return new LocalVariable(selected);
+        }
+        return new StaticMemberVariable(ownerClass, selected);
     }
 
     static boolean canUseImplicitThis(TypeKlass ownerClass, VariableInfo varInfo) {

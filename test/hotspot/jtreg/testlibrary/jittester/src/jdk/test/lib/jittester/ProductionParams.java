@@ -90,6 +90,7 @@ public class ProductionParams {
     public static Option<Integer> chanceExpressionIndex = null;
     public static Option<Integer> chanceThrow = null;
     public static Option<Integer> identityValueClassBalance = null;
+    public static Option<Integer> classRecordWeight = null;
     public static Option<String> testbaseDir = null;
     public static Option<Boolean> individualSandboxes = null;
     public static Option<String> tempDir = null;
@@ -253,6 +254,8 @@ public class ProductionParams {
         chanceExpressionIndex = optionResolver.addIntegerOption("chance-expression-index", 0, "A non negative decimal integer used to restrict chane of generating expression in array index while creating or accessing by index");
         chanceThrow = optionResolver.addIntegerOption("chance-throw", 30, "A non negative decimal integer used to restrict chane of 'throw' statement (is adjusted by 30% afterwards, i.e. value of 100 means 30% chance of generating such a statement)");
         identityValueClassBalance = optionResolver.addIntegerOption("identity-value-class-balance", 80, "Balance (0..100) between identity and value class generation: 0=identity only, 50=equal, 100=value only");
+        classRecordWeight = optionResolver.addIntegerOption("class-record-weight", 0,
+                "Weight of Java record declarations in the class/type declaration rule");
         testbaseDir = optionResolver.addStringOption("testbase-dir", ".", "Testbase dir");
         individualSandboxes = optionResolver.addBooleanOption(
                 null,

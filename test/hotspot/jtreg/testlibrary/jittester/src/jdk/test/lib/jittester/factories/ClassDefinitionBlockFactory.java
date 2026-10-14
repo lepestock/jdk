@@ -89,6 +89,12 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                                 .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2))
                                 .getInterfaceFactory(), 0.1);
                     }
+                    int recordWeight = Math.max(0, ProductionParams.classRecordWeight.value());
+                    if (recordWeight > 0) {
+                        rule.add("record_class", builder.setName(prefix + "_Record_" + i)
+                                .setMemberFunctionsLimit(memberFunctionsLimit)
+                                .getRecordKlassFactory(), recordWeight);
+                    }
                     // TODO: Add enums
                     content.add(rule.produce());
                 } catch (ProductionFailedException e) {

@@ -116,6 +116,8 @@ class NonStaticMemberVariableFactory extends Factory<NonStaticMemberVariable> {
                             VariableInfo thisInfo = new VariableInfo("this", varInfo.owner, varInfo.owner,
                                     VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED);
                             object = new LocalVariable(thisInfo);
+                        } else if (varInfo.isRecordComponent()) {
+                            object = VariableFactory.produceDirectReceiver((TypeKlass) ownerClass, varInfo.owner);
                         } else {
                             object = builder.setResultType(varInfo.owner)
                                     .getExpressionFactory().produce();

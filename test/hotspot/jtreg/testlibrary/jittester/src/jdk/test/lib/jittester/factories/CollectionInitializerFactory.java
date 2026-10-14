@@ -25,6 +25,7 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import java.util.List;
+import jdk.test.lib.jittester.ContainerSizePicker;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Type;
@@ -34,6 +35,7 @@ import jdk.test.lib.jittester.types.TypeArray;
 import jdk.test.lib.jittester.types.TypeKlass;
 
 class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
+    private static final int EXPRESSION_INITIALIZER_MAX_ELEMENTS = 8;
 
     private final int operatorLimit;
     private final TypeKlass ownerClass;
@@ -77,10 +79,11 @@ class CollectionInitializerFactory extends SafeFactory<CollectionInitializer> {
     }
 
     private int chooseElementCount() throws ProductionFailedException {
-        if (targetVariableInfo == null) {
-            throw new ProductionFailedException();
+        if (targetVariableInfo != null) {
+            return targetVariableInfo.getArrayLength().orElseThrow(ProductionFailedException::new);
         }
-        return targetVariableInfo.getArrayLength().orElseThrow(ProductionFailedException::new);
+        return Math.max(1, Math.min(EXPRESSION_INITIALIZER_MAX_ELEMENTS,
+                ContainerSizePicker.pickIntContainerSize()));
     }
 
     private IRNode produceElement(IRNodeBuilder elementBuilder) throws ProductionFailedException {

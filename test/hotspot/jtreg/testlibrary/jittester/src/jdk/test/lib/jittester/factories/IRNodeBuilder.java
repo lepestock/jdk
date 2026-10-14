@@ -73,6 +73,7 @@ import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.classes.MainKlass;
+import jdk.test.lib.jittester.classes.RecordKlass;
 import jdk.test.lib.jittester.classes.ValueKlass;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
 import jdk.test.lib.jittester.functions.ConstructorDefinition;
@@ -790,6 +791,12 @@ public class IRNodeBuilder {
 
     public Factory<Klass> getKlassFactory() {
         return new KlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
+                flowParams().statementLimit(),
+                flowParams().operatorLimit(), getLevel());
+    }
+
+    public Factory<RecordKlass> getRecordKlassFactory() {
+        return new RecordKlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
                 flowParams().statementLimit(),
                 flowParams().operatorLimit(), getLevel());
     }

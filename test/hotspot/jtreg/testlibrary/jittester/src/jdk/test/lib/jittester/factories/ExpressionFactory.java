@@ -128,6 +128,11 @@ class ExpressionFactory extends SafeFactory<IRNode> {
             double classTerminalWeight = terminalWeight * 2.0;
             addTerminal("class_terminal", classTerminalFactory, classTerminalWeight, 2.0, groupTerminals);
         }
+        if (supportsCollectionInitializer(resultType)) {
+            Factory<? extends IRNode> collectionInitializerFactory =
+                    builder.getCollectionInitializerFactory(null);
+            addTerminal("array_initializer", collectionInitializerFactory, terminalWeight, 1.0, groupTerminals);
+        }
         if (groupTerminals) {
             // Once terminals are grouped, the expression-level rule should only decide
             // terminal-vs-operator. The terminalRule weights decide which terminal is used.
@@ -237,6 +242,12 @@ class ExpressionFactory extends SafeFactory<IRNode> {
         return type instanceof TypeArray arrayType
                 && TypeArray.isElementTypeAllowed(arrayType.type)
                 && arrayType.dimensions < ProductionParams.dimensionsLimit.value();
+    }
+
+    private static boolean supportsCollectionInitializer(Type type) {
+        return type instanceof TypeArray arrayType
+                && arrayType.dimensions == 1
+                && TypeArray.isElementTypeAllowed(arrayType.type);
     }
 
     @Override

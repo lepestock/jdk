@@ -97,6 +97,7 @@ public class TypeArray extends TypeKlass {
             try {
                 TypeArray a = (TypeArray) t;
                 return a.type.equals(type) && a.nullRestricted == nullRestricted
+                        && a.storageKind == storageKind
                         && (a.dimensions == dimensions
                         || a.dimensions == -1
                         || dimensions == -1);
@@ -112,6 +113,7 @@ public class TypeArray extends TypeKlass {
         hash = 53 * hash + Objects.hashCode(this.type);
         hash = 313 * hash + this.dimensions;
         hash = 499 * hash + Boolean.hashCode(this.nullRestricted);
+        hash = 787 * hash + Objects.hashCode(this.storageKind);
         return hash;
     }
 
@@ -127,6 +129,9 @@ public class TypeArray extends TypeKlass {
                 }
                 if (r == 0) {
                     r = Boolean.compare(nullRestricted, a.nullRestricted);
+                }
+                if (r == 0) {
+                    r = storageKind.compareTo(a.storageKind);
                 }
             } catch (Exception e) {
             }

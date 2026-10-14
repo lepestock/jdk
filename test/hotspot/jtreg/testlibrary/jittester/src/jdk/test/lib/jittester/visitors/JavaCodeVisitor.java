@@ -77,6 +77,7 @@ import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Interface;
 import jdk.test.lib.jittester.classes.Klass;
 import jdk.test.lib.jittester.classes.MainKlass;
+import jdk.test.lib.jittester.classes.RecordKlass;
 import jdk.test.lib.jittester.classes.ValueKlass;
 import jdk.test.lib.jittester.diagnostics.SourceDiagnostics;
 import jdk.test.lib.jittester.functions.ArgumentDeclaration;
@@ -1120,6 +1121,9 @@ public class JavaCodeVisitor implements Visitor<String> {
 
     @Override
     public String visit(Klass node) {
+        if (node instanceof RecordKlass recordKlass) {
+            return visitRecordKlass(recordKlass);
+        }
         TypeKlass thisKlass = node.getThisKlass();
         String r = (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
                 + (thisKlass.isFinal() ? "final " : "")
@@ -1146,6 +1150,31 @@ public class JavaCodeVisitor implements Visitor<String> {
              + (memberFunctionDecls != null ? (memberFunctionDecls.accept(this)+ "\n") : "")
              + (memberFunctions != null ? (memberFunctions.accept(this)+ "\n") : "")
              + printVariables.accept(this)
+             + "}\n";
+        return r;
+    }
+
+    private String visitRecordKlass(RecordKlass node) {
+        String components = node.getComponents().stream()
+                .map(component -> component.type.accept(this) + " " + component.name)
+                .collect(Collectors.joining(", "));
+        String r = (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
+                + "record " + node.getName() + "(" + components + ")";
+        List<TypeKlass> interfaces = node.getInterfaces();
+        r += interfaces.stream()
+                .map(Type::getName)
+                .collect(Collectors.joining(", ", (interfaces.isEmpty() ? "" : " implements "), ""));
+        IRNode redefinedFunctions = node.getChild(Klass.KlassPart.REDEFINED_FUNCTIONS.ordinal());
+        IRNode overridenFunctions = node.getChild(Klass.KlassPart.OVERRIDEN_FUNCTIONS.ordinal());
+        IRNode memberFunctions = node.getChild(Klass.KlassPart.MEMBER_FUNCTIONS.ordinal());
+        IRNode memberFunctionDecls = node.getChild(Klass.KlassPart.MEMBER_FUNCTIONS_DECLARATIONS.ordinal());
+        IRNode printVariables = node.getChild(Klass.KlassPart.PRINT_VARIABLES.ordinal());
+        r += " {\n"
+             + (redefinedFunctions != null ? (redefinedFunctions.accept(this) + "\n") : "")
+             + (overridenFunctions != null ? (overridenFunctions.accept(this) + "\n") : "")
+             + (memberFunctionDecls != null ? (memberFunctionDecls.accept(this) + "\n") : "")
+             + (memberFunctions != null ? (memberFunctions.accept(this) + "\n") : "")
+             + (printVariables != null ? printVariables.accept(this) : "")
              + "}\n";
         return r;
     }
@@ -1344,13 +1373,14 @@ public class JavaCodeVisitor implements Visitor<String> {
         IRNode object = node.getChild(0);
         String objectString = object.accept(this);
         VariableInfo value = node.getVariableInfo();
+        String memberName = value.isRecordComponent() ? value.name + "()" : value.name;
         if (objectString.equals("this")) {
-            return value.name;
+            return memberName;
         } else {
             if (object instanceof VariableBase || object instanceof Function || object instanceof Literal) {
-                return objectString + "." + value.name;
+                return objectString + "." + memberName;
             } else {
-                return "(" + objectString + ")" + "." + value.name;
+                return "(" + objectString + ")" + "." + memberName;
             }
         }
     }

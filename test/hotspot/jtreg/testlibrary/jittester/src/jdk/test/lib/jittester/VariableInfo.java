@@ -32,6 +32,7 @@ public class VariableInfo extends Symbol {
 
     public static final int LOCAL = 0x40;
     public static final int INITIALIZED = 0x80;
+    public static final int RECORD_COMPONENT = 0x100;
     private OptionalInt arrayLength = OptionalInt.empty();
 
     protected VariableInfo() {
@@ -75,6 +76,10 @@ public class VariableInfo extends Symbol {
 
     public boolean isLocal() {
         return (flags & LOCAL) != 0;
+    }
+
+    public boolean isRecordComponent() {
+        return (flags & RECORD_COMPONENT) != 0;
     }
 
     public OptionalInt getArrayLength() {

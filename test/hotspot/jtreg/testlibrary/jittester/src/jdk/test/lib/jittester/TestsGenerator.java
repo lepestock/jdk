@@ -354,7 +354,7 @@ public abstract class TestsGenerator implements Consumer<IRTreeGenerator.Test> {
         result.append(type.isAbstract() ? "abstract " : "")
               .append(type.isFinal() ? "final " : "")
               .append(type.isValueKlass() ? "value " : "")
-              .append(type.isInterface() ? "interface " : "class ")
+              .append(type.isRecord() ? "record " : (type.isInterface() ? "interface " : "class "))
               .append(type.getName())
               .append(parents.isEmpty() ? "" : ": " + parents);
         return result.toString();

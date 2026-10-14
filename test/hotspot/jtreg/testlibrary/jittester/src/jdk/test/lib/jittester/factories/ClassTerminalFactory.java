@@ -276,6 +276,13 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
                     }
                     return new StaticMemberVariable(ownerClass, varInfo);
                 }
+                if (varInfo.isRecordComponent()) {
+                    IRNode object = VariableFactory.produceDirectReceiver(ownerClass, varInfo.owner);
+                    if (!replayMode) {
+                        Genome.commitSpeculativeRecord();
+                    }
+                    return new NonStaticMemberVariable(object, varInfo);
+                }
                 IRNodeBuilder b = new IRNodeBuilder().setOwnerKlass(ownerClass)
                         .withOperatorLimit(Math.max(1, operatorLimit - 1))
                         .setResultType(varInfo.owner)
