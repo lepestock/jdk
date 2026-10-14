@@ -80,6 +80,19 @@ public record InlineTypeFlatFieldMorphTemplate(long id, int nextLeg, boolean loa
     private static final double LOCAL_SINK_PROBABILITY = 0.35;
     private static final int HELPER_GENERATION_DIVISOR = 4;
 
+    public static List<MorphTemplate> createGentestScopedReserve() {
+        int probability = ProductionParams.morphTemplateInlineTypeFlatFieldProbability.value();
+        if (probability <= 0 || !PseudoRandom.randomBoolean(Math.min(1.0, probability / 100.0))) {
+            return List.of();
+        }
+        ArrayList<MorphTemplate> templates = new ArrayList<>();
+        int reserve = Math.max(0, ProductionParams.morphTemplateGentestScopeReserveSize.value());
+        for (int i = 0; i < reserve; i++) {
+            templates.add(createGentestScoped());
+        }
+        return List.copyOf(templates);
+    }
+
     private static InlineTypeFlatFieldMorphTemplate createGentestScoped() {
         long id = Genome.createOrConsumeTemplateGene("morph.inline_type_flat_field.id",
                 PseudoRandom.nextLongSilent());

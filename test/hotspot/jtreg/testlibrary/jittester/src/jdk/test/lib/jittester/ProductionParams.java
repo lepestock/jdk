@@ -171,6 +171,7 @@ public class ProductionParams {
     public static Option<Integer> morphTemplateInlineTypeFlatArrayLegSelectionWeight = null;
     public static Option<Boolean> morphTemplateInlineTypeFlatArrayPulsemap = null;
     public static Option<Integer> morphTemplateInlineTypeFlatFieldProbability = null;
+    public static Option<Integer> morphTemplateGentestScopeReserveSize = null;
     public static Option<Integer> morphTemplateInlineTypeFlatFieldUseLegLimit = null;
     public static Option<Integer> morphTemplateInlineTypeFlatFieldLegSelectionWeight = null;
     public static Option<Integer> morphTemplateCreationRepeatProbability = null;
@@ -482,6 +483,10 @@ public class ProductionParams {
                 "morph-template-inline-type-flat-field-probability",
                 0,
                 "Probability (0..100) to create an inline-type flat-field morph template");
+        morphTemplateGentestScopeReserveSize = optionResolver.addIntegerOption(
+                "morph-template-gentest-scope-reserve-size",
+                10,
+                "Number of gentest-scope morph templates pre-created when a gentest-level morph family is enabled");
         morphTemplateInlineTypeFlatFieldUseLegLimit = optionResolver.addIntegerOption(
                 "morph-template-inline-type-flat-field-use-leg-limit",
                 5,
@@ -539,7 +544,7 @@ public class ProductionParams {
                 lockEliminationMorphTemplateProbability, morphTemplateLoopIntrinsificationProbability,
                 morphTemplateInlineTypeFlatArrayProbability, morphTemplateInlineTypeFlatArrayNonTrivialProbability,
                 morphTemplateInlineTypeFlatArrayLegSelectionWeight, morphTemplateInlineTypeFlatFieldProbability,
-                morphTemplateInlineTypeFlatFieldUseLegLimit,
+                morphTemplateGentestScopeReserveSize, morphTemplateInlineTypeFlatFieldUseLegLimit,
                 morphTemplateInlineTypeFlatFieldLegSelectionWeight, morphTemplateCreationRepeatProbability,
                 arrayKernelEmptyBodyKeepProbability, morphLockEliminationCreateLockVarProbability,
                 morphTemplateLegWeight, morphTemplateReferenceDeteriorationPercent)) {

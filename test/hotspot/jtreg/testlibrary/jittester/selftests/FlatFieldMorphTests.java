@@ -23,7 +23,6 @@
 
 package jdk.test.lib.jittester.factories;
 
-import java.lang.reflect.Method;
 import jdk.test.lib.jittester.FlowParams;
 import jdk.test.lib.jittester.Formatter;
 import jdk.test.lib.jittester.GenerationState;
@@ -53,7 +52,8 @@ public class FlatFieldMorphTests {
                 "--disable-external-symbols", "true", "--disable-interfaces", "true",
                 "--disable-inheritance", "true", "--member-functions-limit", "2",
                 "--statement-limit", "2", "--operator-limit", "2", "--data-member-limit", "2",
-                "--morph-template-inline-type-flat-field-probability", "100"});
+                "--morph-template-inline-type-flat-field-probability", "100",
+                "--morph-template-gentest-scope-reserve-size", "1"});
         GenerationState.setCurrentMainClassName("Test_FlatField");
         SymbolTable.removeAll();
         SymbolTable.add(new FunctionInfo(TypeList.OBJECT.getName(), TypeList.OBJECT, TypeList.OBJECT,
@@ -144,8 +144,6 @@ public class FlatFieldMorphTests {
     }
 
     private static void testGeneratedClassesAndLegs() throws Exception {
-        Method createTemplate = InlineTypeFlatFieldMorphTemplate.class.getDeclaredMethod("createGentestScoped");
-        createTemplate.setAccessible(true);
         boolean loadSeen = false;
         boolean storeSeen = false;
         boolean recordSeen = false;
@@ -157,7 +155,7 @@ public class FlatFieldMorphTests {
             String stage = "types";
             try {
                 PseudoRandom.setCurrentSeed(100 + i);
-                MorphTemplate template = (MorphTemplate) createTemplate.invoke(null);
+                MorphTemplate template = InlineTypeFlatFieldMorphTemplate.createGentestScopedReserve().getFirst();
                 IRNodeBuilder builder = new IRNodeBuilder().setName("Test_FlatField_Value_" + i).setLevel(0);
                 MorphLegResult types = template.produceLeg(MorphLegTarget.TYPE_DECLARATION, 0, builder);
                 String source = types.node().accept(new JavaCodeVisitor());

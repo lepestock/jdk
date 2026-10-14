@@ -25,11 +25,14 @@ package jdk.test.lib.jittester;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import jdk.test.lib.jittester.factories.IRNodeBuilder;
 import jdk.test.lib.jittester.corelib.CoreLibSymbols;
 import jdk.test.lib.jittester.corelib.CoreLibSymbolsLoader;
 import jdk.test.lib.jittester.functions.FunctionInfo;
+import jdk.test.lib.jittester.morph.InlineTypeFlatFieldMorphTemplate;
+import jdk.test.lib.jittester.morph.MorphTemplate;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
 import jdk.test.lib.jittester.utils.PseudoRandom;
@@ -67,23 +70,35 @@ public class IRTreeGenerator {
                 .setLevel(0);
 
         IRNode privateClasses = null;
-        if (!ProductionParams.disableClasses.value()) {
+        IRNode mainClass = null;
+        List<MorphTemplate> gentestTemplates = InlineTypeFlatFieldMorphTemplate.createGentestScopedReserve();
+        for (MorphTemplate template : gentestTemplates) {
+            GenerationState.setCurrentMorphContext(
+                    GenerationState.currentMorphContext().withAdded(template));
+        }
+        try {
+            if (!ProductionParams.disableClasses.value()) {
+                try {
+                    privateClasses = builder.getClassDefinitionBlockFactory()
+                            .produce();
+                } catch (ProductionFailedException ex) {
+                    ex.printStackTrace(System.out);
+                }
+            }
             try {
-                privateClasses = builder.getClassDefinitionBlockFactory()
+                mainClass = builder.getMainKlassFactory()
                         .produce();
+                TypeKlass aClass = new TypeKlass(name);
+                mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, true));
+                mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, false));
             } catch (ProductionFailedException ex) {
                 ex.printStackTrace(System.out);
             }
-        }
-        IRNode mainClass = null;
-        try {
-            mainClass = builder.getMainKlassFactory()
-                    .produce();
-            TypeKlass aClass = new TypeKlass(name);
-            mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, true));
-            mainClass.getChild(1).addChild(FixedTrees.generateMainOrExecuteMethod(aClass, false));
-        } catch (ProductionFailedException ex) {
-            ex.printStackTrace(System.out);
+        } finally {
+            for (MorphTemplate template : gentestTemplates) {
+                GenerationState.setCurrentMorphContext(
+                        GenerationState.currentMorphContext().withoutId(template.id()));
+            }
         }
         return new Test(seed, mainClass, privateClasses);
     }
