@@ -24,6 +24,7 @@
 package jdk.test.lib.jittester.morph;
 
 public enum MorphLegTarget {
+    TYPE_DECLARATION,
     BLOCK,
     FIELD_DECLARATION
 }

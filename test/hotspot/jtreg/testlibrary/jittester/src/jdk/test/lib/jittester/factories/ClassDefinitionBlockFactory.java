@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import jdk.test.lib.jittester.Block;
+import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.ProductionParams;
@@ -35,6 +36,7 @@ import jdk.test.lib.jittester.Rule;
 import jdk.test.lib.jittester.Type;
 import jdk.test.lib.jittester.classes.ClassDefinitionBlock;
 import jdk.test.lib.jittester.classes.Klass;
+import jdk.test.lib.jittester.morph.MorphLegTarget;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
@@ -100,6 +102,8 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
                             .setMemberFunctionsLimit(memberFunctionsLimit)
                             .getRecordKlassFactory(), recordWeight);
                 }
+                addMorphTypeDeclarationLeg(rule, builder.setName(prefix + "_Value_Class_" + i)
+                        .setMemberFunctionsLimit(memberFunctionsLimit));
                 // TODO: Add enums
                 content.add(rule.produce());
             } catch (ProductionFailedException e) {
@@ -114,6 +118,17 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
     private boolean shouldProduceAnotherClass() {
         return typeDeclarationAttemptProbability > 0.0
                 && PseudoRandom.randomBoolean(typeDeclarationAttemptProbability);
+    }
+
+    private void addMorphTypeDeclarationLeg(Rule<IRNode> rule, IRNodeBuilder builder) {
+        double mtLegWeight = GenerationState.currentFlowParams().mtLegWeight();
+        if (mtLegWeight <= 0.0 || !MorphLegFactory.hasApplicableLeg(GenerationState.currentMorphContext(),
+                MorphLegTarget.TYPE_DECLARATION, builder)) {
+            return;
+        }
+        rule.add("morph_type_leg", new MorphLegFactory(builder, MorphLegTarget.TYPE_DECLARATION),
+                MorphLegFactory.weight(GenerationState.currentMorphContext(), mtLegWeight,
+                        MorphLegTarget.TYPE_DECLARATION, builder));
     }
 
     private void ensureMinDepth(Collection<IRNode> content) throws ProductionFailedException {

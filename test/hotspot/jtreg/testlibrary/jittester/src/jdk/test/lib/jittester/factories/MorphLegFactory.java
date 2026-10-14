@@ -51,9 +51,20 @@ class MorphLegFactory extends Factory<IRNode> {
     }
 
     static double weight(MorphContext context, double baseWeight, MorphLegTarget target, IRNodeBuilder builder) {
+        if (target == MorphLegTarget.TYPE_DECLARATION) {
+            return typeDeclarationWeight(context, baseWeight, builder);
+        }
         double multiplier = 0.0;
         for (MorphTemplate template : selectableTemplates(context, target, builder)) {
             multiplier = Math.max(multiplier, template.legWeightMultiplier(target));
+        }
+        return baseWeight * multiplier;
+    }
+
+    private static double typeDeclarationWeight(MorphContext context, double baseWeight, IRNodeBuilder builder) {
+        double multiplier = 0.0;
+        for (MorphTemplate template : selectableTemplates(context, MorphLegTarget.TYPE_DECLARATION, builder)) {
+            multiplier += Math.max(0.0, template.legWeightMultiplier(MorphLegTarget.TYPE_DECLARATION));
         }
         return baseWeight * multiplier;
     }

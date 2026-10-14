@@ -168,6 +168,7 @@ public record InlineTypeFlatArrayMorphTemplate(long id, int nextLeg, int kind,
     @Override
     public double legWeightMultiplier(MorphLegTarget target) {
         return switch (target) {
+            case TYPE_DECLARATION -> 0.0;
             case FIELD_DECLARATION -> FIELD_DECLARATION_LEG_WEIGHT_MULTIPLIER;
             case BLOCK -> BLOCK_LEG_WEIGHT_MULTIPLIER;
         };
@@ -176,6 +177,7 @@ public record InlineTypeFlatArrayMorphTemplate(long id, int nextLeg, int kind,
     @Override
     public boolean canProduceLeg(MorphLegTarget target, IRNodeBuilder builder) {
         return switch (target) {
+            case TYPE_DECLARATION -> false;
             case BLOCK -> canProduceBlockLeg(builder);
             case FIELD_DECLARATION -> canProduceFieldDeclarationLeg();
         };
@@ -185,6 +187,7 @@ public record InlineTypeFlatArrayMorphTemplate(long id, int nextLeg, int kind,
     public MorphLegResult produceLeg(MorphLegTarget target, int leg, IRNodeBuilder builder)
             throws ProductionFailedException {
         return switch (target) {
+            case TYPE_DECLARATION -> throw new ProductionFailedException();
             case BLOCK -> produceLeg(leg, builder);
             case FIELD_DECLARATION -> produceFieldArrayLeg(leg, builder);
         };
