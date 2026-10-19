@@ -626,7 +626,7 @@ public class IRNodeBuilder {
 
     public Factory<ClassDefinitionBlock> getClassDefinitionBlockFactory() {
         return new ClassDefinitionBlockFactory(getPrefix(),
-                ProductionParams.classesLimit.value(),
+                ProductionParams.typeDeclarationAttemptsMean.value(),
                 ProductionParams.memberFunctionsLimit.value(),
                 ProductionParams.memberFunctionsArgLimit.value(),
                 flowParams().statementLimit(),

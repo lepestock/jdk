@@ -132,6 +132,12 @@ public class OptionResolver {
         return option;
     }
 
+    public Option<Double> addDoubleOption(Character key, String name, double defaultValue, String description) {
+        final Option<Double> option = new DoubleOption(key, name, defaultValue, description);
+        register(option);
+        return option;
+    }
+
     public Option<String> addStringOption(Character key, String name, String defaultValue, String description) {
         final Option<String> option = new StringOption(key, name, defaultValue, description);
         register(option);
@@ -237,6 +243,18 @@ public class OptionResolver {
         @Override
         public Long parseFromString(String arg) {
             return Long.valueOf(arg);
+        }
+    }
+
+    private class DoubleOption extends Option<Double> {
+
+        DoubleOption(Character s, String l, double v, String d) {
+            super(s, l, v, d);
+        }
+
+        @Override
+        public Double parseFromString(String arg) {
+            return Double.valueOf(arg);
         }
     }
 

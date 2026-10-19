@@ -3,7 +3,7 @@
 --identity-value-class-balance=80
 
 # Keep plain generation responsive enough for smoke and pool preselection runs.
---classes-limit=6
+--type-declaration-attempts-mean=3.5
 --member-functions-limit=8
 --data-member-limit=6
 --statement-limit=18

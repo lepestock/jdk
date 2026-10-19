@@ -48,7 +48,7 @@ public class GenomeParametersTests {
         Path profile = work.resolve("founder.profile");
         Files.writeString(included, "--statement-limit=5\n--arrays-disable=false\n");
         Files.writeString(profile, "--profile " + included + "\n--statement-limit=7\n"
-                + "--classes-limit=5\n");
+                + "--type-declaration-attempts-mean=2.5\n");
         String founder = work.resolve("founder").toString();
         ProductionParams.initializeFromCmdline(new String[] {
                 "--profile", profile.toString(), "--statement-limit=9",
@@ -69,8 +69,8 @@ public class GenomeParametersTests {
         check(GenerationState.currentFlowParams().statementLimit() == 9,
                 "FlowParams was initialized before parameter restoration");
         check(!ProductionParams.disableArrays.value(), "Replay did not restore false");
-        check(ProductionParams.classesLimit.value() == 5,
-                "Replay did not restore the class limit");
+        check(ProductionParams.typeDeclarationAttemptsMean.value() == 2.5,
+                "Replay did not restore a double parameter");
         check(ProductionParams.operatorLimit.isSet(),
                 "An explicitly supplied default value must remain recorded");
         check(!ProductionParams.memberFunctionsLimit.isSet(),

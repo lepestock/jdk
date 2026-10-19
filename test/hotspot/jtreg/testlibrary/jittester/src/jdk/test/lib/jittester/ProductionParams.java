@@ -57,7 +57,7 @@ public class ProductionParams {
     public static Option<Integer> memberFunctionsLimit = null;
     public static Option<Integer> memberFunctionsArgLimit = null;
     public static Option<Integer> stringLiteralSizeLimit = null;
-    public static Option<Integer> classesLimit = null;
+    public static Option<Double> typeDeclarationAttemptsMean = null;
     public static Option<Integer> implementationLimit = null;
     public static Option<Integer> dimensionsLimit = null;
     public static Option<Integer> minCfgDepth = null;
@@ -219,7 +219,8 @@ public class ProductionParams {
         memberFunctionsLimit = optionResolver.addIntegerOption('m', "member-functions-limit", 15, "Upper limit on member functions");
         memberFunctionsArgLimit = optionResolver.addIntegerOption('a', "member-functions-arg-limit", 5, "Upper limit on the number of member function args");
         stringLiteralSizeLimit = optionResolver.addIntegerOption("string-literal-size-limit", 10, "Upper limit on the number of chars in string literal");
-        classesLimit = optionResolver.addIntegerOption('c', "classes-limit", 12, "Upper limit on the number of classes");
+        typeDeclarationAttemptsMean = optionResolver.addDoubleOption('c', "type-declaration-attempts-mean", 6.5,
+                "Mean number of top-level type declaration attempts; there is no hard maximum");
         implementationLimit = optionResolver.addIntegerOption('i', "implementation-limit", 3, "Upper limit on a number of interfaces a class can implement");
         dimensionsLimit = optionResolver.addIntegerOption('d', "dimensions-limit", 3, "Upper limit on array dimensions");
         minCfgDepth = optionResolver.addIntegerOption("min-cfg-depth", 2, "A non-negative decimal integer used to restrict the lower bound of depth of control flow graph");
@@ -495,7 +496,7 @@ public class ProductionParams {
         for (Option<?> option : List.of(
                 dataMemberLimit, statementLimit, testStatementLimit, operatorLimit,
                 memberFunctionsLimit, memberFunctionsArgLimit, stringLiteralSizeLimit,
-                classesLimit, implementationLimit, dimensionsLimit,
+                typeDeclarationAttemptsMean, implementationLimit, dimensionsLimit,
                 minCfgDepth, maxCfgDepth, enableStrictFP, disableFinalClasses,
                 disableFinalMethods, disableFinalVariables, disableIf, disableSwitch,
                 complexLoops, disableWhile, disableDoWhile, disableFor, disableFunctions,

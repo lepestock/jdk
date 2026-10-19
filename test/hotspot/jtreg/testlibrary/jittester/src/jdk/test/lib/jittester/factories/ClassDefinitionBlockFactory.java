@@ -40,18 +40,24 @@ import jdk.test.lib.jittester.utils.PseudoRandom;
 
 class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
     private final String prefix;
-    private final int classesLimit;
+    private final double typeDeclarationAttemptProbability;
     private final int statementLimit;
     private final int operatorLimit;
     private final int memberFunctionsLimit;
     private final int memberFunctionsArgLimit;
     private final int level;
 
-    ClassDefinitionBlockFactory(String prefix, int classesLimit, int memberFunctionsLimit,
+    ClassDefinitionBlockFactory(String prefix, double typeDeclarationAttemptsMean, int memberFunctionsLimit,
             int memberFunctionsArgLimit, int statementLimit,
             int operatorLimit, int level) {
         this.prefix = prefix;
-        this.classesLimit = classesLimit;
+        if (!Double.isFinite(typeDeclarationAttemptsMean) || typeDeclarationAttemptsMean < 0) {
+            throw new IllegalArgumentException("type-declaration-attempts-mean must be finite and non-negative");
+        }
+        this.typeDeclarationAttemptProbability = typeDeclarationAttemptsMean / (typeDeclarationAttemptsMean + 1.0);
+        if (typeDeclarationAttemptProbability >= 1.0) {
+            throw new IllegalArgumentException("type-declaration-attempts-mean is too large");
+        }
         this.memberFunctionsLimit = memberFunctionsLimit;
         this.memberFunctionsArgLimit = memberFunctionsArgLimit;
         this.statementLimit = statementLimit;
@@ -64,46 +70,50 @@ class ClassDefinitionBlockFactory extends Factory<ClassDefinitionBlock> {
         ArrayList<IRNode> content = new ArrayList<>();
         int identityValueClassBalance = Math.max(0, Math.min(100,
                 ProductionParams.identityValueClassBalance.value()));
-        int limit = (int) Math.ceil(PseudoRandom.random() * classesLimit);
-        if (limit > 0) {
-            IRNodeBuilder builder = new IRNodeBuilder().setLevel(level)
-                    .setMemberFunctionsArgLimit(memberFunctionsArgLimit)
-                    .withStatementLimit(statementLimit)
-                    .withOperatorLimit(operatorLimit);
-            for (int i = 0; i < limit; i++) {
-                try {
-                    Rule<IRNode> rule = new Rule<>("class");
-                    int identityClassWeight = 100 - identityValueClassBalance;
-                    if (identityClassWeight > 0) {
-                        rule.add("identity_class", builder.setName(prefix + "_Class_" + i)
-                                .setMemberFunctionsLimit(memberFunctionsLimit)
-                                .getKlassFactory(), identityClassWeight);
-                    }
-                    if (identityValueClassBalance > 0) {
-                        rule.add("value_class", builder.setName(prefix + "_Value_Class_" + i)
-                                .setMemberFunctionsLimit(memberFunctionsLimit)
-                                .getValueKlassFactory(), identityValueClassBalance);
-                    }
-                    if (!ProductionParams.disableInterfaces.value()) {
-                        rule.add("interface", builder.setName(prefix + "_Interface_" + i)
-                                .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2))
-                                .getInterfaceFactory(), 0.1);
-                    }
-                    int recordWeight = Math.max(0, ProductionParams.classRecordWeight.value());
-                    if (recordWeight > 0) {
-                        rule.add("record_class", builder.setName(prefix + "_Record_" + i)
-                                .setMemberFunctionsLimit(memberFunctionsLimit)
-                                .getRecordKlassFactory(), recordWeight);
-                    }
-                    // TODO: Add enums
-                    content.add(rule.produce());
-                } catch (ProductionFailedException e) {
+        IRNodeBuilder builder = new IRNodeBuilder().setLevel(level)
+                .setMemberFunctionsArgLimit(memberFunctionsArgLimit)
+                .withStatementLimit(statementLimit)
+                .withOperatorLimit(operatorLimit);
+        int i = 0;
+        while (shouldProduceAnotherClass()) {
+            try {
+                Rule<IRNode> rule = new Rule<>("class");
+                int identityClassWeight = 100 - identityValueClassBalance;
+                if (identityClassWeight > 0) {
+                    rule.add("identity_class", builder.setName(prefix + "_Class_" + i)
+                            .setMemberFunctionsLimit(memberFunctionsLimit)
+                            .getKlassFactory(), identityClassWeight);
                 }
+                if (identityValueClassBalance > 0) {
+                    rule.add("value_class", builder.setName(prefix + "_Value_Class_" + i)
+                            .setMemberFunctionsLimit(memberFunctionsLimit)
+                            .getValueKlassFactory(), identityValueClassBalance);
+                }
+                if (!ProductionParams.disableInterfaces.value()) {
+                    rule.add("interface", builder.setName(prefix + "_Interface_" + i)
+                            .setMemberFunctionsLimit((int) (memberFunctionsLimit * 0.2))
+                            .getInterfaceFactory(), 0.1);
+                }
+                int recordWeight = Math.max(0, ProductionParams.classRecordWeight.value());
+                if (recordWeight > 0) {
+                    rule.add("record_class", builder.setName(prefix + "_Record_" + i)
+                            .setMemberFunctionsLimit(memberFunctionsLimit)
+                            .getRecordKlassFactory(), recordWeight);
+                }
+                // TODO: Add enums
+                content.add(rule.produce());
+            } catch (ProductionFailedException e) {
             }
+            i++;
         }
         ensureMinDepth(content);
         ensureMaxDepth(content);
         return new ClassDefinitionBlock(content, level);
+    }
+
+    private boolean shouldProduceAnotherClass() {
+        return typeDeclarationAttemptProbability > 0.0
+                && PseudoRandom.randomBoolean(typeDeclarationAttemptProbability);
     }
 
     private void ensureMinDepth(Collection<IRNode> content) throws ProductionFailedException {
