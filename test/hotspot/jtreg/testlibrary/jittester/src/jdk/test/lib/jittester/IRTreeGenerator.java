@@ -35,6 +35,7 @@ import jdk.test.lib.jittester.morph.InlineTypeFlatFieldMorphTemplate;
 import jdk.test.lib.jittester.morph.MorphTemplate;
 import jdk.test.lib.jittester.types.TypeKlass;
 import jdk.test.lib.jittester.utils.FixedTrees;
+import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.PseudoRandom;
 
 /**
@@ -54,6 +55,7 @@ public class IRTreeGenerator {
      * @return a pair (main class; private classes)
      */
     public static Test generateIRTree(String name) {
+        Genome.beginGentest();
         long seed = PseudoRandom.getCurrentSeed();
         //NB: SymbolTable is a widely-used singleton, hence all the locking.
         SymbolTable.removeAll();

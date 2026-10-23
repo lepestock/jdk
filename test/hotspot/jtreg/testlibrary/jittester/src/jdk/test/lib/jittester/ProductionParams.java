@@ -483,17 +483,17 @@ public class ProductionParams {
                 "morph-template-inline-type-flat-field-probability",
                 0,
                 "Probability (0..100) to create an inline-type flat-field morph template");
-        morphTemplateGentestScopeReserveSize = optionResolver.addIntegerOption(
+        morphTemplateGentestScopeReserveSize = optionResolver.addWobblyIntegerOption(
                 "morph-template-gentest-scope-reserve-size",
-                10,
+                10, 0,
                 "Number of gentest-scope morph templates pre-created when a gentest-level morph family is enabled");
-        morphTemplateInlineTypeFlatFieldUseLegLimit = optionResolver.addIntegerOption(
+        morphTemplateInlineTypeFlatFieldUseLegLimit = optionResolver.addWobblyIntegerOption(
                 "morph-template-inline-type-flat-field-use-leg-limit",
-                5,
+                5, 1,
                 "Maximum number of inline-type flat-field use legs per template; each template chooses 1..limit");
-        morphTemplateInlineTypeFlatFieldLegSelectionWeight = optionResolver.addIntegerOption(
+        morphTemplateInlineTypeFlatFieldLegSelectionWeight = optionResolver.addWobblyIntegerOption(
                 "morph-template-inline-type-flat-field-leg-selection-weight",
-                100,
+                100, 0,
                 "Selection weight percent for inline-type flat-field templates among applicable morph templates");
         morphTemplateCreationRepeatProbability = optionResolver.addIntegerOption(
                 "morph-template-creation-repeat-probability",
@@ -507,9 +507,9 @@ public class ProductionParams {
                 "morph-lock-elimination-create-lock-var-probability",
                 50,
                 "Probability (0..100) for lock-elimination morph leg to create a magnetized lock variable");
-        morphTemplateLegWeight = optionResolver.addIntegerOption(
+        morphTemplateLegWeight = optionResolver.addWobblyIntegerOption(
                 "morph-template-leg-weight",
-                100,
+                100, 0,
                 "Relative weight percent (100 = 1x, may exceed 100) for active morph template legs");
         morphTemplateReferenceDeteriorationPercent = optionResolver.addIntegerOption(
                 "morph-template-reference-deterioration-percent",
@@ -553,9 +553,15 @@ public class ProductionParams {
         generationOptions = Collections.unmodifiableMap(options);
     }
 
-    public record GenerationParameters(String defaultsFingerprint, Map<String, String> overrides) {
+    public record GenerationParameters(String defaultsFingerprint, Map<String, String> overrides,
+                                       Map<String, String> wobbleSpecifications) {
         public GenerationParameters {
             overrides = Collections.unmodifiableMap(new TreeMap<>(overrides));
+            wobbleSpecifications = Collections.unmodifiableMap(new TreeMap<>(wobbleSpecifications));
+        }
+
+        public GenerationParameters(String defaultsFingerprint, Map<String, String> overrides) {
+            this(defaultsFingerprint, overrides, Map.of());
         }
     }
 
@@ -567,7 +573,8 @@ public class ProductionParams {
                 overrides.put(option.getLongName(), option.value().toString());
             }
         }
-        return new GenerationParameters(generationDefaultsFingerprint(), overrides);
+        return new GenerationParameters(generationDefaultsFingerprint(), overrides,
+                activeOptionResolver.wobbleSpecifications());
     }
 
     public static void restoreGenerationParameters(GenerationParameters parameters) {
@@ -594,6 +601,19 @@ public class ProductionParams {
                 (Integer) restored.getOrDefault(morphTemplateInlineTypeFlatFieldProbability,
                         morphTemplateInlineTypeFlatFieldProbability.getDefaultValue()));
         activeOptionResolver.restoreValues(restored);
+        activeOptionResolver.restoreWobbleSpecifications(parameters.wobbleSpecifications());
+    }
+
+    public static void resolveWobblyParameters(long gentestSeed) {
+        activeOptionResolver.resolveWobbles(gentestSeed);
+    }
+
+    public static Map<String, String> effectiveWobblyParameters() {
+        return activeOptionResolver.effectiveWobbles();
+    }
+
+    public static void restoreEffectiveWobblyParameters(Map<String, String> effective) {
+        activeOptionResolver.restoreEffectiveWobbles(effective);
     }
 
     private static String generationDefaultsFingerprint() {
@@ -668,6 +688,7 @@ public class ProductionParams {
             PseudoRandom.setCurrentSeed(seed.value());
         }
         if (!replayMode) {
+            resolveWobblyParameters(PseudoRandom.getCurrentSeed());
             validateFlatFieldConfiguration();
         }
         Long mutationSeedOverride = firstSetLong(genomeMutationSeed);
@@ -908,6 +929,9 @@ public class ProductionParams {
                         + canonicalName);
             }
             Option<?> option = resolveOption(canonicalName);
+            if (!(option.getDefaultValue() instanceof String) && entry.getValue().contains(":")) {
+                throw new IllegalArgumentException("Wobbly mutation-local overrides are not supported: " + canonicalName);
+            }
             if (option.getDefaultValue() instanceof List) {
                 throw new IllegalArgumentException("Mutation override is not supported for repeating option --"
                         + canonicalName);

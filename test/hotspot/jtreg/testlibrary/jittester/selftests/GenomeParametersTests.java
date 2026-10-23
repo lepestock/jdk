@@ -86,7 +86,7 @@ public class GenomeParametersTests {
         check(Files.mismatch(Path.of(founder + ".blocks"), Path.of(replay + ".blocks")) == -1,
                 "Replay changed the block-only header");
         String header = Files.readString(Path.of(founder + ".genome"));
-        check(header.contains("(genocode_version full-2.0)"), "Missing major version bump");
+        check(header.contains("(genocode_version full-2.1)"), "Missing current genome version");
         check(!header.contains("testbase-dir") && !header.contains("debug-morph-source-diagnostics")
                 && !header.contains("debug-type-labels") && !header.contains("member-functions-limit"),
                 "Header is not a sparse policy snapshot");
@@ -145,7 +145,7 @@ public class GenomeParametersTests {
         String defaultsLine = header.lines().filter(line -> line.startsWith("(production_defaults "))
                 .findFirst().orElseThrow();
         reject(header.replace(defaultsLine + "\n", ""), "missing production-parameter header");
-        reject(header.replace("full-2.0", "full-1.4"), "version mismatch");
+        reject(header.replace("full-2.1", "full-1.4"), "version mismatch");
         reject(header.replace(defaultsLine, "(production_defaults " + "0".repeat(64) + ")"), "defaults mismatch");
         reject(header + defaultsLine + "\n", "Duplicate");
         reject(header + "(production_parameter statement-limit \"9\")\n", "Duplicate");

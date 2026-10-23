@@ -64,6 +64,10 @@ public final class Genome {
         return genocode.startBlock(liveSeed);
     }
 
+    public static synchronized void beginGentest() {
+        genocode.beginGentest();
+    }
+
     public static synchronized long startBlock(long liveSeed, FlowParams flowParamsAdvance) {
         return genocode.startBlock(liveSeed, flowParamsAdvance);
     }

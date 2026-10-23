@@ -35,6 +35,10 @@ import jdk.test.lib.jittester.LongSmallSet;
 public interface GenomeBackend {
     void initialize(String replayFile, String recordFile, Long mutationSeed, String mutationTarget);
 
+    /** Resolve or restore per-gentest policy before constructing its IR. */
+    default void beginGentest() {
+    }
+
     default long startBlock(long liveSeed) {
         return startBlock(liveSeed, null);
     }

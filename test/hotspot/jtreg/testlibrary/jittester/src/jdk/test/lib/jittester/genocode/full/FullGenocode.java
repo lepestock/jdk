@@ -61,7 +61,7 @@ import java.util.regex.Pattern;
  * Statement-level overrides are intentionally ignored in this genocode.
  */
 public final class FullGenocode implements GenomeBackend {
-    private static final String GENOCODE_VERSION = "full-2.0";
+    private static final String GENOCODE_VERSION = "full-2.1";
     private static final int MAX_EVENT_LINE_WIDTH = 120;
 
     private List<ReplayNode> replayRoots = Collections.emptyList();
@@ -85,6 +85,12 @@ public final class FullGenocode implements GenomeBackend {
     private static final Pattern PRODUCTION_PARAMETER_PATTERN =
             Pattern.compile("^\\(production_parameter\\s+([^\\s()]+)\\s+\"((?:[^\"\\\\]|\\\\.)*)\"\\)\\s*(?:#.*)?$");
     private ProductionParams.GenerationParameters generationParameters;
+    private static final Pattern PRODUCTION_WOBBLE_PATTERN =
+            Pattern.compile("^\\(production_wobble\\s+([^\\s()]+)\\s+\"([^\"]+)\"\\)\\s*(?:#.*)?$");
+    private static final Pattern GENTEST_PARAMETER_PATTERN =
+            Pattern.compile("^\\(production_gentest_parameter\\s+(\\d+)\\s+([^\\s()]+)\\s+\"(\\d+)\"\\)\\s*(?:#.*)?$");
+    private Map<Integer, Map<String, String>> replayGentestParameters = Map.of();
+    private int nextGentestIndex;
     private Long mutationSeedOverride = null;
     private Long mutationTargetBlockSeed = null;
     private Path recordFilePath = null;
@@ -123,6 +129,8 @@ public final class FullGenocode implements GenomeBackend {
         boolean replayMode = replayFile != null && !replayFile.isBlank();
         replayModeActive = replayMode;
         ReplayData replayData = loadReplayData(replayFile);
+        replayGentestParameters = replayData.gentestParameters;
+        nextGentestIndex = 0;
         replayRoots = replayData.roots;
         nextRootIndex = 0;
         replayRootEvents = replayData.rootEvents;
@@ -149,7 +157,7 @@ public final class FullGenocode implements GenomeBackend {
             ProductionParams.restoreGenerationParameters(replayData.generationParameters);
         }
         generationParameters = ProductionParams.generationParameters();
-        replaySupportsStatementScopes = GENOCODE_VERSION.equals(replayData.genocodeVersion);
+        replaySupportsStatementScopes = isSupportedReplayVersion(replayData.genocodeVersion);
         replayTraceToken = normalizeTraceToken(System.getProperty("jittester.replay.trace.token"));
         replayTraceTokens = parseTraceTokenSet(System.getProperty("jittester.replay.trace.tokens"));
         replayTraceCrash = Boolean.getBoolean("jittester.replay.trace.crash");
@@ -207,6 +215,39 @@ public final class FullGenocode implements GenomeBackend {
         blocksDepth = 0;
         resetPendingNLine();
         writeGlobalSeedHeader();
+    }
+
+    @Override
+    public synchronized void beginGentest() {
+        int index = nextGentestIndex++;
+        // The first test's effective policy is already in the global header.
+        if (index == 0 || generationParameters.wobbleSpecifications().isEmpty()) {
+            return;
+        }
+        if (!replayStack.isEmpty() || isSpeculativeRecordActive()) {
+            throw new IllegalStateException("Cannot begin a gentest inside a generation scope");
+        }
+        if (replayModeActive) {
+            Map<String, String> effective = replayGentestParameters.get(index);
+            if (effective == null) {
+                throw new IllegalArgumentException("Missing gentest parameter snapshot: " + index);
+            }
+            ProductionParams.restoreEffectiveWobblyParameters(effective);
+        } else {
+            ProductionParams.resolveWobblyParameters(PseudoRandom.getCurrentSeed());
+        }
+        GenerationState.initializeFlowParamsFromProductionParams();
+        try {
+            flushPendingNLine();
+            for (Map.Entry<String, String> entry : ProductionParams.effectiveWobblyParameters().entrySet()) {
+                String line = "(production_gentest_parameter " + index + " " + entry.getKey()
+                        + " \"" + entry.getValue() + "\")\n";
+                writeRecord(line);
+                writeBlocks(line);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to record gentest parameters", e);
+        }
     }
 
     @Override
@@ -768,7 +809,7 @@ public final class FullGenocode implements GenomeBackend {
 
     private ReplayData loadReplayData(String replayFile) {
         if (replayFile == null || replayFile.isBlank()) {
-            return new ReplayData(null, null, null, Collections.emptyList(), Collections.emptyList());
+            return new ReplayData(null, null, null, Map.of(), Collections.emptyList(), Collections.emptyList());
         }
         Path path = Paths.get(replayFile);
         try {
@@ -777,8 +818,27 @@ public final class FullGenocode implements GenomeBackend {
             String genocodeVersion = null;
             String defaultsFingerprint = null;
             Map<String, String> parameters = new TreeMap<>();
+            Map<String, String> wobbleSpecifications = new TreeMap<>();
+            Map<Integer, Map<String, String>> gentestParameters = new TreeMap<>();
             List<String> tokens = new ArrayList<>();
             for (String line : lines) {
+                Matcher wobbleMatcher = PRODUCTION_WOBBLE_PATTERN.matcher(line.trim());
+                if (wobbleMatcher.matches()) {
+                    if (!tokens.isEmpty() || wobbleSpecifications.putIfAbsent(
+                            wobbleMatcher.group(1), wobbleMatcher.group(2)) != null) {
+                        throw new IllegalArgumentException("Duplicate or misplaced wobble specification");
+                    }
+                    continue;
+                }
+                Matcher gentestMatcher = GENTEST_PARAMETER_PATTERN.matcher(line.trim());
+                if (gentestMatcher.matches()) {
+                    int index = Integer.parseInt(gentestMatcher.group(1));
+                    if (index <= 0 || gentestParameters.computeIfAbsent(index, unused -> new TreeMap<>())
+                            .putIfAbsent(gentestMatcher.group(2), gentestMatcher.group(3)) != null) {
+                        throw new IllegalArgumentException("Invalid or duplicate gentest parameter");
+                    }
+                    continue;
+                }
                 // Parameter strings may contain '#' and escaped quotes. Parse
                 // them before applying the gene stream's comment stripping.
                 Matcher parameterMatcher = PRODUCTION_PARAMETER_PATTERN.matcher(line.trim());
@@ -831,10 +891,21 @@ public final class FullGenocode implements GenomeBackend {
                     tokens.add(matcher.group());
                 }
             }
+            if ("full-2.0".equals(genocodeVersion)
+                    && (!wobbleSpecifications.isEmpty() || !gentestParameters.isEmpty())) {
+                throw new IllegalArgumentException("Wobble metadata requires full-2.1");
+            }
             ProductionParams.GenerationParameters parametersSnapshot = defaultsFingerprint == null
-                    ? null : new ProductionParams.GenerationParameters(defaultsFingerprint, parameters);
+                    ? null : new ProductionParams.GenerationParameters(defaultsFingerprint, parameters, wobbleSpecifications);
+            int expectedIndex = 1;
+            for (Map.Entry<Integer, Map<String, String>> entry : gentestParameters.entrySet()) {
+                if (entry.getKey() != expectedIndex++ || wobbleSpecifications.isEmpty()
+                        || !entry.getValue().keySet().equals(wobbleSpecifications.keySet())) {
+                    throw new IllegalArgumentException("Invalid gentest parameter snapshot sequence");
+                }
+            }
             if (tokens.isEmpty()) {
-                return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, Collections.emptyList(),
+                return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, gentestParameters, Collections.emptyList(),
                         Collections.emptyList());
             }
 
@@ -850,10 +921,10 @@ public final class FullGenocode implements GenomeBackend {
                     ScopeSeed scopeSeed = parseScopeSeed(token);
                     roots.add(new ReplayNode(scopeSeed.type, scopeSeed.seed));
                 }
-                return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, roots, rootEvents);
+                return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, gentestParameters, roots, rootEvents);
             }
             ReplayParse replayParse = parseReplayForest(tokens);
-            return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, replayParse.roots,
+            return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, gentestParameters, replayParse.roots,
                     replayParse.rootEvents);
         } catch (IOException e) {
             throw new RuntimeException("Failed to read block RNG replay file: " + replayFile, e);
@@ -1048,6 +1119,10 @@ public final class FullGenocode implements GenomeBackend {
                     .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
                     .replace("\b", "\\b").replace("\f", "\\f");
             writer.write("(production_parameter " + entry.getKey() + " \"" + quoted + "\")");
+            writer.newLine();
+        }
+        for (Map.Entry<String, String> entry : generationParameters.wobbleSpecifications().entrySet()) {
+            writer.write("(production_wobble " + entry.getKey() + " \"" + entry.getValue() + "\")");
             writer.newLine();
         }
     }
@@ -1316,15 +1391,18 @@ public final class FullGenocode implements GenomeBackend {
         final String genocodeVersion;
         final Long globalSeed;
         final ProductionParams.GenerationParameters generationParameters;
+        final Map<Integer, Map<String, String>> gentestParameters;
         final List<ReplayNode> roots;
         final List<ReplayEvent> rootEvents;
 
         ReplayData(String genocodeVersion, Long globalSeed,
-                ProductionParams.GenerationParameters generationParameters, List<ReplayNode> roots,
+                ProductionParams.GenerationParameters generationParameters,
+                Map<Integer, Map<String, String>> gentestParameters, List<ReplayNode> roots,
                 List<ReplayEvent> rootEvents) {
             this.genocodeVersion = genocodeVersion;
             this.globalSeed = globalSeed;
             this.generationParameters = generationParameters;
+            this.gentestParameters = gentestParameters;
             this.roots = roots;
             this.rootEvents = rootEvents;
         }
@@ -1341,7 +1419,7 @@ public final class FullGenocode implements GenomeBackend {
     }
 
     private static boolean isSupportedReplayVersion(String version) {
-        return GENOCODE_VERSION.equals(version);
+        return GENOCODE_VERSION.equals(version) || "full-2.0".equals(version);
     }
 
     private static Long parseMutationTargetBlockSeed(String mutationTarget) {

@@ -30,6 +30,8 @@ import java.util.*;
 public class OptionResolver {
     private final Map<String, Option<?>> options = new LinkedHashMap<>(20);
     private Map<Option<?>, Object> values = Collections.emptyMap();
+    private final Map<Option<?>, Integer> wobbleMinimums = new HashMap<>();
+    private final Map<Option<?>, Wobble.Specification> wobbleSpecifications = new HashMap<>();
 
     public OptionResolver() {
     }
@@ -41,6 +43,7 @@ public class OptionResolver {
     public final void parse(String[] argv, Option<String> propertyFileOption) {
         int position = 0;
         this.values = new HashMap<>(argv.length / 2);
+        wobbleSpecifications.clear();
 
         while (position < argv.length) {
             String curArg = argv[position];
@@ -84,7 +87,7 @@ public class OptionResolver {
                     }
                 }
                 try {
-                    value = currentOption.parseFromString(valueArg);
+                    value = parseConfiguredValue(currentOption, valueArg);
                 } catch (Exception ex) {
                     throw new IllegalArgumentException("Error parsing " + valueArg + ", option " + curArg, ex);
                 }
@@ -113,7 +116,9 @@ public class OptionResolver {
 
             final String propertyValue = properties.getProperty(optionName);
             try {
-                values.putIfAbsent(currentOption, currentOption.parseFromString(propertyValue));
+                if (!values.containsKey(currentOption)) {
+                    values.put(currentOption, parseConfiguredValue(currentOption, propertyValue));
+                }
             } catch (Exception ex) {
                 throw new IllegalArgumentException("Error parsing " + propertyValue + ", property " + optionName, ex);
             }
@@ -152,6 +157,82 @@ public class OptionResolver {
 
     public Option<Integer> addIntegerOption(String name, int defaultValue, String description) {
         return addIntegerOption(null, name, defaultValue, description);
+    }
+
+    public Option<Integer> addWobblyIntegerOption(String name, int defaultValue, int minimum, String description) {
+        Option<Integer> option = addIntegerOption(name, defaultValue, description
+                + "; accepts :stable, :slightly_wobbly, :wobbly, :very_wobbly");
+        wobbleMinimums.put(option, minimum);
+        return option;
+    }
+
+    private Object parseConfiguredValue(Option<?> option, String text) {
+        if (text != null && text.contains(":")) {
+            Integer minimum = wobbleMinimums.get(option);
+            if (minimum != null) {
+                Wobble.Specification specification = Wobble.Specification.parse(text, minimum);
+                wobbleSpecifications.remove(option);
+                if (specification.level() != Wobble.Level.STABLE) {
+                    wobbleSpecifications.put(option, specification);
+                }
+                return specification.baseline();
+            }
+            if (option.isFlag()) {
+                throw new IllegalArgumentException("Wobbliness is not supported for --" + option.longName);
+            }
+        }
+        wobbleSpecifications.remove(option);
+        return option.parseFromString(text);
+    }
+
+    public Map<String, String> wobbleSpecifications() {
+        Map<String, String> result = new TreeMap<>();
+        wobbleSpecifications.forEach((option, specification) -> result.put(option.longName, specification.toString()));
+        return Collections.unmodifiableMap(result);
+    }
+
+    public void restoreWobbleSpecifications(Map<String, String> specifications) {
+        Map<Option<?>, Wobble.Specification> restored = new HashMap<>();
+        specifications.forEach((name, text) -> {
+            Option<?> option = findOptionByLongName(name);
+            Integer minimum = wobbleMinimums.get(option);
+            if (minimum == null || !option.isSet()) {
+                throw new IllegalArgumentException("Missing or unsupported effective wobbly parameter: " + name);
+            }
+            Wobble.Specification specification = Wobble.Specification.parse(text, minimum);
+            if (specification.level() == Wobble.Level.STABLE || !specification.toString().equals(text)
+                    || (Integer) option.value() < minimum) {
+                throw new IllegalArgumentException("Invalid wobbly parameter metadata: " + name);
+            }
+            restored.put(option, specification);
+        });
+        wobbleSpecifications.clear();
+        wobbleSpecifications.putAll(restored);
+    }
+
+    public void resolveWobbles(long gentestSeed) {
+        wobbleSpecifications.forEach((option, specification) -> values.put(option,
+                specification.sample(gentestSeed, option.longName, wobbleMinimums.get(option))));
+    }
+
+    public Map<String, String> effectiveWobbles() {
+        Map<String, String> result = new TreeMap<>();
+        wobbleSpecifications.keySet().forEach(option -> result.put(option.longName, option.value().toString()));
+        return result;
+    }
+
+    public void restoreEffectiveWobbles(Map<String, String> effective) {
+        if (!effective.keySet().equals(wobbleSpecifications().keySet())) {
+            throw new IllegalArgumentException("Gentest wobbly parameter set mismatch");
+        }
+        effective.forEach((name, value) -> {
+            Option<?> option = findOptionByLongName(name);
+            int parsed = Integer.parseInt(value);
+            if (parsed < wobbleMinimums.get(option) || !Integer.toString(parsed).equals(value)) {
+                throw new IllegalArgumentException("Invalid effective wobbly parameter: " + name);
+            }
+            values.put(option, parsed);
+        });
     }
 
     public Option<String> addStringOption(String name, String defaultValue, String description) {

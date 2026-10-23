@@ -62,7 +62,8 @@ public class FlatFieldConfigurationTests {
         var before = ProductionParams.generationParameters();
         var overrides = new HashMap<>(before.overrides());
         overrides.put("disable-functions", "true");
-        var invalid = new ProductionParams.GenerationParameters(before.defaultsFingerprint(), overrides);
+        var invalid = new ProductionParams.GenerationParameters(before.defaultsFingerprint(), overrides,
+                before.wobbleSpecifications());
         reject(() -> ProductionParams.restoreGenerationParameters(invalid));
         require(before.equals(ProductionParams.generationParameters()),
                 "Rejected parameter restoration changed the current configuration");
