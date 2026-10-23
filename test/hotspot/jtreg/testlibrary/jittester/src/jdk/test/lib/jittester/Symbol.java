@@ -129,4 +129,9 @@ public class Symbol {
     public void setMagnetismGeneId(long magnetismGeneId) {
         this.magnetismGeneId = magnetismGeneId;
     }
+
+    // Use only when a copy represents a distinct symbol, not a scope/checkpoint copy.
+    public void clearMagnetismGeneId() {
+        magnetismGeneId = Long.MIN_VALUE;
+    }
 }

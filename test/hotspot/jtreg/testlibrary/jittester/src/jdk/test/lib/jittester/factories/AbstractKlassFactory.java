@@ -299,6 +299,8 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                     if (functionInfo.isConstructor()) {
                         continue;
                     }
+                    // A function registered under a new owner needs its own declaration magnet.
+                    functionInfo.clearMagnetismGeneId();
                     if ((functionInfo.flags & FunctionInfo.STATIC) == 0) {
                         functionInfo.argTypes.get(0).type = thisKlass;
                     }
@@ -335,6 +337,7 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
             thisKlass.addParent(iface.getName());
             for (Symbol symbol : SymbolTable.getAllCombined(iface, FunctionInfo.class)) {
                 FunctionInfo functionInfo = (FunctionInfo) symbol.deepCopy();
+                functionInfo.clearMagnetismGeneId();
                 functionInfo.owner = thisKlass;
                 functionInfo.argTypes.get(0).type = thisKlass;
                 SymbolTable.add(functionInfo);

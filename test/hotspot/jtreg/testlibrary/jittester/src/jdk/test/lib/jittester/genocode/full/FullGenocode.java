@@ -290,7 +290,8 @@ public final class FullGenocode implements GenomeBackend {
             previousFlowParams = Optional.of(GenerationState.currentFlowParams());
             GenerationState.setCurrentFlowParams(flowParamsAdvance.get());
         }
-        if (mutable) {
+        // Ordinary mutations inherit the same scope limits as subsequent replay.
+        if (mutable && ProductionParams.hasMutationOverrides()) {
             previousParamsState = ProductionParams.beginMutationOverrideScope();
             if (previousFlowParams.isEmpty()) {
                 previousFlowParams = Optional.of(GenerationState.currentFlowParams());
