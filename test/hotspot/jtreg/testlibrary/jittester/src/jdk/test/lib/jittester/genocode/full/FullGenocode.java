@@ -48,8 +48,10 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,7 +61,7 @@ import java.util.regex.Pattern;
  * Statement-level overrides are intentionally ignored in this genocode.
  */
 public final class FullGenocode implements GenomeBackend {
-    private static final String GENOCODE_VERSION = "full-1.4";
+    private static final String GENOCODE_VERSION = "full-2.0";
     private static final int MAX_EVENT_LINE_WIDTH = 120;
 
     private List<ReplayNode> replayRoots = Collections.emptyList();
@@ -78,6 +80,11 @@ public final class FullGenocode implements GenomeBackend {
             Pattern.compile("^\\(genocode_version\\s+([^\\s()]+)\\)$");
     private static final Pattern GLOBAL_SEED_HEADER_PATTERN =
             Pattern.compile("^\\(global_seed\\s+(-?\\d+)\\)$");
+    private static final Pattern PRODUCTION_DEFAULTS_PATTERN =
+            Pattern.compile("^\\(production_defaults\\s+([0-9a-f]{64})\\)$");
+    private static final Pattern PRODUCTION_PARAMETER_PATTERN =
+            Pattern.compile("^\\(production_parameter\\s+([^\\s()]+)\\s+\"((?:[^\"\\\\]|\\\\.)*)\"\\)\\s*(?:#.*)?$");
+    private ProductionParams.GenerationParameters generationParameters;
     private Long mutationSeedOverride = null;
     private Long mutationTargetBlockSeed = null;
     private Path recordFilePath = null;
@@ -135,6 +142,13 @@ public final class FullGenocode implements GenomeBackend {
             throw new RuntimeException("Replay genome version mismatch: expected "
                     + GENOCODE_VERSION + ", got " + replayData.genocodeVersion);
         }
+        if (replayMode) {
+            if (replayData.generationParameters == null) {
+                throw new IllegalArgumentException("Replay genome is missing production-parameter header");
+            }
+            ProductionParams.restoreGenerationParameters(replayData.generationParameters);
+        }
+        generationParameters = ProductionParams.generationParameters();
         replaySupportsStatementScopes = GENOCODE_VERSION.equals(replayData.genocodeVersion);
         replayTraceToken = normalizeTraceToken(System.getProperty("jittester.replay.trace.token"));
         replayTraceTokens = parseTraceTokenSet(System.getProperty("jittester.replay.trace.tokens"));
@@ -754,15 +768,31 @@ public final class FullGenocode implements GenomeBackend {
 
     private ReplayData loadReplayData(String replayFile) {
         if (replayFile == null || replayFile.isBlank()) {
-            return new ReplayData(null, null, Collections.emptyList(), Collections.emptyList());
+            return new ReplayData(null, null, null, Collections.emptyList(), Collections.emptyList());
         }
         Path path = Paths.get(replayFile);
         try {
             List<String> lines = Files.readAllLines(path);
             Long globalSeed = null;
             String genocodeVersion = null;
+            String defaultsFingerprint = null;
+            Map<String, String> parameters = new TreeMap<>();
             List<String> tokens = new ArrayList<>();
             for (String line : lines) {
+                // Parameter strings may contain '#' and escaped quotes. Parse
+                // them before applying the gene stream's comment stripping.
+                Matcher parameterMatcher = PRODUCTION_PARAMETER_PATTERN.matcher(line.trim());
+                if (parameterMatcher.matches()) {
+                    if (!tokens.isEmpty()) {
+                        throw new IllegalArgumentException("Production parameters must precede genome genes");
+                    }
+                    String name = parameterMatcher.group(1);
+                    String value = parameterMatcher.group(2).translateEscapes();
+                    if (parameters.putIfAbsent(name, value) != null) {
+                        throw new IllegalArgumentException("Duplicate genome production parameter: " + name);
+                    }
+                    continue;
+                }
                 int commentStart = line.indexOf('#');
                 String noComment = commentStart >= 0 ? line.substring(0, commentStart) : line;
                 String trimmed = noComment.trim();
@@ -771,21 +801,40 @@ public final class FullGenocode implements GenomeBackend {
                 }
                 Matcher versionMatcher = GENOCODE_VERSION_HEADER_PATTERN.matcher(trimmed);
                 if (versionMatcher.matches()) {
+                    if (genocodeVersion != null || !tokens.isEmpty()) {
+                        throw new IllegalArgumentException("Duplicate or misplaced genocode version header");
+                    }
                     genocodeVersion = versionMatcher.group(1);
                     continue;
                 }
                 Matcher seedMatcher = GLOBAL_SEED_HEADER_PATTERN.matcher(trimmed);
                 if (seedMatcher.matches()) {
+                    if (globalSeed != null || !tokens.isEmpty()) {
+                        throw new IllegalArgumentException("Duplicate or misplaced global seed header");
+                    }
                     globalSeed = Long.parseLong(seedMatcher.group(1));
                     continue;
+                }
+                Matcher defaultsMatcher = PRODUCTION_DEFAULTS_PATTERN.matcher(trimmed);
+                if (defaultsMatcher.matches()) {
+                    if (defaultsFingerprint != null || !tokens.isEmpty()) {
+                        throw new IllegalArgumentException("Duplicate or misplaced production defaults header");
+                    }
+                    defaultsFingerprint = defaultsMatcher.group(1);
+                    continue;
+                }
+                if (trimmed.startsWith("(production_")) {
+                    throw new IllegalArgumentException("Malformed genome production-parameter header: " + trimmed);
                 }
                 Matcher matcher = TOKEN_PATTERN.matcher(trimmed);
                 while (matcher.find()) {
                     tokens.add(matcher.group());
                 }
             }
+            ProductionParams.GenerationParameters parametersSnapshot = defaultsFingerprint == null
+                    ? null : new ProductionParams.GenerationParameters(defaultsFingerprint, parameters);
             if (tokens.isEmpty()) {
-                return new ReplayData(genocodeVersion, globalSeed, Collections.emptyList(),
+                return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, Collections.emptyList(),
                         Collections.emptyList());
             }
 
@@ -801,10 +850,10 @@ public final class FullGenocode implements GenomeBackend {
                     ScopeSeed scopeSeed = parseScopeSeed(token);
                     roots.add(new ReplayNode(scopeSeed.type, scopeSeed.seed));
                 }
-                return new ReplayData(genocodeVersion, globalSeed, roots, rootEvents);
+                return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, roots, rootEvents);
             }
             ReplayParse replayParse = parseReplayForest(tokens);
-            return new ReplayData(genocodeVersion, globalSeed, replayParse.roots,
+            return new ReplayData(genocodeVersion, globalSeed, parametersSnapshot, replayParse.roots,
                     replayParse.rootEvents);
         } catch (IOException e) {
             throw new RuntimeException("Failed to read block RNG replay file: " + replayFile, e);
@@ -972,6 +1021,7 @@ public final class FullGenocode implements GenomeBackend {
             recordWriter.write(Long.toString(PseudoRandom.getCurrentSeed()));
             recordWriter.write(")");
             recordWriter.newLine();
+            writeProductionParameters(recordWriter);
             recordWriter.flush();
             if (blocksWriter != null) {
                 blocksWriter.write("(genocode_version ");
@@ -982,10 +1032,23 @@ public final class FullGenocode implements GenomeBackend {
                 blocksWriter.write(Long.toString(PseudoRandom.getCurrentSeed()));
                 blocksWriter.write(")");
                 blocksWriter.newLine();
+                writeProductionParameters(blocksWriter);
                 blocksWriter.flush();
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to write global seed header", e);
+        }
+    }
+
+    private void writeProductionParameters(BufferedWriter writer) throws IOException {
+        writer.write("(production_defaults " + generationParameters.defaultsFingerprint() + ")");
+        writer.newLine();
+        for (Map.Entry<String, String> entry : generationParameters.overrides().entrySet()) {
+            String quoted = entry.getValue().replace("\\", "\\\\").replace("\"", "\\\"")
+                    .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+                    .replace("\b", "\\b").replace("\f", "\\f");
+            writer.write("(production_parameter " + entry.getKey() + " \"" + quoted + "\")");
+            writer.newLine();
         }
     }
 
@@ -1252,13 +1315,16 @@ public final class FullGenocode implements GenomeBackend {
     private static final class ReplayData {
         final String genocodeVersion;
         final Long globalSeed;
+        final ProductionParams.GenerationParameters generationParameters;
         final List<ReplayNode> roots;
         final List<ReplayEvent> rootEvents;
 
-        ReplayData(String genocodeVersion, Long globalSeed, List<ReplayNode> roots,
+        ReplayData(String genocodeVersion, Long globalSeed,
+                ProductionParams.GenerationParameters generationParameters, List<ReplayNode> roots,
                 List<ReplayEvent> rootEvents) {
             this.genocodeVersion = genocodeVersion;
             this.globalSeed = globalSeed;
+            this.generationParameters = generationParameters;
             this.roots = roots;
             this.rootEvents = rootEvents;
         }

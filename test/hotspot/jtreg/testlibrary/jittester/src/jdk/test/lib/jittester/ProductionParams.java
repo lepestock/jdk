@@ -30,9 +30,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.HexFormat;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import jdk.test.lib.jittester.utils.Genome;
 import jdk.test.lib.jittester.utils.OptionResolver;
@@ -172,6 +177,7 @@ public class ProductionParams {
     private static boolean genomeRecordEnabled = false;
     private static OptionResolver activeOptionResolver = null;
     private static Map<String, String> mutationOverrides = Collections.emptyMap();
+    private static Map<String, Option<?>> generationOptions = Map.of();
     private static final Set<String> FORBIDDEN_MUTATION_OVERRIDE_PARAMS = Set.of(
             "main-class",
             "property-file",
@@ -482,6 +488,97 @@ public class ProductionParams {
                 "morph-template-reference-deterioration-percent",
                 5,
                 "Percent multiplier for morph parameters inside morph-owned child blocks");
+
+        // Only generation policy belongs in the genome. Paths, instrumentation,
+        // diagnostics and invocation/replay controls remain caller-owned.
+        TreeMap<String, Option<?>> options = new TreeMap<>();
+        for (Option<?> option : List.of(
+                dataMemberLimit, statementLimit, testStatementLimit, operatorLimit,
+                memberFunctionsLimit, memberFunctionsArgLimit, stringLiteralSizeLimit,
+                classesLimit, implementationLimit, dimensionsLimit,
+                minCfgDepth, maxCfgDepth, enableStrictFP, disableFinalClasses,
+                disableFinalMethods, disableFinalVariables, disableIf, disableSwitch,
+                complexLoops, disableWhile, disableDoWhile, disableFor, disableFunctions,
+                disableVarsInBlock, disableExprInInit, disableExternalSymbols, addExternalSymbols,
+                disableInheritance, disableDowncasts, disableStatic, disableInterfaces,
+                disableClasses, disableNestedBlocks, disableArrays, arraysAllowedTypes,
+                enableFinalizers, chanceExpressionIndex, chanceThrow, identityValueClassBalance,
+                classRecordWeight, expressionGuardRawBp, intrinsicCallWeightBonus,
+                generatedFunctionStatementWeight, generatedFunctionLoopCallDecayK,
+                magnetismLevel, arrayProductionWeightBonus, arraysNullRestrictedValueProbability,
+                listStoragePercent, arrayKernelBodyStatementPercent, arrayKernelCollectionElementLValues,
+                collectionPrintReductionPercent, arrayFieldDefinitionWeightBonus,
+                disableFixedTreeExceptionGuards, expressionStopFloorPercent,
+                expressionStopStartDepth, expressionStopFullDepth, taperingBlockTerminalProbabilityPercent,
+                taperingBlockTerminalReciprocalK, taperingBlockStatementLimitMultiplierPercent,
+                blockStatementBoostPercent, blockStatementBoostHalfDepth, assignmentFieldBiasBoostPercent,
+                assignmentFieldBiasHalfDepth, assignmentFieldBiasStartPercent, assignmentLocalMinWeightPercent,
+                constBiasBasePercent, constBiasHalfDepth, mainLoopIterations, mainLoopJitter,
+                lockEliminationMorphTemplateProbability, morphTemplateLoopIntrinsificationProbability,
+                morphTemplateInlineTypeFlatArrayProbability, morphTemplateInlineTypeFlatArrayNonTrivialProbability,
+                morphTemplateInlineTypeFlatArrayLegSelectionWeight, morphTemplateCreationRepeatProbability,
+                arrayKernelEmptyBodyKeepProbability, morphLockEliminationCreateLockVarProbability,
+                morphTemplateLegWeight, morphTemplateReferenceDeteriorationPercent)) {
+            options.put(option.getLongName(), option);
+        }
+        generationOptions = Collections.unmodifiableMap(options);
+    }
+
+    public record GenerationParameters(String defaultsFingerprint, Map<String, String> overrides) {
+        public GenerationParameters {
+            overrides = Collections.unmodifiableMap(new TreeMap<>(overrides));
+        }
+    }
+
+    public static GenerationParameters generationParameters() {
+        ensureResolverInitialized();
+        Map<String, String> overrides = new TreeMap<>();
+        for (Option<?> option : generationOptions.values()) {
+            if (option.isSet()) {
+                overrides.put(option.getLongName(), option.value().toString());
+            }
+        }
+        return new GenerationParameters(generationDefaultsFingerprint(), overrides);
+    }
+
+    public static void restoreGenerationParameters(GenerationParameters parameters) {
+        ensureResolverInitialized();
+        if (!generationDefaultsFingerprint().equals(parameters.defaultsFingerprint())) {
+            throw new IllegalArgumentException("Genome production-parameter defaults mismatch");
+        }
+        Map<Option<?>, Object> restored = activeOptionResolver.snapshotValues();
+        generationOptions.values().forEach(restored::remove);
+        for (Map.Entry<String, String> entry : parameters.overrides().entrySet()) {
+            Option<?> option = generationOptions.get(entry.getKey());
+            if (option == null) {
+                throw new IllegalArgumentException("Not a genome generation parameter: " + entry.getKey());
+            }
+            Object value = option.parseFromString(entry.getValue());
+            if (!value.toString().equals(entry.getValue())) {
+                throw new IllegalArgumentException("Non-canonical genome parameter value for "
+                        + entry.getKey() + ": " + entry.getValue());
+            }
+            restored.put(option, value);
+        }
+        activeOptionResolver.restoreValues(restored);
+    }
+
+    private static String generationDefaultsFingerprint() {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            for (Option<?> option : generationOptions.values()) {
+                for (String field : List.of(option.getLongName(),
+                        option.getDefaultValue().getClass().getName(),
+                        option.getDefaultValue().toString())) {
+                    byte[] bytes = field.getBytes(StandardCharsets.UTF_8);
+                    digest.update((bytes.length + ":").getBytes(StandardCharsets.UTF_8));
+                    digest.update(bytes);
+                }
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new AssertionError(e);
+        }
     }
 
     /**
@@ -502,8 +599,6 @@ public class ProductionParams {
         mutationOverrides = Collections.unmodifiableMap(overrideParseResult.overrides);
         validateRuntimeOutputMode();
         validateMutationOverrides();
-
-        GenerationState.initializeFlowParamsFromProductionParams();
 
         String genocodeName = firstNonBlank(
                 valueIfSet(genocode),
@@ -543,6 +638,7 @@ public class ProductionParams {
         String mutationTarget = valueIfSet(genomeMutationTarget);
         Genome.setReplayStrict(true);
         Genome.initialize(replayPath, recordPath, mutationSeedOverride, mutationTarget);
+        GenerationState.initializeFlowParamsFromProductionParams();
     }
 
     private static void applyConfDirDefaults(OptionResolver parser) {
