@@ -108,6 +108,8 @@ import jdk.test.lib.jittester.utils.PrintingUtils;
 import jdk.test.lib.jittester.utils.TypeBoxingUtil;
 
 public class JavaCodeVisitor implements Visitor<String> {
+    private static final boolean STRICT_INITIALIZATION_MARKERS =
+            Boolean.getBoolean("jittester.strict_initialization_markers");
     private Set<String> debugWrapGeneFilter = null;
     private int nullRestrictedArrayInitializerCount = 0;
 
@@ -1107,7 +1109,8 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(Initialization node) {
         VariableInfo vi = node.getVariableInfo();
-        return attributes(vi) + vi.type.accept(this)+ " " + vi.name + " = "
+        return nullRestrictedAnnotations(vi)
+                + attributes(vi) + vi.type.accept(this)+ " " + vi.name + " = "
                 + node.getChild(0).accept(this);
     }
 
@@ -1374,7 +1377,7 @@ public class JavaCodeVisitor implements Visitor<String> {
         String objectString = object.accept(this);
         VariableInfo value = node.getVariableInfo();
         String memberName = value.isRecordComponent() ? value.name + "()" : value.name;
-        if (objectString.equals("this")) {
+        if (objectString.equals("this") && !value.isNullRestricted()) {
             return memberName;
         } else {
             if (object instanceof VariableBase || object instanceof Function || object instanceof Literal) {
@@ -1683,7 +1686,17 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(VariableDeclaration node) {
         VariableInfo vi = node.getVariableInfo();
-        return attributes(vi) + vi.type.accept(this)+ " " + vi.name;
+        return nullRestrictedAnnotations(vi)
+                + attributes(vi) + vi.type.accept(this)+ " " + vi.name;
+    }
+
+    private static String nullRestrictedAnnotations(VariableInfo variable) {
+        if (!variable.isNullRestricted()) {
+            return "";
+        }
+        String strictInit = STRICT_INITIALIZATION_MARKERS && !variable.isLocal()
+                ? "@jdk.test.lib.helpers.StrictInit " : "";
+        return strictInit + "@jdk.internal.vm.annotation.NullRestricted ";
     }
 
     @Override

@@ -55,14 +55,21 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
     private final Type resultType;
     private final boolean exceptionSafe;
     private final boolean noConsts;
+    private final boolean constructorOnly;
 
     ClassTerminalFactory(int operatorLimit, TypeKlass ownerClass, Type resultType,
             boolean exceptionSafe, boolean noConsts) {
+        this(operatorLimit, ownerClass, resultType, exceptionSafe, noConsts, false);
+    }
+
+    ClassTerminalFactory(int operatorLimit, TypeKlass ownerClass, Type resultType,
+            boolean exceptionSafe, boolean noConsts, boolean constructorOnly) {
         this.operatorLimit = operatorLimit;
         this.ownerClass = ownerClass;
         this.resultType = resultType;
         this.exceptionSafe = exceptionSafe;
         this.noConsts = noConsts;
+        this.constructorOnly = constructorOnly;
     }
 
     @Override
@@ -71,7 +78,7 @@ class ClassTerminalFactory extends SafeFactory<IRNode> {
         if (byCtor != null) {
             return byCtor;
         }
-        IRNode byVar = tryInitializedVariable();
+        IRNode byVar = constructorOnly ? null : tryInitializedVariable();
         if (byVar != null) {
             return byVar;
         }

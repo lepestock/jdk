@@ -306,6 +306,9 @@ abstract class AbstractKlassFactory<T extends Klass> extends Factory<T> {
                     }
                 }
                 symbolCopy.owner = thisKlass;
+                if (symbolCopy instanceof VariableInfo) {
+                    symbolCopy.flags |= VariableInfo.INHERITED;
+                }
                 SymbolTable.add(symbolCopy);
             }
         }

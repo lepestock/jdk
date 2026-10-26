@@ -801,6 +801,11 @@ public class IRNodeBuilder {
                 flowParams().operatorLimit(), getLevel());
     }
 
+    public Factory<IRNode> getConstructorCallFactory() {
+        return new ClassTerminalFactory(flowParams().operatorLimit(), getOwnerClass(), getResultType(),
+                getExceptionSafe(), getNoConsts(), true);
+    }
+
     public Factory<ValueKlass> getValueKlassFactory() {
         return new ValueKlassFactory(getName(), getMemberFunctionsLimit(), getMemberFunctionsArgLimit(),
                 flowParams().statementLimit(),

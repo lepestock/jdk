@@ -25,8 +25,16 @@ package jdk.test.lib.jittester.factories;
 
 import java.util.ArrayList;
 import jdk.test.lib.jittester.FlowParams;
+import jdk.test.lib.jittester.BinaryOperator;
+import jdk.test.lib.jittester.Block;
 import jdk.test.lib.jittester.GenerationState;
 import jdk.test.lib.jittester.IRNode;
+import jdk.test.lib.jittester.LocalVariable;
+import jdk.test.lib.jittester.NonStaticMemberVariable;
+import jdk.test.lib.jittester.OperatorKind;
+import jdk.test.lib.jittester.RawJavaStatement;
+import jdk.test.lib.jittester.Statement;
+import jdk.test.lib.jittester.StatementSequence;
 import jdk.test.lib.jittester.ProductionFailedException;
 import jdk.test.lib.jittester.Symbol;
 import jdk.test.lib.jittester.SymbolTable;
@@ -110,6 +118,7 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
             } catch (ProductionFailedException e) {
                 body = null;
             }
+            body = initializeStrictFields(body);
         } finally {
             SymbolTable.pop();
         }
@@ -118,5 +127,43 @@ class ConstructorDefinitionFactory extends Factory<ConstructorDefinition> {
         // If it's all ok, add the function to the symbol table.
         SymbolTable.add(functionInfo);
         return new ConstructorDefinition(functionInfo, argumentsDeclaration, body);
+    }
+
+    private IRNode initializeStrictFields(IRNode body) throws ProductionFailedException {
+        ArrayList<IRNode> initializers = new ArrayList<>();
+        FlowParams previous = GenerationState.currentFlowParams();
+        GenerationState.setCurrentFlowParams(previous.withCodeContext(FlowParams.CodeContext.CONSTRUCTOR).advance());
+        ThisVariableControl.pushForbidThis();
+        try {
+            for (Symbol symbol : SymbolTable.getAllCombined(ownerClass, VariableInfo.class)) {
+                VariableInfo field = (VariableInfo) symbol;
+                if (!field.owner.equals(ownerClass) || field.isStatic() || !field.isNullRestricted()
+                        || (field.flags & VariableInfo.INHERITED) != 0) {
+                    continue;
+                }
+                IRNode value = new IRNodeBuilder().setOwnerKlass(ownerClass).setResultType(field.type)
+                        .withOperatorLimit(operatorLimit).setExceptionSafe(true).setNoConsts(false)
+                        .getConstructorCallFactory().produce();
+                VariableInfo thisInfo = VariableInfo.symbolArgument("this", ownerClass, ownerClass,
+                        VariableInfo.FINAL | VariableInfo.LOCAL | VariableInfo.INITIALIZED);
+                IRNode target = new NonStaticMemberVariable(new LocalVariable(thisInfo), field);
+                initializers.add(new Statement(new BinaryOperator(OperatorKind.ASSIGN,
+                        field.type, target, value), true));
+            }
+        } finally {
+            ThisVariableControl.popForbidThis();
+            GenerationState.setCurrentFlowParams(previous);
+        }
+        if (initializers.isEmpty()) {
+            return body;
+        }
+        // Null-restricted instance fields are strict: initialize them before
+        // the superclass constructor, then run the ordinary generated body.
+        initializers.add(new RawJavaStatement("super();"));
+        if (body == null) {
+            return new Block(ownerClass, TypeList.VOID, initializers, level);
+        }
+        body.getChildren().add(0, new StatementSequence(initializers, level));
+        return body;
     }
 }

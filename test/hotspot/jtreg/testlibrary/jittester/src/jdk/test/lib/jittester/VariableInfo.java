@@ -33,6 +33,8 @@ public class VariableInfo extends Symbol {
     public static final int LOCAL = 0x40;
     public static final int INITIALIZED = 0x80;
     public static final int RECORD_COMPONENT = 0x100;
+    public static final int NULL_RESTRICTED = 0x200;
+    public static final int INHERITED = 0x400;
     private OptionalInt arrayLength = OptionalInt.empty();
 
     protected VariableInfo() {
@@ -80,6 +82,10 @@ public class VariableInfo extends Symbol {
 
     public boolean isRecordComponent() {
         return (flags & RECORD_COMPONENT) != 0;
+    }
+
+    public boolean isNullRestricted() {
+        return (flags & NULL_RESTRICTED) != 0;
     }
 
     public OptionalInt getArrayLength() {
