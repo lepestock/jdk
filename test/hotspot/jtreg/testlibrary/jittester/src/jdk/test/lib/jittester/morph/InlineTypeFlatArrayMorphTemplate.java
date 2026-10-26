@@ -59,6 +59,7 @@ import jdk.test.lib.jittester.collections.CollectionInitializer;
 import jdk.test.lib.jittester.collections.IndexedStorageKind;
 import jdk.test.lib.jittester.diagnostics.SourceDiagnostics;
 import jdk.test.lib.jittester.factories.IRNodeBuilder;
+import jdk.test.lib.jittester.factories.ThisVariableControl;
 import jdk.test.lib.jittester.loops.CounterInitializer;
 import jdk.test.lib.jittester.loops.CounterManipulator;
 import jdk.test.lib.jittester.loops.For;
@@ -334,7 +335,13 @@ public record InlineTypeFlatArrayMorphTemplate(long id, int nextLeg, int kind,
                 .setResultType(arrayType)
                 .setExceptionSafe(true)
                 .setNoConsts(false);
-        CollectionInitializer initializer = initBuilder.getCollectionInitializerFactory(arrayInfo).produce();
+        CollectionInitializer initializer;
+        ThisVariableControl.pushForbidThis();
+        try {
+            initializer = initBuilder.getCollectionInitializerFactory(arrayInfo).produce();
+        } finally {
+            ThisVariableControl.popForbidThis();
+        }
         SymbolTable.add(arrayInfo);
         Declaration declaration = new Declaration(new VariableInitialization(arrayInfo, initializer));
         attachDiagnostic(declaration, "InlineTypeFlatArrayMorph id=" + id
