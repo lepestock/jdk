@@ -34,6 +34,10 @@ import jdk.test.lib.helpers.StrictProcessor;
  * Applies strict-initialization classfile processing to one generated JitTester
  * test. A batch may share a class directory, therefore only class files whose
  * binary name belongs to the supplied test prefix are considered.
+ *
+ * <p>Distributed as source-only execution support. The execution system compiles
+ * and invokes this processor with the test JDK after compiling the gentest and
+ * before running it. It is not part of the generator's compilation or runtime.
  */
 public final class JitTesterStrictProcessor {
     private static final String CLASS_SUFFIX = ".class";

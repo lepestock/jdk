@@ -70,6 +70,9 @@ DIST_DIR = dist
 DIST_JAR = $(DIST_DIR)/JITtester.jar
 
 SRC_FILES = $(shell find $(SRC_DIR) -name '*.java')
+# Execution-system support is distributed as source and built with the test JDK,
+# not the generator JDK. Keep these files in copytestlibrary and artifact sources.
+SOURCE_ONLY_SRC_FILES = $(SRC_DIR)/jdk/test/lib/jittester/jtreg/JitTesterStrictProcessor.java
 TESTLIBRARY_SRC_DIR = ../../../../lib/jdk/test/lib
 TESTLIBRARY_SRC_FILES = $(TESTLIBRARY_SRC_DIR)/Asserts.java \
                         $(TESTLIBRARY_SRC_DIR)/JDKToolFinder.java \
@@ -119,9 +122,7 @@ COMPILE: INIT filelist compile_asm compile_testlib compile_generators
 	$(JAVAC) -cp $(CLASSES_DIR) -XDignore.symbol.file --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -Xlint -sourcepath $(SRC_DIR) -d $(CLASSES_DIR) @$(JITTESTER_FILELIST)
 
 filelist: INIT
-	@rm -f $(JITTESTER_FILELIST)
-	@find $(SRC_DIR) -name '*.java' | sort > $(JITTESTER_FILELIST)
-	@if [ -n "$(EXTRA_SRC_FILES)" ]; then printf '%s\n' $(EXTRA_SRC_FILES) >> $(JITTESTER_FILELIST); fi
+	@printf '%s\n' $(sort $(filter-out $(SOURCE_ONLY_SRC_FILES),$(SRC_FILES) $(EXTRA_SRC_FILES))) > $(JITTESTER_FILELIST)
 
 INIT: $(DIST_DIR)
 	$(shell if [ ! -d $(CLASSES_DIR) ]; then mkdir -p $(CLASSES_DIR); fi)
