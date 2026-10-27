@@ -1116,10 +1116,22 @@ public class JavaCodeVisitor implements Visitor<String> {
 
     @Override
     public String visit(Interface node) {
-        return "interface " + node.getName() + (node.getParentKlass() != null ? " extends "
+        return typeLabelsComment((TypeKlass) node.getResultType())
+                + "interface " + node.getName() + (node.getParentKlass() != null ? " extends "
                 + node.getParentKlass().getName() : "") + " {\n"
                 + (node.getChildren().size() > 0 ? node.getChild(0).accept(this) : "")
                 + "}\n";
+    }
+
+    private static String typeLabelsComment(TypeKlass type) {
+        if (!ProductionParams.debugTypeLabels.value() || type.getLabels().isEmpty()) {
+            return "";
+        }
+        // Keep labels on one comment line, including literal Java Unicode escapes.
+        String labels = type.getLabels().stream()
+                .map(label -> label.replace("\\", "\\\\").replace('\n', ' ').replace('\r', ' '))
+                .collect(Collectors.joining(", "));
+        return "// Type labels: " + labels + "\n";
     }
 
     @Override
@@ -1128,7 +1140,8 @@ public class JavaCodeVisitor implements Visitor<String> {
             return visitRecordKlass(recordKlass);
         }
         TypeKlass thisKlass = node.getThisKlass();
-        String r = (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
+        String r = typeLabelsComment(thisKlass)
+                + (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
                 + (thisKlass.isFinal() ? "final " : "")
                 + (thisKlass.isAbstract() ? "abstract " : "")
                 + "class " + node.getName()
@@ -1161,7 +1174,8 @@ public class JavaCodeVisitor implements Visitor<String> {
         String components = node.getComponents().stream()
                 .map(component -> component.type.accept(this) + " " + component.name)
                 .collect(Collectors.joining(", "));
-        String r = (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
+        String r = typeLabelsComment(node.getThisKlass())
+                + (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
                 + "record " + node.getName() + "(" + components + ")";
         List<TypeKlass> interfaces = node.getInterfaces();
         r += interfaces.stream()
@@ -1185,7 +1199,8 @@ public class JavaCodeVisitor implements Visitor<String> {
     @Override
     public String visit(ValueKlass node) {
         TypeKlass thisKlass = node.getThisKlass();
-        String r = (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
+        String r = typeLabelsComment(thisKlass)
+                + (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
                 + (thisKlass.isAbstract() ? "abstract " : "")
                 + "value class " + node.getName()
                 + (node.getParentKlass() != null && !node.getParentKlass().equals(TypeList.OBJECT)
@@ -1358,7 +1373,8 @@ public class JavaCodeVisitor implements Visitor<String> {
         IRNode testFunction = node.getChild(MainKlass.MainKlassPart.TEST_FUNCTION.ordinal());
         IRNode printVariables = node.getChild(MainKlass.MainKlassPart.PRINT_VARIABLES.ordinal());
 
-        return (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
+        return typeLabelsComment(node.getThisKlass())
+                + (ProductionParams.enableStrictFP.value() ? "strictfp " : "")
                 + "public class " + name + " {\n"
                 + dataMembers.accept(this)+ "\n"
                 + (memberFunctions != null ? memberFunctions.accept(this): "") + "\n"

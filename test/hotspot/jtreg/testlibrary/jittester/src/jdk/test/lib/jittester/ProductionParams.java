@@ -163,6 +163,7 @@ public class ProductionParams {
     public static Option<Boolean> debugArrayAssignmentCandidates = null;
     public static Option<Integer> debugArrayAssignmentCandidatesMax = null;
     public static Option<Boolean> debugMorphSourceDiagnostics = null;
+    public static Option<Boolean> debugTypeLabels = null;
     public static Option<Integer> lockEliminationMorphTemplateProbability = null;
     public static Option<Integer> morphTemplateLoopIntrinsificationProbability = null;
     public static Option<Integer> morphTemplateInlineTypeFlatArrayProbability = null;
@@ -444,6 +445,11 @@ public class ProductionParams {
                 "debug-morph-source-diagnostics",
                 false,
                 "Emit source comments for morph template creation and leg materialization");
+        debugTypeLabels = optionResolver.addBooleanOption(
+                null,
+                "debug-type-labels",
+                false,
+                "Emit stored type labels as source comments above type declarations");
         lockEliminationMorphTemplateProbability = optionResolver.addIntegerOption(
                 "lock-elimination-morph-template-probability",
                 20,

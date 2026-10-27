@@ -54,7 +54,7 @@ public class GenomeParametersTests {
                 "--profile", profile.toString(), "--statement-limit=9",
                 "--operator-limit=50", "--genome-record", founder, "--seed=314159",
                 "--testbase-dir", work.resolve("old-output").toString(),
-                "--debug-morph-source-diagnostics"});
+                "--debug-morph-source-diagnostics", "--debug-type-labels"});
         Genome.close();
 
         // Replay must need neither the original profile nor its included files.
@@ -77,6 +77,7 @@ public class GenomeParametersTests {
                 "An untouched default must remain implicit");
         check(!ProductionParams.debugMorphSourceDiagnostics.value(),
                 "Diagnostic settings must not be restored");
+        check(!ProductionParams.debugTypeLabels.value(), "Type-label diagnostics must not be restored");
         check(ProductionParams.testbaseDir.value().endsWith("new-output"),
                 "The caller's output path must remain usable");
         Genome.close();
@@ -87,7 +88,8 @@ public class GenomeParametersTests {
         String header = Files.readString(Path.of(founder + ".genome"));
         check(header.contains("(genocode_version full-2.0)"), "Missing major version bump");
         check(!header.contains("testbase-dir") && !header.contains("debug-morph-source-diagnostics")
-                && !header.contains("member-functions-limit"), "Header is not a sparse policy snapshot");
+                && !header.contains("debug-type-labels") && !header.contains("member-functions-limit"),
+                "Header is not a sparse policy snapshot");
     }
 
     private static void testReplayConfigurationIsolation() throws Exception {
@@ -95,6 +97,7 @@ public class GenomeParametersTests {
                 "--genome-replay", work.resolve("founder").toString(),
                 "--statement-limit=100", "--member-functions-limit=99", "--arrays-disable",
                 "--runtime-output-mode=pulse", "--debug-morph-source-diagnostics",
+                "--debug-type-labels",
                 "--override", "statement-limit", "77"});
         check(ProductionParams.statementLimit.value() == 9, "Caller changed a recorded PP");
         check(ProductionParams.memberFunctionsLimit.value() == ProductionParams.memberFunctionsLimit.getDefaultValue(),
@@ -103,6 +106,7 @@ public class GenomeParametersTests {
         check(!ProductionParams.disableArrays.value(), "Caller changed a recorded boolean");
         check(ProductionParams.pulsemapEnabled(), "Caller instrumentation was overwritten");
         check(ProductionParams.debugMorphSourceDiagnostics.value(), "Caller diagnostics were overwritten");
+        check(ProductionParams.debugTypeLabels.value(), "Caller type-label diagnostics were overwritten");
         var before = ProductionParams.generationParameters();
         var backup = ProductionParams.beginMutationOverrideScope();
         check(ProductionParams.statementLimit.value() == 77, "Scoped override was lost");

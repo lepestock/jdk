@@ -40,6 +40,7 @@ public class TypeKlass extends Type {
     private TypeKlass parentKlass;
     private final TreeSet<String> parentsList;
     private final TreeSet<String> childrenList;
+    private final LinkedHashSet<String> labels;
     private final LinkedHashSet<Symbol> symbolsSet;
     private int flags;
 
@@ -59,6 +60,7 @@ public class TypeKlass extends Type {
         this.flags = flags;
         parentsList = new TreeSet<>();
         childrenList = new TreeSet<>();
+        labels = new LinkedHashSet<>();
         symbolsSet = new LinkedHashSet<>();
     }
 
@@ -125,6 +127,18 @@ public class TypeKlass extends Type {
 
     public Collection<String> getChildrenNames() {
         return childrenList;
+    }
+
+    public boolean addLabel(String label) {
+        return labels.add(label);
+    }
+
+    public boolean hasLabel(String label) {
+        return labels.contains(label);
+    }
+
+    public Collection<String> getLabels() {
+        return Collections.unmodifiableSet(labels);
     }
 
     @Override
