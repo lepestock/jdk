@@ -151,7 +151,7 @@ public final class FlowParams {
                 percentToProbability(ProductionParams.morphTemplateLoopIntrinsificationProbability.value()),
                 percentToProbability(ProductionParams.morphTemplateInlineTypeFlatArrayProbability.value()),
                 ProductionParams.morphTemplateCreationRepeatProbability.value(),
-                percentToProbability(ProductionParams.morphTemplateLegWeight.value()),
+                Math.max(0.0, ProductionParams.morphTemplateLegWeight.value() / 100.0),
                 percentToProbability(ProductionParams.taperingBlockTerminalProbabilityPercent.value()));
     }
 
@@ -395,6 +395,10 @@ public final class FlowParams {
         return normalizeProbability(percent / 100.0);
     }
 
+    private static double normalizeWeight(double value) {
+        return Double.isFinite(value) ? Math.max(0.0, value) : 0.0;
+    }
+
     private static double normalizeProbability(double value) {
         if (Double.isNaN(value)) {
             return 0.0;
@@ -629,13 +633,13 @@ public final class FlowParams {
         }
 
         public Builder withMtLegWeight(double value) {
-            this.mtLegWeight = normalizeProbability(value);
+            this.mtLegWeight = normalizeWeight(value);
             return this;
         }
 
         public Builder withMtParameters(double creationProbability, double legWeight) {
             this.mtCreationProbability = normalizeProbability(creationProbability);
-            this.mtLegWeight = normalizeProbability(legWeight);
+            this.mtLegWeight = normalizeWeight(legWeight);
             return this;
         }
 

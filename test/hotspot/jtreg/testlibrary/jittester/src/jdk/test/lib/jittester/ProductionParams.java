@@ -510,7 +510,7 @@ public class ProductionParams {
         morphTemplateLegWeight = optionResolver.addIntegerOption(
                 "morph-template-leg-weight",
                 100,
-                "Weight percent (0..100) for active morph template legs at statement points");
+                "Relative weight percent (100 = 1x, may exceed 100) for active morph template legs");
         morphTemplateReferenceDeteriorationPercent = optionResolver.addIntegerOption(
                 "morph-template-reference-deterioration-percent",
                 5,
